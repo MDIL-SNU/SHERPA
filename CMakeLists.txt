@@ -8,8 +8,10 @@ SET ( PROJECT_VERSION_MINOR 1 )
 SET ( CMAKE_VERBOSE_MAKEFILE true )
 SET ( SRC_FILES 
         main.c 
+        calculator.c
         config.c
         input.c
+        target.c
         utils.c )
 SET ( CMAKE_C_COMPILER "mpiicc" )
 

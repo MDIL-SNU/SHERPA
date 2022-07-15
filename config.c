@@ -5,6 +5,101 @@
 #include "utils.h"
 
 
+/* convert into lmp basis */
+void convert_basis(Config *config)
+{
+    int i, j;
+    double A_norm, AxB_norm, vol, tmp_value, tmp_pos[3];
+    double A[3], B[3], C[3];
+    double Ahat[3], AxB[3], AxBhat[3], AhatxB[3], AxBhatxAhat[3];
+    double frac[3][3], trans[3][3];
+
+    /* rotate bases into triangular matrix */
+    for (i = 0; i < 3; i++) {
+        A[i] = config->cell[0][i];
+        B[i] = config->cell[1][i];
+        C[i] = config->cell[2][i];
+    }
+
+    A_norm = norm(A);
+    Ahat[0] = A[0] / A_norm;
+    Ahat[1] = A[1] / A_norm;
+    Ahat[2] = A[2] / A_norm;
+
+    cross(A, B, AxB);
+    AxB_norm = norm(AxB);
+    AxBhat[0] = AxB[0] / AxB_norm;
+    AxBhat[1] = AxB[1] / AxB_norm;
+    AxBhat[2] = AxB[2] / AxB_norm;
+
+    cross(Ahat, B, AhatxB);
+    cross(AxBhat, Ahat, AxBhatxAhat);
+
+    /* column vector (a b c) */
+    config->cell[0][0] = A_norm;
+    config->cell[0][1] = dot(B, Ahat);
+    config->cell[0][2] = dot(C, Ahat);
+    config->cell[1][0] = 0.0;
+    config->cell[1][1] = norm(AhatxB);
+    config->cell[1][2] = dot(C, AxBhatxAhat);
+    config->cell[2][0] = 0.0;
+    config->cell[2][1] = 0.0;
+    config->cell[2][2] = dot(C, AxBhat);
+
+    /* edge & tilting */
+    config->boxlo[0] = 0.0;
+    config->boxlo[1] = 0.0;
+    config->boxlo[2] = 0.0;
+    config->boxhi[0] = config->cell[0][0];
+    config->boxhi[1] = config->cell[1][1];
+    config->boxhi[2] = config->cell[2][2];
+    config->xy = config->cell[0][1];
+    config->xz = config->cell[0][2];
+    config->yz = config->cell[1][2];
+
+    /* transformation matrix */
+    vol = det(config->cell);
+    cross(B, C, frac[0]);
+    cross(C, A, frac[1]);
+    cross(A, B, frac[2]);
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            frac[i][j] /= vol;
+        }
+    }
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            trans[i][j] = config->cell[i][0] * frac[0][j] +
+                          config->cell[i][1] * frac[1][j] +
+                          config->cell[i][2] * frac[2][j];
+        }
+    }
+
+    /* convert position */
+    for (i = 0; i < config->tot_num; i++) {
+        for (j = 0; j < 3; j++) {
+            tmp_pos[j] = trans[j][0] * config->pos[i * 3 + 0] +
+                         trans[j][1] * config->pos[i * 3 + 1] +
+                         trans[j][2] * config->pos[i * 3 + 2];
+        }
+        config->pos[i * 3 + 0] = tmp_pos[0];
+        config->pos[i * 3 + 1] = tmp_pos[1];
+        config->pos[i * 3 + 2] = tmp_pos[2];
+    }
+
+    /* transpose lattice vector */
+    for (i = 0; i < 3; i++) {
+        for (j = i + 1; j < 3; j++) {
+            tmp_value = config->cell[i][j];
+            config->cell[i][j] = config->cell[j][i];
+            config->cell[j][i] = tmp_value;
+        }
+    }
+}
+
+
 #define MAXLINE 128
 int read_config(Config *config, Input *input, char *filename)
 {
@@ -66,12 +161,14 @@ int read_config(Config *config, Input *input, char *filename)
 
     /* type index of atom */
     int count = 0;
+    config->id = (int *)malloc(sizeof(int) * config->tot_num);
     config->type = (int *)malloc(sizeof(int) * config->tot_num);
     for (i = 0; i < config->ntype; ++i) {
         for (j = 0; j < input->nelem; ++j) {
             if (config->atom_num[i] == get_atom_num(input->atom_type[j])) {
                 for (k = 0; k < config->each_num[i]; ++k) {
                     config->type[count] = j + 1;
+                    config->id[count] = count + 1;
                     count++;
                 }
             }
@@ -105,6 +202,7 @@ int read_config(Config *config, Input *input, char *filename)
             config->pos[i * 3 + 2] = atof(strtok(NULL, " \n"));
         }
     }
+    convert_basis(config);
     fclose(fp);
     return 0;
 }
@@ -117,7 +215,7 @@ void write_config(Config *config, char *filename)
     FILE *fp = fopen(filename, "w");
 
     /* title */
-    fputs("POSCAR from MINK\n", fp);
+    fputs("POSCAR\n", fp);
 
     /* scale */
     fputs("1.0\n", fp);
@@ -176,8 +274,19 @@ void copy_config(Config *config2, Config *config1)
     config2->cell[2][1] = config1->cell[2][1];
     config2->cell[2][2] = config1->cell[2][2];
 
+    config2->boxlo[0] = config1->boxlo[0];
+    config2->boxlo[1] = config1->boxlo[1];
+    config2->boxlo[2] = config1->boxlo[2];
+    config2->boxhi[0] = config1->boxhi[0];
+    config2->boxhi[1] = config1->boxhi[1];
+    config2->boxhi[2] = config1->boxhi[2];
+    config2->xy = config1->xy;
+    config2->xz = config1->xz;
+    config2->yz = config1->yz;
+
     config2->atom_num = (int *)malloc(sizeof(int) * config1->ntype);
     config2->each_num = (int *)malloc(sizeof(int) * config1->ntype);
+    config2->id = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->type = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->pos = (double *)malloc(sizeof(double) * config1->tot_num * 3);
 
@@ -186,6 +295,7 @@ void copy_config(Config *config2, Config *config1)
         config2->each_num[i] = config1->each_num[i];
     }
     for (i = 0; i < config1->tot_num; ++i) {
+        config2->id[i] = config1->id[i];
         config2->type[i] = config1->type[i];
         config2->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
         config2->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
@@ -198,6 +308,7 @@ void free_config(Config *config)
 {
     free(config->atom_num);
     free(config->each_num);
+    free(config->id);
     free(config->type);
     free(config->pos);
     free(config);

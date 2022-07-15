@@ -21,7 +21,7 @@ int input_int(int *var, char *tag, char *filename)
         } else if (strncmp(ptr, tag, strlen(tag)) == 0) {
             strtok(line, " \n\t");
             strtok(NULL, " \n\t");
-            *var = atoi(strtok(NULL, " \n"));
+            *var = atoi(strtok(NULL, "\n"));
             fclose(fp);
             return 0;
         } else {
@@ -50,7 +50,7 @@ int input_double(double *var, char *tag, char *filename)
         } else if (strncmp(ptr, tag, strlen(tag)) == 0) {
             strtok(line, " \n\t");
             strtok(NULL, " \n\t");
-            *var = atof(strtok(NULL, " \n"));
+            *var = atof(strtok(NULL, "\n"));
             fclose(fp);
             return 0;
         } else {
@@ -80,7 +80,7 @@ int input_char(char **var, char *tag, char *filename)
             strtok(line, " \n\t");
             strtok(NULL, " \n\t");
             *var = (char *)malloc(sizeof(char) * 32);
-            strcpy(*var, strtok(NULL, " \n\t"));
+            strcpy(*var, strtok(NULL, "\n"));
             fclose(fp);
             return 0;
         } else {
@@ -157,6 +157,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_char(&(input->target), "TARGET", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_double(&(input->fmax), "FMAX", filename);
     if (errno) {
         return 1;
@@ -166,6 +170,14 @@ int read_input(Input *input, char *filename)
         return 1;
     }
     errno = input_double(&(input->trial_angle), "TRIAL_ANGLE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->cutoff), "CUTOFF", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->stddev), "STDDEV", filename);
     if (errno) {
         return 1;
     }

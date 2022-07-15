@@ -10,11 +10,14 @@ typedef struct _Input
     char *pair_style;
     char *pair_coeff;
     char *init_config;
+    char *target;
     char **atom_type;
 
     double fmax;
     double ftol;
     double trial_angle;
+    double cutoff;
+    double stddev;
 } Input;
 
 int input_int(int *, char *, char *);

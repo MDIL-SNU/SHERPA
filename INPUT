@@ -1,0 +1,18 @@
+# potential parameter #
+NELEMENT    = 2
+ATOM_TYPE   = O Pt
+PAIR_STYLE  = nn
+PAIR_COEFF  = * * potential_saved O Pt
+
+# dimer parameter #
+INIT_CONFIG = ./POSCAR
+TARGET      = ./TARGET
+CUTOFF      = 4.4
+FMAX        = 0.01
+FTOL        = 0.01
+TRIAL_ANGLE = 45
+STDDEV      = 0.1
+INIT_MODE   = 0
+
+# random parameter #
+RANDOM_SEED = 0
