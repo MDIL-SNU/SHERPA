@@ -153,11 +153,19 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_double(&(input->cutoff), "CUTOFF", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_char(&(input->init_config), "INIT_CONFIG", filename);
     if (errno) {
         return 1;
     }
     errno = input_char(&(input->target), "TARGET", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->dimer_dist), "DIMER_DIST", filename);
     if (errno) {
         return 1;
     }
@@ -173,7 +181,7 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->cutoff), "CUTOFF", filename);
+    errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
     if (errno) {
         return 1;
     }

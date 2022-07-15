@@ -3,14 +3,16 @@ NELEMENT    = 2
 ATOM_TYPE   = O Pt
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
+CUTOFF      = 6.0
 
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
 TARGET      = ./TARGET
-CUTOFF      = 4.4
+DIMER_DIST  = 0.001
 FMAX        = 0.01
 FTOL        = 0.01
 TRIAL_ANGLE = 45
+DISP_CUTOFF = 4.4
 STDDEV      = 0.1
 INIT_MODE   = 0
 

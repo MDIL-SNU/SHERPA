@@ -13,10 +13,12 @@ typedef struct _Input
     char *target;
     char **atom_type;
 
+    double cutoff;
+    double dimer_dist;
     double fmax;
     double ftol;
     double trial_angle;
-    double cutoff;
+    double disp_cutoff;
     double stddev;
 } Input;
 

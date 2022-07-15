@@ -100,6 +100,43 @@ void convert_basis(Config *config)
 }
 
 
+/* remove one atom from config */
+void extract_atom(Config *config, int idx)
+{
+    int i, j, ntype, tot_num;
+    int acc_num = 0;
+    for (i = 0; i < config->ntype; ++i) {
+        acc_num += config->each_num[i];
+        if (acc_num > idx) {
+            config->each_num[i]--;
+            if (config->each_num[i] == 0) {
+                for (j = i; j < config->ntype - 1; ++j) {
+                    config->atom_num[i] = config->atom_num[i + 1];
+                    config->each_num[i] = config->each_num[i + 1];
+                }
+                config->ntype--;
+                ntype = config->ntype;
+                config->atom_num = (int *)realloc(config->atom_num, sizeof(int) * ntype);
+                config->each_num = (int *)realloc(config->each_num, sizeof(int) * ntype);
+            }
+            break;
+        }
+    }
+
+    for (i = idx; i < config->tot_num - 1; ++i) {
+        config->type[i] = config->type[i + 1];
+        config->pos[i * 3 + 0] = config->pos[(i + 1) * 3 + 0];
+        config->pos[i * 3 + 1] = config->pos[(i + 1) * 3 + 1];
+        config->pos[i * 3 + 2] = config->pos[(i + 1) * 3 + 2];
+    }
+    config->tot_num--;
+    tot_num = config->tot_num;
+    config->id = (int *)realloc(config->id, sizeof(int) * tot_num);
+    config->type = (int *)realloc(config->type, sizeof(int) * tot_num);
+    config->pos = (double *)realloc(config->pos, sizeof(double) * tot_num * 3);
+}
+
+
 #define MAXLINE 128
 int read_config(Config *config, Input *input, char *filename)
 {

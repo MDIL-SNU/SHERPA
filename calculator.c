@@ -113,6 +113,39 @@ double local_oneshot(Config *config, Input *input, int index, MPI_Comm comm)
 }
 
 
+double local_oneshot_xyz(Config *config, Input *input, double *center, MPI_Comm comm)
+{
+    char cmd[1024];
+    void *lmp = NULL;
+
+    /* create LAMMPS instance */
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    int lmpargc = sizeof(lmpargv) / sizeof(char *);
+    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
+    /* potential */
+    sprintf(cmd, "pair_style %s", input->pair_style);
+    lammps_command(lmp, cmd);
+    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
+    lammps_command(lmp, cmd);
+    /* group and delete */
+    sprintf(cmd, "region double sphere %f %f %f %f",
+            center[0], center[1], center[2], input->cutoff * 2);
+    lammps_command(lmp, cmd);
+    lammps_command(lmp, "group double region double");
+    lammps_command(lmp, "group del subtract all double");
+    lammps_command(lmp, "delete_atoms group del compress no");
+    /* balance */
+    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
+    /* oneshot */
+    lammps_command(lmp, "run 0");
+    double pe = lammps_get_thermo(lmp, "pe");
+    /* delete LAMMPS instance */
+    lammps_close(lmp);
+
+    return pe;
+}
+
+
 double atom_relax(Config *config, Input *input, MPI_Comm comm)
 {
     char cmd[1024];

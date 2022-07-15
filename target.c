@@ -4,7 +4,7 @@
 #include "target.h"
 
 
-int gen_target(Config *config, Input *input, int **target_index, int *target_num)
+int gen_target(Config *config, Input *input, int **target_list, int *target_num)
 {
     int i;
     FILE *fp;
@@ -27,10 +27,10 @@ int gen_target(Config *config, Input *input, int **target_index, int *target_num
                 (*target_num)++;
                 ptr = strtok(NULL, " \n\t");
             }
-            *target_index = (int *)malloc(sizeof(int) * (*target_num));
+            *target_list = (int *)malloc(sizeof(int) * (*target_num));
             strtok(tmp_line, " \n\t");
             for (i = 0; i < *target_num; ++i) {
-                (*target_index)[i] = atoi(strtok(NULL, " \n\t"));
+                (*target_list)[i] = atoi(strtok(NULL, " \n\t"));
             }
         } else if (strncmp(ptr, "A", 1) == 0) {
             //gen_all();
