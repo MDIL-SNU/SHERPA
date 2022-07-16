@@ -198,6 +198,7 @@ int read_input(Input *input, char *filename)
         return 1;
     }
     return 0;
+    input->trial_angle *= 3.1415926535897932384626 / 180;
 }
 
 

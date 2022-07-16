@@ -5,12 +5,14 @@
 
 
 double normal_random(double, double);
+double **normalize(double **, int);
 double **parallel_vector(double **, double **, int);
 double **perpendicular_vector(double **, double **, int);
 double **gen_eigenmode(Input *, int);
-double **get_rot_force(Input *, double **, double **, int, int *, double **);
+double **get_rot_force(Input *, double **, double **, double **, int);
+void rotate_vector(double **, double **, double ***, double ***, int, double);
 void cut_sphere(Config *, Input *, double *);
-void rotate(Config *, Config *, Input *, int, int *, double **);
-void translate();
+void rotate(Config *, Input *, int, int *, double **);
+void translate(Config *, Input *, int, int *, double **);
 void dimer(Config *, Input *, int);
 #endif
