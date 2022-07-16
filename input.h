@@ -5,6 +5,7 @@ typedef struct _Input
 {
     int nelem;
     int init_mode;
+    int max_num_rot;
     int random_seed;
 
     char *pair_style;
@@ -15,8 +16,9 @@ typedef struct _Input
 
     double cutoff;
     double dimer_dist;
-    double fmax;
     double ftol;
+    double f_rot_min;
+    double f_rot_max;
     double trial_angle;
     double disp_cutoff;
     double stddev;

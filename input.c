@@ -169,11 +169,19 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->fmax), "FMAX", filename);
+    errno = input_double(&(input->ftol), "FTOL", filename);
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->ftol), "FTOL", filename);
+    errno = input_double(&(input->f_rot_min), "F_ROT_MIN", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->f_rot_max), "F_ROT_MAX", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->max_num_rot), "MAX_NUM_ROT", filename);
     if (errno) {
         return 1;
     }
@@ -202,5 +210,6 @@ void free_input(Input *input)
     free(input->pair_style);
     free(input->pair_coeff);
     free(input->init_config);
+    free(input->target);
     free(input);
 }

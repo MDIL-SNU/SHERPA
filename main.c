@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
     errno = gen_target(config, input, &target_list, &target_num);
 
     // TODO: fix atom
-    atom_relax(config, input, MPI_COMM_WORLD);
+    atom_relax(config, input);
 
     /* main loop */
     //for (i = 0; i < target_num; ++i) {

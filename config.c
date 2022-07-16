@@ -1,8 +1,45 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "config.h"
 #include "utils.h"
+
+
+double norm3(double *vec)
+{
+    return sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+}
+
+
+double dot3(double *vec1, double *vec2)
+{
+    return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
+}
+
+
+void cross3(double *vec1, double *vec2, double *vec3)
+{
+    vec3[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
+    vec3[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
+    vec3[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
+}
+
+
+double det(double (*mat)[3])
+{
+    int i;
+    double cofactor[3];
+    cofactor[0] = mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1];
+    cofactor[1] = mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2];
+    cofactor[2] = mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0];
+
+    double det = 0.0;
+    for (i = 0; i < 3; i++) {
+        det += cofactor[i] * mat[0][i];
+    }
+    return det;
+}
 
 
 /* convert into lmp basis */
@@ -21,30 +58,30 @@ void convert_basis(Config *config)
         C[i] = config->cell[2][i];
     }
 
-    A_norm = norm(A);
+    A_norm = norm3(A);
     Ahat[0] = A[0] / A_norm;
     Ahat[1] = A[1] / A_norm;
     Ahat[2] = A[2] / A_norm;
 
-    cross(A, B, AxB);
-    AxB_norm = norm(AxB);
+    cross3(A, B, AxB);
+    AxB_norm = norm3(AxB);
     AxBhat[0] = AxB[0] / AxB_norm;
     AxBhat[1] = AxB[1] / AxB_norm;
     AxBhat[2] = AxB[2] / AxB_norm;
 
-    cross(Ahat, B, AhatxB);
-    cross(AxBhat, Ahat, AxBhatxAhat);
+    cross3(Ahat, B, AhatxB);
+    cross3(AxBhat, Ahat, AxBhatxAhat);
 
     /* column vector (a b c) */
     config->cell[0][0] = A_norm;
-    config->cell[0][1] = dot(B, Ahat);
-    config->cell[0][2] = dot(C, Ahat);
+    config->cell[0][1] = dot3(B, Ahat);
+    config->cell[0][2] = dot3(C, Ahat);
     config->cell[1][0] = 0.0;
-    config->cell[1][1] = norm(AhatxB);
-    config->cell[1][2] = dot(C, AxBhatxAhat);
+    config->cell[1][1] = norm3(AhatxB);
+    config->cell[1][2] = dot3(C, AxBhatxAhat);
     config->cell[2][0] = 0.0;
     config->cell[2][1] = 0.0;
-    config->cell[2][2] = dot(C, AxBhat);
+    config->cell[2][2] = dot3(C, AxBhat);
 
     /* edge & tilting */
     config->boxlo[0] = 0.0;
@@ -59,9 +96,9 @@ void convert_basis(Config *config)
 
     /* transformation matrix */
     vol = det(config->cell);
-    cross(B, C, frac[0]);
-    cross(C, A, frac[1]);
-    cross(A, B, frac[2]);
+    cross3(B, C, frac[0]);
+    cross3(C, A, frac[1]);
+    cross3(A, B, frac[2]);
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {

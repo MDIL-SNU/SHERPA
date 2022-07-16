@@ -8,14 +8,13 @@
 #include "utils.h"
 
 
-void *lmp_init(Config *config, Input *input,
-               int lmpargc, char **lmpargv, MPI_Comm comm)
+void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv)
 {
     /* create LAMMPS instance */
     int i;
     void *lmp;
     char cmd[1024];
-    lmp = lammps_open(lmpargc, lmpargv, comm, NULL);
+    lmp = lammps_open(lmpargc, lmpargv, MPI_COMM_WORLD, NULL);
     if (lmp == NULL) {
         printf("LAMMPS initialization failed");
     }
@@ -43,118 +42,47 @@ void *lmp_init(Config *config, Input *input,
 }
 
 
-double global_oneshot(Config *config, Input *input, MPI_Comm comm)
+void oneshot(Config *config, Input *input, double *energy, double ***force,
+             int disp_num, int *disp_list)
 {
-    char cmd[1024];
-    void *lmp = NULL;
-    /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
-    /* oneshot */
-    lammps_command(lmp, "run 0");
-    double pe = lammps_get_thermo(lmp, "pe");
-    /* delete LAMMPS instance */
-    lammps_close(lmp);
-
-    return pe;
-}
-
-
-double local_oneshot(Config *config, Input *input, int index, MPI_Comm comm)
-{
-    char cmd[1024];
-    void *lmp = NULL;
-
-    char *rlx_cmd = (char *)malloc(sizeof(char) * config->tot_num * 6);
-    char *fix_cmd = (char *)malloc(sizeof(char) * config->tot_num * 6);
-    /* local mask */
-    int *mask = (int *)malloc(sizeof(int) * config->tot_num);
-    int nummask = get_mask(config, input, rlx_cmd, fix_cmd, mask, index, comm);
-    mask = (int *)realloc(mask, sizeof(int) * nummask);
-
-    /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* group and delete */
-    lammps_command(lmp, rlx_cmd);
-    if (nummask < config->tot_num) {
-        lammps_command(lmp, fix_cmd);
-        lammps_command(lmp, "fix 1 fix setforce 0.0 0.0 0.0");
-        lammps_command(lmp, "group del subtract all rlx fix");
-        lammps_command(lmp, "delete_atoms group del compress no");
-    }
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
-    /* oneshot */
-    lammps_command(lmp, "run 0");
-    double pe = lammps_get_thermo(lmp, "pe");
-    /* delete LAMMPS instance */
-    lammps_close(lmp);
-
-    free(rlx_cmd);
-    free(fix_cmd);
-    free(mask);
-
-    return pe;
-}
-
-
-double local_oneshot_xyz(Config *config, Input *input, double *center, MPI_Comm comm)
-{
-    char cmd[1024];
-    void *lmp = NULL;
-
-    /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* group and delete */
-    sprintf(cmd, "region double sphere %f %f %f %f",
-            center[0], center[1], center[2], input->cutoff * 2);
-    lammps_command(lmp, cmd);
-    lammps_command(lmp, "group double region double");
-    lammps_command(lmp, "group del subtract all double");
-    lammps_command(lmp, "delete_atoms group del compress no");
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
-    /* oneshot */
-    lammps_command(lmp, "run 0");
-    double pe = lammps_get_thermo(lmp, "pe");
-    /* delete LAMMPS instance */
-    lammps_close(lmp);
-
-    return pe;
-}
-
-
-double atom_relax(Config *config, Input *input, MPI_Comm comm)
-{
+    int i;
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
     //char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
     char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
+    lmp = lmp_init(config, input, lmpargc, lmpargv);
+    /* potential */
+    sprintf(cmd, "pair_style %s", input->pair_style);
+    lammps_command(lmp, cmd);
+    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
+    lammps_command(lmp, cmd);
+    /* balance */
+    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
+    /* oneshot */
+    lammps_command(lmp, "run 0");
+    *energy = lammps_get_thermo(lmp, "pe");
+    double **tmp_force = (double **)lammps_extract_atom(lmp, "f");
+    for (i = 0;  i < disp_num; ++i) {
+        (*force)[i][0] = tmp_force[disp_list[i]][0];
+        (*force)[i][1] = tmp_force[disp_list[i]][1];
+        (*force)[i][2] = tmp_force[disp_list[i]][2];
+    }
+    /* delete LAMMPS instance */
+    lammps_close(lmp);
+}
+
+
+double atom_relax(Config *config, Input *input)
+{
+    char cmd[1024];
+    void *lmp = NULL;
+    /* create LAMMPS instance */
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    //char *lmpargv[] = {"liblammps", "-screen", "none"};
+    int lmpargc = sizeof(lmpargv) / sizeof(char *);
+    lmp = lmp_init(config, input, lmpargc, lmpargv);
     /* potential */
     sprintf(cmd, "pair_style %s", input->pair_style);
     lammps_command(lmp, cmd);
@@ -163,7 +91,7 @@ double atom_relax(Config *config, Input *input, MPI_Comm comm)
     /* balance */
     lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
     /* minimize */
-    sprintf(cmd, "minimize 0 %f 10000 100000", input->fmax);
+    sprintf(cmd, "minimize 0 %f 10000 100000", input->ftol);
     lammps_command(lmp, cmd);
     double pe = lammps_get_thermo(lmp, "pe");
     /* update positions */
