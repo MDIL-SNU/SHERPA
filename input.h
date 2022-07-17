@@ -22,6 +22,8 @@ typedef struct _Input
     double trial_angle;
     double disp_cutoff;
     double stddev;
+    double max_step;
+    double trial_step;
 } Input;
 
 int input_int(int *, char *, char *);

@@ -197,6 +197,14 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_double(&(input->max_step), "MAX_STEP", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->trial_step), "TRIAL_STEP", filename);
+    if (errno) {
+        return 1;
+    }
     return 0;
     input->trial_angle *= 3.1415926535897932384626 / 180;
 }

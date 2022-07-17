@@ -16,6 +16,8 @@ MAX_NUM_ROT = 1
 TRIAL_ANGLE = 45
 DISP_CUTOFF = 4.4
 STDDEV      = 0.1
+MAX_STEP    = 0.1
+TRIAL_STEP  = 0.001
 INIT_MODE   = 0
 
 # random parameter #

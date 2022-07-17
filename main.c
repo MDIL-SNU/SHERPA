@@ -61,5 +61,6 @@ int main(int argc, char *argv[])
     free_config(config);
     free_input(input);
     
+    MPI_Finalize();
     return 0;
 }
