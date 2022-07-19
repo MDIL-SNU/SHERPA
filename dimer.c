@@ -20,140 +20,126 @@ double normal_random(double mean, double std)
 }
 
 
-double norm(double **vec, int n)
+double norm(double *vec, int n)
 {
     int i;
     double output = 0.0;
     for (i = 0; i < n; ++i) {
-        output += vec[i][0] * vec[i][0];
-        output += vec[i][1] * vec[i][1];
-        output += vec[i][2] * vec[i][2];
+        output += vec[i * 3 + 0] * vec[i * 3 + 0];
+        output += vec[i * 3 + 1] * vec[i * 3 + 1];
+        output += vec[i * 3 + 2] * vec[i * 3 + 2];
     }
     return sqrt(output);
 }
 
 
-double **normalize(double **vec, int n)
+double *normalize(double *vec, int n)
 {
     int i;
-    double **output = (double **)malloc(sizeof(double *) * n); 
+    double *output = (double *)malloc(sizeof(double) * n * 3); 
     double magnitude = norm(vec, n);
     for (i = 0; i < n; ++i) {
-        output[i] = (double *)malloc(sizeof(double) * 3);
-        output[i][0] = vec[i][0] / magnitude;
-        output[i][1] = vec[i][1] / magnitude;
-        output[i][2] = vec[i][2] / magnitude;
+        output[i * 3 + 0] = vec[i * 3 + 0] / magnitude;
+        output[i * 3 + 1] = vec[i * 3 + 1] / magnitude;
+        output[i * 3 + 2] = vec[i * 3 + 2] / magnitude;
     }
     return output;
 }
 
 
-double dot(double **vec1, double **vec2, int n)
+double dot(double *vec1, double *vec2, int n)
 {
     int i;
     double output = 0.0;
     for (i = 0; i < n; ++i) {
-        output += vec1[i][0] * vec2[i][0];
-        output += vec1[i][1] * vec2[i][1];
-        output += vec1[i][2] * vec2[i][2];
+        output += vec1[i * 3 + 0] * vec2[i * 3 + 0];
+        output += vec1[i * 3 + 1] * vec2[i * 3 + 1];
+        output += vec1[i * 3 + 2] * vec2[i * 3 + 2];
     }
     return output;
 }
 
 
-double **parallel_vector(double **vector, double **unit, int n)
+double *parallel_vector(double *vector, double *unit, int n)
 {
     int i; 
     double magnitude = dot(vector, unit, n);
-    double **output = (double **)malloc(sizeof(double *) * n);
+    double *output = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        output[i] = (double *)malloc(sizeof(double) * 3);
-        output[i][0] = magnitude * unit[i][0];
-        output[i][1] = magnitude * unit[i][1];
-        output[i][2] = magnitude * unit[i][2];
+        output[i * 3 + 0] = magnitude * unit[i * 3 + 0];
+        output[i * 3 + 1] = magnitude * unit[i * 3 + 1];
+        output[i * 3 + 2] = magnitude * unit[i * 3 + 2];
     } 
     return output;
 }
 
 
-double **perpendicular_vector(double **vector, double **unit, int n)
+double *perpendicular_vector(double *vector, double *unit, int n)
 {
     int i;
-    double **tmp_vector = parallel_vector(vector, unit, n);
-    double **output = (double **)malloc(sizeof(double *) * n);
+    double *tmp_vector = parallel_vector(vector, unit, n);
+    double *output = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        output[i] = (double *)malloc(sizeof(double) * 3); 
-        output[i][0] = vector[i][0] - tmp_vector[i][0];
-        output[i][1] = vector[i][1] - tmp_vector[i][1];
-        output[i][2] = vector[i][2] - tmp_vector[i][2];
+        output[i * 3 + 0] = vector[i * 3 + 0] - tmp_vector[i * 3 + 0];
+        output[i * 3 + 1] = vector[i * 3 + 1] - tmp_vector[i * 3 + 1];
+        output[i * 3 + 2] = vector[i * 3 + 2] - tmp_vector[i * 3 + 2];
     } 
-    for (i = 0; i < n; ++i) {
-        free(tmp_vector[i]);
-    }
     free(tmp_vector);
     return output;
 }
 
 
-void rotate_vector(double **vec0i, double **vec0j,
-                   double ***vec1i, double ***vec1j,
+void rotate_vector(double *vec0i, double *vec0j,
+                   double **vec1i, double **vec1j,
                    int n, double angle)
 {
     int i;
     double cAng = cos(angle);
     double sAng = sin(angle);
-    double **tmp_vec1i = (double **)malloc(sizeof(double *) * n);
-    double **tmp_vec1j = (double **)malloc(sizeof(double *) * n);
+    double *tmp_vec1i = (double *)malloc(sizeof(double) * n * 3);
+    double *tmp_vec1j = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        tmp_vec1i[i] = (double *)malloc(sizeof(double) * 3);
-        tmp_vec1i[i][0] = vec0i[i][0] * cAng + vec0j[i][0] * sAng;
-        tmp_vec1i[i][1] = vec0i[i][1] * cAng + vec0j[i][1] * sAng;
-        tmp_vec1i[i][2] = vec0i[i][2] * cAng + vec0j[i][2] * sAng;
-        tmp_vec1j[i] = (double *)malloc(sizeof(double) * 3);
-        tmp_vec1j[i][0] = vec0j[i][0] * cAng - vec0i[i][0] * sAng;
-        tmp_vec1j[i][1] = vec0j[i][1] * cAng - vec0i[i][1] * sAng;
-        tmp_vec1j[i][2] = vec0j[i][2] * cAng - vec0i[i][2] * sAng;
+        tmp_vec1i[i * 3 + 0] = vec0i[i * 3 + 0] * cAng + vec0j[i * 3 + 0] * sAng;
+        tmp_vec1i[i * 3 + 1] = vec0i[i * 3 + 1] * cAng + vec0j[i * 3 + 1] * sAng;
+        tmp_vec1i[i * 3 + 2] = vec0i[i * 3 + 2] * cAng + vec0j[i * 3 + 2] * sAng;
+        tmp_vec1j[i * 3 + 0] = vec0j[i * 3 + 0] * cAng - vec0i[i * 3 + 0] * sAng;
+        tmp_vec1j[i * 3 + 1] = vec0j[i * 3 + 1] * cAng - vec0i[i * 3 + 1] * sAng;
+        tmp_vec1j[i * 3 + 2] = vec0j[i * 3 + 2] * cAng - vec0i[i * 3 + 2] * sAng;
     }
     double magnitude1 = norm(vec0i, n);
     double magnitude2 = norm(vec0j, n);
     *vec1i = normalize(tmp_vec1i, n);
     *vec1j = normalize(tmp_vec1j, n);
     for (i = 0; i < n; ++i) {
-        (*vec1i)[i][0] *= magnitude1;
-        (*vec1i)[i][1] *= magnitude1;
-        (*vec1i)[i][2] *= magnitude1;
-        free(tmp_vec1i[i]);
-        (*vec1j)[i][0] *= magnitude2;
-        (*vec1j)[i][1] *= magnitude2;
-        (*vec1j)[i][2] *= magnitude2;
-        free(tmp_vec1j[i]);
+        (*vec1i)[i * 3 + 0] *= magnitude1;
+        (*vec1i)[i * 3 + 1] *= magnitude1;
+        (*vec1i)[i * 3 + 2] *= magnitude1;
+        (*vec1j)[i * 3 + 0] *= magnitude2;
+        (*vec1j)[i * 3 + 1] *= magnitude2;
+        (*vec1j)[i * 3 + 2] *= magnitude2;
     }
     free(tmp_vec1i);
     free(tmp_vec1j);
 }
 
 
-double **projected_force(double **force0, double **eigenmode,
-                         double curvature, int n)
+double *projected_force(double *force0, double *eigenmode,
+                        double curvature, int n)
 {
     int i;
-    double **parallel_force = parallel_vector(force0, eigenmode, n);
-    double **output = (double **)malloc(sizeof(double *) * n);
+    double *parallel_force = parallel_vector(force0, eigenmode, n);
+    double *output = (double *)malloc(sizeof(double) * n * 3);
     if (curvature > 0) {
         for (i = 0; i < n; ++i) {
-            output[i] = (double *)malloc(sizeof(double) * 3);
-            output[i][0] = -parallel_force[i][0];
-            output[i][1] = -parallel_force[i][1];
-            output[i][2] = -parallel_force[i][2];
-            free(parallel_force[i]);
+            output[i * 3 + 0] = -parallel_force[i * 3 + 0];
+            output[i * 3 + 1] = -parallel_force[i * 3 + 1];
+            output[i * 3 + 2] = -parallel_force[i * 3 + 2];
         }
     } else {
         for (i = 0; i < n; ++i) {
-            output[i] = (double *)malloc(sizeof(double) * 3);
-            output[i][0] = force0[i][0] - 2 * parallel_force[i][0];
-            output[i][1] = force0[i][1] - 2 * parallel_force[i][1];
-            output[i][2] = force0[i][2] - 2 * parallel_force[i][2];
-            free(parallel_force[i]);
+            output[i * 3 + 0] = force0[i * 3 + 0] - 2 * parallel_force[i * 3 + 0];
+            output[i * 3 + 1] = force0[i * 3 + 1] - 2 * parallel_force[i * 3 + 1];
+            output[i * 3 + 2] = force0[i * 3 + 2] - 2 * parallel_force[i * 3 + 2];
         }
     }
     free(parallel_force);
@@ -202,42 +188,39 @@ void cut_sphere(Config *config, Input *input, double *center)
 }
 
 
-double **displace(Input *input, int n)
+double *displace(Input *input, int n)
 {
     int i, j;
-    double **disp = (double **)malloc(sizeof(double *) * n);
+    double *disp = (double *)malloc(sizeof(double) * n * 3);
     if (input->init_mode > 0) {
         // TODO: MODECAR
     } else {
         // TODO: orthogonalization
         for (i = 0; i < n; ++i) {
-            disp[i] = (double *)malloc(sizeof(double) * 3);
-            disp[i][0] = normal_random(0, input->stddev); 
-            disp[i][1] = normal_random(0, input->stddev); 
-            disp[i][2] = normal_random(0, input->stddev); 
+            disp[i * 3 + 0] = normal_random(0, input->stddev); 
+            disp[i * 3 + 1] = normal_random(0, input->stddev); 
+            disp[i * 3 + 2] = normal_random(0, input->stddev); 
         }
     }
     return disp;
 }
 
 
-double **get_rot_force(Input *input, double **force1, double **force2,
-                       double **eigenmode, int disp_num)
+double *get_rot_force(Input *input, double *force1, double *force2,
+                      double *eigenmode, int disp_num)
 {
     int i;
-    double **dforce = (double **)malloc(sizeof(double *) * disp_num);
+    double *dforce = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
-        dforce[i] = (double *)malloc(sizeof(double) * 3);
-        dforce[i][0] = force1[i][0] - force2[i][0];
-        dforce[i][1] = force1[i][1] - force2[i][1];
-        dforce[i][2] = force1[i][2] - force2[i][2];
+        dforce[i * 3 + 0] = force1[i * 3 + 0] - force2[i * 3 + 0];
+        dforce[i * 3 + 1] = force1[i * 3 + 1] - force2[i * 3 + 1];
+        dforce[i * 3 + 2] = force1[i * 3 + 2] - force2[i * 3 + 2];
     }
-    double **rot_force = perpendicular_vector(dforce, eigenmode, disp_num);
+    double *rot_force = perpendicular_vector(dforce, eigenmode, disp_num);
     for (i = 0; i < disp_num; ++i) {
-        rot_force[i][0] /= 2 * input->dimer_dist;
-        rot_force[i][1] /= 2 * input->dimer_dist;
-        rot_force[i][2] /= 2 * input->dimer_dist;
-        free(dforce[i]);
+        rot_force[i * 3 + 0] /= 2 * input->dimer_dist;
+        rot_force[i * 3 + 1] /= 2 * input->dimer_dist;
+        rot_force[i * 3 + 2] /= 2 * input->dimer_dist;
     }
     free(dforce);
     return rot_force;
@@ -245,89 +228,79 @@ double **get_rot_force(Input *input, double **force1, double **force2,
 
 
 void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
-            double **eigenmode)
+            double *eigenmode)
 {
     int i;
     double magnitude;
     double energy0, energy1, energy2;
-    double **force0 = (double **)malloc(sizeof(double *) * disp_num);
-    double **force1 = (double **)malloc(sizeof(double *) * disp_num);
-    double **force2 = (double **)malloc(sizeof(double *) * disp_num);
-    for (i = 0; i < disp_num; ++i) {
-        force0[i] = (double *)malloc(sizeof(double) * 3);
-        force1[i] = (double *)malloc(sizeof(double) * 3);
-        force2[i] = (double *)malloc(sizeof(double) * 3);
-    }
+    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot(config0, input, &energy0, &force0, disp_num, disp_list); 
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
         for (i = 0; i < disp_num; ++i) {
             config1->pos[disp_list[i] * 3 + 0] += input->dimer_dist
-                                                * eigenmode[i][0];
+                                                * eigenmode[i * 3 + 0];
             config1->pos[disp_list[i] * 3 + 1] += input->dimer_dist 
-                                                * eigenmode[i][1];
+                                                * eigenmode[i * 3 + 1];
             config1->pos[disp_list[i] * 3 + 2] += input->dimer_dist 
-                                                * eigenmode[i][2];
+                                                * eigenmode[i * 3 + 2];
         }
         oneshot(config1, input, &energy1, &force1, disp_num, disp_list);
         free_config(config1);
         for (i = 0; i < disp_num; ++i) {
-            force2[i][0] = 2 * force0[i][0] - force1[i][0];
-            force2[i][1] = 2 * force0[i][1] - force1[i][1];
-            force2[i][2] = 2 * force0[i][2] - force1[i][2];
+            force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
+            force2[i * 3 + 1] = 2 * force0[i * 3 + 1] - force1[i * 3 + 1];
+            force2[i * 3 + 2] = 2 * force0[i * 3 + 2] - force1[i * 3 + 2];
         }
-        double **f_rot_A = get_rot_force(input, force1, force2,
-                                         eigenmode, disp_num);
+        double *f_rot_A = get_rot_force(input, force1, force2,
+                                        eigenmode, disp_num);
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
-            for (i = 0; i < disp_num; ++i) {
-                free(f_rot_A[i]);
-            }
             free(f_rot_A);
             break;
         }
-        double **n_A = (double **)malloc(sizeof(double *) * disp_num);
-        double **rot_unit_A = normalize(f_rot_A, disp_num);
+        double *rot_unit_A = normalize(f_rot_A, disp_num);
         /* curvature */
-        double **dforce = (double **)malloc(sizeof(double *) * disp_num);
+        double *dforce = (double *)malloc(sizeof(double) * disp_num * 3);
+        double *n_A = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
-            n_A[i] = (double *)malloc(sizeof(double) * 3);
-            n_A[i][0] = eigenmode[i][0];
-            n_A[i][1] = eigenmode[i][1];
-            n_A[i][2] = eigenmode[i][2];
-            dforce[i] = (double *)malloc(sizeof(double) * 3);
-            dforce[i][0] = force2[i][0] - force1[i][0];
-            dforce[i][1] = force2[i][1] - force1[i][1];
-            dforce[i][2] = force2[i][2] - force1[i][2];
+            n_A[i * 3 + 0] = eigenmode[i * 3 + 0];
+            n_A[i * 3 + 1] = eigenmode[i * 3 + 1];
+            n_A[i * 3 + 2] = eigenmode[i * 3 + 2];
+            dforce[i * 3 + 0] = force2[i * 3 + 0] - force1[i * 3 + 0];
+            dforce[i * 3 + 1] = force2[i * 3 + 1] - force1[i * 3 + 1];
+            dforce[i * 3 + 2] = force2[i * 3 + 2] - force1[i * 3 + 2];
         }
         magnitude = dot(dforce, eigenmode, disp_num);
         double c0 = magnitude / (2.0 * input->dimer_dist);
         magnitude = dot(dforce, rot_unit_A, disp_num);
         double c0d = magnitude / input->dimer_dist;
         /* trial rotation */
-        double **n_B, **rot_unit_B;
+        double *n_B, *rot_unit_B;
         rotate_vector(n_A, rot_unit_A, &n_B, &rot_unit_B,
                       disp_num, input->trial_angle); 
         Config *trial_config1 = (Config *)malloc(sizeof(Config));
         copy_config(trial_config1, config0);
         for (i = 0; i < disp_num; ++i) {
-            trial_config1->pos[disp_list[i] * 3 + 0] += n_B[i][0]
+            trial_config1->pos[disp_list[i] * 3 + 0] += n_B[i * 3 + 0]
                                                       * input->dimer_dist;
-            trial_config1->pos[disp_list[i] * 3 + 1] += n_B[i][1]
+            trial_config1->pos[disp_list[i] * 3 + 1] += n_B[i * 3 + 1]
                                                       * input->dimer_dist;
-            trial_config1->pos[disp_list[i] * 3 + 2] += n_B[i][2]
+            trial_config1->pos[disp_list[i] * 3 + 2] += n_B[i * 3 + 2]
                                                       * input->dimer_dist;
         } 
         /* derivative of curvature */
         oneshot(trial_config1, input, &energy1, &force1, disp_num, disp_list);
         free_config(trial_config1);
         for (i = 0; i < disp_num; ++i) {
-            force2[i][0] = 2 * force0[i][0] - force1[i][0];
-            force2[i][1] = 2 * force0[i][1] - force1[i][1];
-            force2[i][2] = 2 * force0[i][2] - force1[i][2];
-            dforce[i][0] = force2[i][0] - force1[i][0];
-            dforce[i][1] = force2[i][1] - force1[i][1];
-            dforce[i][2] = force2[i][2] - force1[i][2];
+            force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
+            force2[i * 3 + 1] = 2 * force0[i * 3 + 1] - force1[i * 3 + 1];
+            force2[i * 3 + 2] = 2 * force0[i * 3 + 2] - force1[i * 3 + 2];
+            dforce[i * 3 + 0] = force2[i * 3 + 0] - force1[i * 3 + 0];
+            dforce[i * 3 + 1] = force2[i * 3 + 1] - force1[i * 3 + 1];
+            dforce[i * 3 + 2] = force2[i * 3 + 2] - force1[i * 3 + 2];
         }
         magnitude = dot(dforce, rot_unit_B, disp_num);
         double c1d = magnitude / input->dimer_dist;
@@ -342,20 +315,13 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         if (c0 < cmin) {
             rotangle += 3.1415926535897932384626 * 0.5;
         }
-        double **new_eigenmode, **tmp_force;
+        double *new_eigenmode, *tmp_force;
         rotate_vector(n_A, rot_unit_A, &new_eigenmode, &tmp_force,
                       disp_num, rotangle);
         for (i = 0; i < disp_num; ++i) {
-            eigenmode[i][0] = new_eigenmode[i][0];
-            eigenmode[i][1] = new_eigenmode[i][1];
-            eigenmode[i][2] = new_eigenmode[i][2];
-            free(n_A[i]);
-            free(n_B[i]);
-            free(dforce[i]);
-            free(rot_unit_A[i]);
-            free(rot_unit_B[i]);
-            free(new_eigenmode[i]);
-            free(tmp_force[i]);
+            eigenmode[i * 3 + 0] = new_eigenmode[i * 3 + 0];
+            eigenmode[i * 3 + 1] = new_eigenmode[i * 3 + 1];
+            eigenmode[i * 3 + 2] = new_eigenmode[i * 3 + 2];
         }
         free(n_A);
         free(n_B);
@@ -365,21 +331,10 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(new_eigenmode);
         free(tmp_force);
         if (norm(f_rot_A, disp_num) < input->f_rot_max) {
-            for (i = 0; i < disp_num; ++i) {
-                free(f_rot_A[i]);
-            }
             free(f_rot_A);
             break;
         }
-        for (i = 0; i < disp_num; ++i) {
-            free(f_rot_A[i]);
-        }
         free(f_rot_A);
-    }
-    for (i = 0; i < disp_num; ++i) {
-        free(force0[i]);
-        free(force1[i]);
-        free(force2[i]);
     }
     free(force0);
     free(force1);
@@ -387,21 +342,24 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
-void get_cg_direction(double **direction, double ***direction_old,
-                      double ***cg_direction, int n)
+void get_cg_direction(double *direction, double **direction_old,
+                      double **cg_direction, int n)
 {
     int i;
     double old_norm = norm(*direction_old, n);
     double betaPR;
     if (fabs(old_norm) < 1e-15) {
-        double **ddirection = (double **)malloc(sizeof(double *) * n);
+        double *ddirection = (double *)malloc(sizeof(double) * n * 3);
         for (i = 0; i < n; ++i) {
-            ddirection[i] = (double *)malloc(sizeof(double) * 3);
-            ddirection[i][0] = direction[i][0] - (*direction_old)[i][0];
-            ddirection[i][1] = direction[i][1] - (*direction_old)[i][1];
-            ddirection[i][2] = direction[i][2] - (*direction_old)[i][2];
+            ddirection[i * 3 + 0] = direction[i * 3 + 0]
+                                  - (*direction_old)[i * 3 + 0];
+            ddirection[i * 3 + 1] = direction[i * 3 + 1] 
+                                  - (*direction_old)[i * 3 + 1];
+            ddirection[i * 3 + 2] = direction[i * 3 + 2] 
+                                  - (*direction_old)[i * 3 + 2];
         }
         betaPR = dot(direction, ddirection, n) / old_norm; 
+        free(ddirection);
     } else {
         betaPR = 0.0;
     }
@@ -409,139 +367,120 @@ void get_cg_direction(double **direction, double ***direction_old,
         betaPR = 0.0;
     }
     for (i = 0; i < n; ++i) {
-        (*cg_direction)[i][0] = direction[i][0] + (*cg_direction)[i][0] * betaPR;
-        (*cg_direction)[i][1] = direction[i][1] + (*cg_direction)[i][1] * betaPR;
-        (*cg_direction)[i][2] = direction[i][2] + (*cg_direction)[i][2] * betaPR;
-        (*direction_old)[i][0] = direction[i][0];
-        (*direction_old)[i][1] = direction[i][1];
-        (*direction_old)[i][2] = direction[i][2];
+        (*cg_direction)[i * 3 + 0] = direction[i * 3 + 0]
+                                   + (*cg_direction)[i * 3 + 0] * betaPR;
+        (*cg_direction)[i * 3 + 1] = direction[i * 3 + 1] 
+                                   + (*cg_direction)[i * 3 + 1] * betaPR;
+        (*cg_direction)[i * 3 + 2] = direction[i * 3 + 2] 
+                                   + (*cg_direction)[i * 3 + 2] * betaPR;
+        (*direction_old)[i * 3 + 0] = direction[i * 3 + 0];
+        (*direction_old)[i * 3 + 1] = direction[i * 3 + 1];
+        (*direction_old)[i * 3 + 2] = direction[i * 3 + 2];
     }
 }
 
 
 void translate(Config *config0, Input *input, int disp_num, int *disp_list,
-               double **eigenmode, double **direction_old, double **cg_direction)
+               double *eigenmode, double *direction_old, double *cg_direction)
 {
     int i;
     double magnitude;
     double energy0, energy1, energy2;
-    double **force0 = (double **)malloc(sizeof(double *) * disp_num);
-    double **force1 = (double **)malloc(sizeof(double *) * disp_num);
-    double **force2 = (double **)malloc(sizeof(double *) * disp_num);
-    for (i = 0; i < disp_num; ++i) {
-        force0[i] = (double *)malloc(sizeof(double) * 3);
-        force1[i] = (double *)malloc(sizeof(double) * 3);
-        force2[i] = (double *)malloc(sizeof(double) * 3);
-    }
+    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot(config0, input, &energy0, &force0, disp_num, disp_list); 
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
         config1->pos[disp_list[i] * 3 + 0] += input->dimer_dist
-                                            * eigenmode[i][0];
+                                            * eigenmode[i * 3 + 0];
         config1->pos[disp_list[i] * 3 + 1] += input->dimer_dist 
-                                            * eigenmode[i][1];
+                                            * eigenmode[i * 3 + 1];
         config1->pos[disp_list[i] * 3 + 2] += input->dimer_dist 
-                                            * eigenmode[i][2];
+                                            * eigenmode[i * 3 + 2];
     }
     /* curvature */
     oneshot(config1, input, &energy1, &force1, disp_num, disp_list);
     free_config(config1);
     for (i = 0; i < disp_num; ++i) {
-        force2[i][0] = 2 * force0[i][0] - force1[i][0];
-        force2[i][1] = 2 * force0[i][1] - force1[i][1];
-        force2[i][2] = 2 * force0[i][2] - force1[i][2];
+        force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
+        force2[i * 3 + 1] = 2 * force0[i * 3 + 1] - force1[i * 3 + 1];
+        force2[i * 3 + 2] = 2 * force0[i * 3 + 2] - force1[i * 3 + 2];
     }
-    double **dforce = (double **)malloc(sizeof(double *) * disp_num);
+    double *dforce = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
-        dforce[i] = (double *)malloc(sizeof(double) * 3);
-        dforce[i][0] = force2[i][0] - force1[i][0];
-        dforce[i][1] = force2[i][1] - force1[i][1];
-        dforce[i][2] = force2[i][2] - force1[i][2];
+        dforce[i * 3 + 0] = force2[i * 3 + 0] - force1[i * 3 + 0];
+        dforce[i * 3 + 1] = force2[i * 3 + 1] - force1[i * 3 + 1];
+        dforce[i * 3 + 2] = force2[i * 3 + 2] - force1[i * 3 + 2];
     }
     magnitude = dot(dforce, eigenmode, disp_num);
     double curvature = magnitude / (2.0 * input->dimer_dist);
     /* projected force */
-    double **f0p = projected_force(force0, eigenmode, curvature, disp_num);
+    double *f0p = projected_force(force0, eigenmode, curvature, disp_num);
     /* cg_direction */
     get_cg_direction(f0p, &direction_old, &cg_direction, disp_num);
-    double **direction = normalize(cg_direction, disp_num);
+    double *direction = normalize(cg_direction, disp_num);
     /* step */
-    double **step = (double **)malloc(sizeof(double *) * disp_num);
+    double *step = (double *)malloc(sizeof(double) * disp_num * 3);
     if (curvature > 0) {
         for (i = 0; i < disp_num; ++i) {
-            step[i] = (double *)malloc(sizeof(double) * 3);
-            step[i][0] = direction[i][0] * input->max_step;
-            step[i][1] = direction[i][1] * input->max_step;
-            step[i][2] = direction[i][2] * input->max_step;
+            step[i * 3 + 0] = direction[i * 3 + 0] * input->max_step;
+            step[i * 3 + 1] = direction[i * 3 + 1] * input->max_step;
+            step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
         } 
     } else {
         Config *trial_config0 = (Config *)malloc(sizeof(Config));
         copy_config(trial_config0, config0);
         for (i = 0; i < disp_num; ++i) {
-            trial_config0->pos[disp_list[i] * 3 + 0] += direction[i][0]
+            trial_config0->pos[disp_list[i] * 3 + 0] += direction[i * 3 + 0]
                                                       * input->trial_step;
-            trial_config0->pos[disp_list[i] * 3 + 1] += direction[i][1]
+            trial_config0->pos[disp_list[i] * 3 + 1] += direction[i * 3 + 1]
                                                       * input->trial_step;
-            trial_config0->pos[disp_list[i] * 3 + 2] += direction[i][2]
+            trial_config0->pos[disp_list[i] * 3 + 2] += direction[i * 3 + 2]
                                                       * input->trial_step;
         }
         double trial_energy0;
-        double **trial_force0 = (double **)malloc(sizeof(double *) * disp_num);
-        double **tmp_force = (double **)malloc(sizeof(double *) * disp_num);
-        for (i = 0; i < disp_num; ++i) {
-            trial_force0[i] = (double *)malloc(sizeof(double) * 3);
-            tmp_force[i] = (double *)malloc(sizeof(double) * 3);
-        }
+        double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+        double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
         oneshot(trial_config0, input, &trial_energy0, &trial_force0,
                 disp_num, disp_list); 
-        double **f0tp = projected_force(trial_force0, eigenmode,
-                                        curvature, disp_num);
+        double *f0tp = projected_force(trial_force0, eigenmode,
+                                       curvature, disp_num);
         for (i = 0; i < disp_num; ++i) {
-            tmp_force[i][0] = f0tp[i][0] + f0p[i][0];
-            tmp_force[i][1] = f0tp[i][1] + f0p[i][1];
-            tmp_force[i][2] = f0tp[i][2] + f0p[i][2];
+            tmp_force[i * 3 + 0] = f0tp[i * 3 + 0] + f0p[i * 3 + 0];
+            tmp_force[i * 3 + 1] = f0tp[i * 3 + 1] + f0p[i * 3 + 1];
+            tmp_force[i * 3 + 2] = f0tp[i * 3 + 2] + f0p[i * 3 + 2];
         }
         double F = dot(tmp_force, direction, disp_num) / 2.0;
         for (i = 0; i < disp_num; ++i) {
-            tmp_force[i][0] = f0tp[i][0] - f0p[i][0];
-            tmp_force[i][1] = f0tp[i][1] - f0p[i][1];
-            tmp_force[i][2] = f0tp[i][2] - f0p[i][2];
+            tmp_force[i * 3 + 0] = f0tp[i * 3 + 0] - f0p[i * 3 + 0];
+            tmp_force[i * 3 + 1] = f0tp[i * 3 + 1] - f0p[i * 3 + 1];
+            tmp_force[i * 3 + 2] = f0tp[i * 3 + 2] - f0p[i * 3 + 2];
         }
         double C = dot(tmp_force, direction, disp_num) / input->trial_step;
         double coeff = -F / C + input->trial_step * 0.5;
         for (i = 0; i < disp_num; ++i) {
-            step[i] = (double *)malloc(sizeof(double) * 3);
-            step[i][0] = coeff * direction[i][0];
-            step[i][1] = coeff * direction[i][1];
-            step[i][2] = coeff * direction[i][2];
-            free(trial_force0[i]);
-            free(tmp_force[i]);
-            free(f0tp[i]);
+            step[i * 3 + 0] = coeff * direction[i * 3 + 0];
+            step[i * 3 + 1] = coeff * direction[i * 3 + 1];
+            step[i * 3 + 2] = coeff * direction[i * 3 + 2];
         }
         free(trial_force0);
         free(tmp_force);
-        free(f0tp[i]);
+        free(f0tp);
         free_config(trial_config0);
         if (norm(step, disp_num) > input->max_step) {
             for (i = 0; i < disp_num; ++i) {
-                step[i][0] = direction[i][0] * input->max_step;
-                step[i][1] = direction[i][1] * input->max_step;
-                step[i][2] = direction[i][2] * input->max_step;
+                step[i * 3 + 0] = direction[i * 3 + 0] * input->max_step;
+                step[i * 3 + 1] = direction[i * 3 + 1] * input->max_step;
+                step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
             }
         }
     }
     for (i = 0; i < disp_num; ++i) {
-        config0->pos[disp_list[i] * 3 + 0] += step[i][0];
-        config0->pos[disp_list[i] * 3 + 1] += step[i][1];
-        config0->pos[disp_list[i] * 3 + 2] += step[i][2];
-        free(dforce[i]);
-        free(force0[i]);
-        free(force1[i]);
-        free(force2[i]);
-        free(f0p[i]);
-        free(direction[i]);
-        free(step[i]);
+        config0->pos[disp_list[i] * 3 + 0] += step[i * 3 + 0];
+        config0->pos[disp_list[i] * 3 + 1] += step[i * 3 + 1];
+        config0->pos[disp_list[i] * 3 + 2] += step[i * 3 + 2];
     } 
     free(dforce);
     free(force0);
@@ -580,28 +519,24 @@ void dimer(Config *config0, Input *input, int ii)
         }
     }
 
-    double **disp = displace(input, disp_num);
+    double *disp = displace(input, disp_num);
     for (i = 0; i < disp_num; ++i) {
-        config0->pos[disp_list[i] * 3 + 0] += disp[i][0]; 
-        config0->pos[disp_list[i] * 3 + 1] += disp[i][1]; 
-        config0->pos[disp_list[i] * 3 + 2] += disp[i][2]; 
+        config0->pos[disp_list[i] * 3 + 0] += disp[i * 3 + 0]; 
+        config0->pos[disp_list[i] * 3 + 1] += disp[i * 3 + 1]; 
+        config0->pos[disp_list[i] * 3 + 2] += disp[i * 3 + 2]; 
     }
-    double **eigenmode = normalize(disp, disp_num);
-
+    double *eigenmode = normalize(disp, disp_num);
+    double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+    for (i = 0; i < disp_num; ++i) {
+        direction_old[i * 3 + 0] = eigenmode[i * 3 + 0];
+        direction_old[i * 3 + 1] = eigenmode[i * 3 + 1];
+        direction_old[i * 3 + 2] = eigenmode[i * 3 + 2];
+        cg_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
+        cg_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
+        cg_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+    }
     double fmax = 0.0001;
-    /* TODO: direction old */
-    double **direction_old = (double **)malloc(sizeof(double *) * disp_num);
-    double **cg_direction = (double **)malloc(sizeof(double *) * disp_num);
-    for (i = 0; i < disp_num; ++i) {
-        direction_old[i] = (double *)malloc(sizeof(double) * 3);
-        direction_old[i][0] = eigenmode[i][0];
-        direction_old[i][1] = eigenmode[i][1];
-        direction_old[i][2] = eigenmode[i][2];
-        cg_direction[i] = (double *)malloc(sizeof(double) * 3);
-        cg_direction[i][0] = eigenmode[i][0];
-        cg_direction[i][1] = eigenmode[i][1];
-        cg_direction[i][2] = eigenmode[i][2];
-    }
     do {
         rotate(config0, input, disp_num, disp_list, eigenmode);
         translate(config0, input, disp_num, disp_list, eigenmode,
@@ -609,12 +544,6 @@ void dimer(Config *config0, Input *input, int ii)
         /* test */
     } while (fmax > input->f_rot_min);
 
-    for (i = 0; i < disp_num; ++i) {
-        free(disp[i]);
-        free(eigenmode[i]);
-        free(direction_old[i]);
-        free(cg_direction[i]);
-    }
     free(disp);
     free(eigenmode);
     free(direction_old);

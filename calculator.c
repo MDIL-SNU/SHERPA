@@ -42,15 +42,15 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv)
 }
 
 
-void oneshot(Config *config, Input *input, double *energy, double ***force,
+void oneshot(Config *config, Input *input, double *energy, double **force,
              int disp_num, int *disp_list)
 {
     int i;
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
-    //char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    char *lmpargv[] = {"liblammps", "-screen", "none"};
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    //char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
     lmp = lmp_init(config, input, lmpargc, lmpargv);
     /* potential */
@@ -63,13 +63,15 @@ void oneshot(Config *config, Input *input, double *energy, double ***force,
     /* oneshot */
     lammps_command(lmp, "run 0");
     *energy = lammps_get_thermo(lmp, "pe");
-    double **tmp_force = (double **)lammps_extract_atom(lmp, "f");
-    for (i = 0;  i < disp_num; ++i) {
-        (*force)[i][0] = tmp_force[disp_list[i]][0];
-        (*force)[i][1] = tmp_force[disp_list[i]][1];
-        (*force)[i][2] = tmp_force[disp_list[i]][2];
+    double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
+    lammps_gather_atoms(lmp, "f", 2, 3, tmp_force);
+    for (i = 0; i < disp_num; ++i) {
+        (*force)[i * 3 + 0] = tmp_force[disp_list[i] * 3 + 0];
+        (*force)[i * 3 + 1] = tmp_force[disp_list[i] * 3 + 1];
+        (*force)[i * 3 + 2] = tmp_force[disp_list[i] * 3 + 2];
     }
     /* delete LAMMPS instance */
+    free(tmp_force);
     lammps_close(lmp);
 }
 
