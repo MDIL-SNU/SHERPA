@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "calculator.h"
 #include "config.h"
 #include "dimer.h"
@@ -19,6 +20,20 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* make directory */
+    if (rank == 0) {
+        errno = mkdir("./output", 0775);
+    }
+    MPI_Bcast(&errno, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (errno != 0) {
+        if (rank == 0) {
+            printf("'output' directory exists!\n");
+            printf("We will not overwrite your data.\n");
+        }
+        MPI_Finalize();
+        return 1;
+    }
 
     /* read input */
     Input *input = (Input *)malloc(sizeof(Input));
@@ -46,7 +61,7 @@ int main(int argc, char *argv[])
     errno = gen_target(config, input, &target_list, &target_num);
 
     // TODO: fix atom
-    atom_relax(config, input);
+    double E_i = atom_relax(config, input);
 
     /* main loop */
     //for (i = 0; i < target_num; ++i) {
@@ -54,7 +69,25 @@ int main(int argc, char *argv[])
         ii = target_list[i];
         Config *tmp_config = (Config *)malloc(sizeof(Config));
         copy_config(tmp_config, config);
-        dimer(tmp_config, input, ii);
+        if (rank == 0) {
+            char line[128], filename[128];
+            sprintf(filename, "output/Dimer_%d.log", i);
+            FILE *fp = fopen(filename, "a");
+            sprintf(line, " Opt step   Rot step   Curvature   Rot angle   Rot force\n");
+            fputs(line, fp); 
+            fclose(fp);
+        }
+        double E_t = dimer(tmp_config, input, i, ii);
+        if (rank == 0) {
+            char line[128], filename[128];
+            sprintf(filename, "output/Dimer_%d.log", i);
+            FILE *fp = fopen(filename, "a");
+            sprintf(line, "--------------------------------------------------------\n");
+            fputs(line, fp); 
+            sprintf(line, " Barrier energy: %f eV\n", E_t - E_i);
+            fputs(line, fp);
+            fclose(fp);
+        }
         free_config(tmp_config);
     }
     free(target_list);

@@ -7,10 +7,10 @@ CUTOFF      = 6.0
 
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
-TARGET      = ./TARGET
+TARGET_LIST = ./TARGET
 DIMER_DIST  = 0.001
-FTOL        = 0.01
-F_ROT_MIN   = 0.1
+F_TOL       = 0.01
+F_ROT_MIN   = 0.01
 F_ROT_MAX   = 1.0
 MAX_NUM_ROT = 1
 TRIAL_ANGLE = 45

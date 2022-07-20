@@ -11,12 +11,12 @@ typedef struct _Input
     char *pair_style;
     char *pair_coeff;
     char *init_config;
-    char *target;
+    char *target_list;
     char **atom_type;
 
     double cutoff;
     double dimer_dist;
-    double ftol;
+    double f_tol;
     double f_rot_min;
     double f_rot_max;
     double trial_angle;

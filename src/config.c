@@ -286,7 +286,7 @@ void write_config(Config *config, char *filename)
 {
     int i;
     char line[MAXLINE];
-    FILE *fp = fopen(filename, "w");
+    FILE *fp = fopen(filename, "a");
 
     /* title */
     fputs("POSCAR\n", fp);

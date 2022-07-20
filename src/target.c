@@ -8,7 +8,7 @@ int gen_target(Config *config, Input *input, int **target_list, int *target_num)
 {
     int i;
     FILE *fp;
-    fp = fopen(input->target, "r");
+    fp = fopen(input->target_list, "r");
     if (fp == NULL) {
         return 1;
     }

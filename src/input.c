@@ -161,7 +161,7 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_char(&(input->target), "TARGET", filename);
+    errno = input_char(&(input->target_list), "TARGET_LIST", filename);
     if (errno) {
         return 1;
     }
@@ -169,7 +169,7 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->ftol), "FTOL", filename);
+    errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
         return 1;
     }
@@ -219,6 +219,6 @@ void free_input(Input *input)
     free(input->pair_style);
     free(input->pair_coeff);
     free(input->init_config);
-    free(input->target);
+    free(input->target_list);
     free(input);
 }

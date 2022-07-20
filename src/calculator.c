@@ -93,7 +93,7 @@ double atom_relax(Config *config, Input *input)
     /* balance */
     lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
     /* minimize */
-    sprintf(cmd, "minimize 0 %f 10000 100000", input->ftol);
+    sprintf(cmd, "minimize 0 %f 10000 100000", input->f_tol);
     lammps_command(lmp, cmd);
     double pe = lammps_get_thermo(lmp, "pe");
     /* update positions */
