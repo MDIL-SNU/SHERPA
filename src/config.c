@@ -161,6 +161,7 @@ void extract_atom(Config *config, int idx)
     }
 
     for (i = idx; i < config->tot_num - 1; ++i) {
+        config->fix[i] = config->fix[i + 1];
         config->type[i] = config->type[i + 1];
         config->pos[i * 3 + 0] = config->pos[(i + 1) * 3 + 0];
         config->pos[i * 3 + 1] = config->pos[(i + 1) * 3 + 1];
@@ -169,6 +170,7 @@ void extract_atom(Config *config, int idx)
     config->tot_num--;
     tot_num = config->tot_num;
     config->id = (int *)realloc(config->id, sizeof(int) * tot_num);
+    config->fix = (int *)realloc(config->fix, sizeof(int) * tot_num);
     config->type = (int *)realloc(config->type, sizeof(int) * tot_num);
     config->pos = (double *)realloc(config->pos, sizeof(double) * tot_num * 3);
 }
@@ -252,8 +254,11 @@ int read_config(Config *config, Input *input, char *filename)
 
     /* positions and constraint */
     ptr = fgets(line, MAXLINE, fp);
+    config->fix = (int *)calloc(config->tot_num, sizeof(int));
     config->pos = (double *)malloc(sizeof(double) * config->tot_num * 3);
+    int constraint = 0;
     if (strncasecmp(line, "S", 1) == 0) {
+        constraint = 1;
         ptr = fgets(line, MAXLINE, fp);
     }
     if (strncasecmp(line, "D", 1) == 0) {
@@ -267,6 +272,12 @@ int read_config(Config *config, Input *input, char *filename)
                                        + tmp_pos[1] * config->cell[1][j]
                                        + tmp_pos[2] * config->cell[2][j];
             }
+            if (constraint > 0) {
+                ptr = strtok(NULL, " \n");
+                if (strcmp(ptr, "F") == 0) {
+                    config->fix[i] = 1;
+                }
+            }
         }
     } else {
         for (i = 0; i < config->tot_num; ++i) {
@@ -274,6 +285,12 @@ int read_config(Config *config, Input *input, char *filename)
             config->pos[i * 3 + 0] = atof(strtok(line, " \n"));
             config->pos[i * 3 + 1] = atof(strtok(NULL, " \n"));
             config->pos[i * 3 + 2] = atof(strtok(NULL, " \n"));
+            if (constraint > 0) {
+                ptr = strtok(NULL, " \n");
+                if (strcmp(ptr, "F") == 0) {
+                    config->fix[i] = 1;
+                }
+            }
         }
     }
     convert_basis(config);
@@ -319,14 +336,26 @@ void write_config(Config *config, char *filename)
     fputs("\n", fp);
 
     /* positions and constraint */
+    fputs("Selective dynamics\n", fp);
     fputs("Cartesian\n", fp);
     for (i = 0; i < config->tot_num; ++i) {
-        sprintf(line, "  %19.16f", config->pos[i * 3 + 0]);
-        fputs(line, fp);
-        sprintf(line, "  %19.16f", config->pos[i * 3 + 1]);
-        fputs(line, fp);
-        sprintf(line, "  %19.16f\n", config->pos[i * 3 + 2]);
-        fputs(line, fp);
+        if (config->fix[i] > 0) {
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 0]);
+            fputs(line, fp);
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 1]);
+            fputs(line, fp);
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 2]);
+            fputs(line, fp);
+            fputs(" F F F\n", fp);
+        } else {
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 0]);
+            fputs(line, fp);
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 1]);
+            fputs(line, fp);
+            sprintf(line, "  %19.16f", config->pos[i * 3 + 2]);
+            fputs(line, fp);
+            fputs(" T T T\n", fp);
+        }
     }
     fclose(fp);
 }
@@ -361,6 +390,7 @@ void copy_config(Config *config2, Config *config1)
     config2->atom_num = (int *)malloc(sizeof(int) * config1->ntype);
     config2->each_num = (int *)malloc(sizeof(int) * config1->ntype);
     config2->id = (int *)malloc(sizeof(int) * config1->tot_num);
+    config2->fix = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->type = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->pos = (double *)malloc(sizeof(double) * config1->tot_num * 3);
 
@@ -370,6 +400,7 @@ void copy_config(Config *config2, Config *config1)
     }
     for (i = 0; i < config1->tot_num; ++i) {
         config2->id[i] = config1->id[i];
+        config2->fix[i] = config1->fix[i];
         config2->type[i] = config1->type[i];
         config2->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
         config2->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
@@ -383,6 +414,7 @@ void free_config(Config *config)
     free(config->atom_num);
     free(config->each_num);
     free(config->id);
+    free(config->fix);
     free(config->type);
     free(config->pos);
     free(config);

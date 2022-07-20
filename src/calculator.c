@@ -78,11 +78,12 @@ void oneshot(Config *config, Input *input, double *energy, double **force,
 
 double atom_relax(Config *config, Input *input)
 {
-    char cmd[1024];
+    int i;
+    char tmp_cmd[64], cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    //char *lmpargv[] = {"liblammps", "-screen", "none"};
+    //char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
     lmp = lmp_init(config, input, lmpargc, lmpargv);
     /* potential */
@@ -92,6 +93,25 @@ double atom_relax(Config *config, Input *input)
     lammps_command(lmp, cmd);
     /* balance */
     lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
+    /* fix */
+    int fix_num = 0;
+    for (i = 0; i < config->tot_num; ++i) {
+        if (config->fix[i] > 0) {
+            fix_num++;
+            break;
+        }
+    }
+    if (fix_num > 0) {
+        sprintf(cmd, "group freeze id");
+        for (i = 0; i < config->tot_num; ++i) {
+            if (config->fix[i] > 0) {
+                sprintf(tmp_cmd, " %d", i + 1);
+                strcat(cmd, tmp_cmd); 
+            }
+        }
+        lammps_command(lmp, cmd);
+        lammps_command(lmp, "fix 1 freeze setforce 0.0 0.0 0.0");
+    }
     /* minimize */
     sprintf(cmd, "minimize 0 %f 10000 100000", input->f_tol);
     lammps_command(lmp, cmd);

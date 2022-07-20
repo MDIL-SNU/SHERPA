@@ -5,6 +5,7 @@ typedef struct _Input
 {
     int nelem;
     int init_mode;
+    int init_relax;
     int max_num_rot;
     int random_seed;
 

@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "calculator.h"
 #include "config.h"
 #include "dimer.h"
@@ -189,20 +190,54 @@ void cut_sphere(Config *config, Input *input, double *center)
 }
 
 
-double *displace(Input *input, int n)
+double *displace(Input *input, int tot_num,
+                 int disp_num, int *disp_list, int count)
 {
-    int i, j;
-    double *disp = (double *)malloc(sizeof(double) * n * 3);
-    if (input->init_mode > 0) {
-        // TODO: MODECAR
-    } else {
-        // TODO: orthogonalization
-        for (i = 0; i < n; ++i) {
-            disp[i * 3 + 0] = normal_random(0, input->stddev); 
-            disp[i * 3 + 1] = normal_random(0, input->stddev); 
-            disp[i * 3 + 2] = normal_random(0, input->stddev); 
+    int i, rank, size;
+    double *disp = (double *)malloc(sizeof(double) * disp_num * 3);
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) {
+        double *tmp_disp = (double *)calloc(tot_num * 3, sizeof(double));
+        char line[128];
+        FILE *fp;
+        if (input->init_mode > 0) {
+            fp = fopen("./MODECAR", "r");
+            for (i = 0; i < tot_num; ++i) {
+                fgets(line, 128, fp);
+                tmp_disp[i * 3 + 0] = atof(strtok(line, " \n"));
+                tmp_disp[i * 3 + 1] = atof(strtok(NULL, " \n"));
+                tmp_disp[i * 3 + 2] = atof(strtok(NULL, " \n"));
+            }
+        } else {
+            for (i = 0; i < disp_num; ++i) {
+                tmp_disp[disp_list[i] * 3 + 0] = normal_random(0, input->stddev); 
+                tmp_disp[disp_list[i] * 3 + 1] = normal_random(0, input->stddev); 
+                tmp_disp[disp_list[i] * 3 + 2] = normal_random(0, input->stddev); 
+            }
+            char filename[128];
+            sprintf(filename, "./output/Eigenmode_%d.dat", count);
+            fp = fopen(filename, "w");     
+            for (i = 0; i < tot_num; ++i) {
+                sprintf(line, "%e %e %e\n",
+                        tmp_disp[i * 3 + 0],
+                        tmp_disp[i * 3 + 1],
+                        tmp_disp[i * 3 + 2]);
+                fputs(line, fp);
+            }
         }
+        fclose(fp);
+        for (i = 0; i < disp_num; ++i) {
+            disp[i * 3 + 0] = tmp_disp[disp_list[i] * 3 + 0];
+            disp[i * 3 + 1] = tmp_disp[disp_list[i] * 3 + 1];
+            disp[i * 3 + 2] = tmp_disp[disp_list[i] * 3 + 2];
+        }
+        free(tmp_disp);
     }
+    MPI_Bcast(disp, disp_num * 3, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     return disp;
 }
 
@@ -268,8 +303,8 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                 char line[128], filename[128];
                 sprintf(filename, "output/Dimer_%d.log", count);
                 FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   ---------   ---------   %9f\n",
-                        dimer_step, i, norm(f_rot_A, disp_num));
+                sprintf(line, " %8d   %8d   %16f   ---------   ---------   %9f\n",
+                        dimer_step, i, energy0, norm(f_rot_A, disp_num));
                 fputs(line, fp);
                 fclose(fp);
             }
@@ -349,8 +384,8 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             char line[128], filename[128];
             sprintf(filename, "output/Dimer_%d.log", count);
             FILE *fp = fopen(filename, "a");
-            sprintf(line, " %8d   %8d   %9f   %9f   %9f\n",
-                    dimer_step, i + 1, c0,
+            sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
+                    dimer_step, i + 1, energy0, c0,
                     rotangle * 180 / 3.1415926535897932384624,
                     norm(f_rot_A, disp_num));
             fputs(line, fp);
@@ -518,9 +553,11 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
+// TODO: orthogonalization
 double dimer(Config *config0, Input *input, int count, int ii)
 {
     int i, rank, size;
+    int tot_num = config0->tot_num;
     double del[3];
     double center[3] = {config0->pos[ii * 3 + 0],
                         config0->pos[ii * 3 + 1],
@@ -532,7 +569,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
     /* First, cut far atoms */
     cut_sphere(config0, input, center);
 
-    /* Second, set dimer */
+    /* Second, set dimer space */
     int disp_num = 0;
     int *disp_list = (int *)malloc(sizeof(int) * config0->tot_num);
     for (i = 0; i < config0->tot_num; ++i) {
@@ -547,8 +584,9 @@ double dimer(Config *config0, Input *input, int count, int ii)
             disp_num++;
         }
     }
-
-    double *disp = displace(input, disp_num);
+    
+    /* Third, eigenmode */
+    double *disp = displace(input, tot_num, disp_num, disp_list, count);
     for (i = 0; i < disp_num; ++i) {
         config0->pos[disp_list[i] * 3 + 0] += disp[i * 3 + 0]; 
         config0->pos[disp_list[i] * 3 + 1] += disp[i * 3 + 1]; 
@@ -569,6 +607,10 @@ double dimer(Config *config0, Input *input, int count, int ii)
     double fmax;
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot(config0, input, &energy0, &force0, disp_num, disp_list);     
+    double energy_initial = energy0;
+
+    /* Fourth, run */
     do {
         rotate(config0, input, disp_num, disp_list, eigenmode,
                count, dimer_step);
@@ -593,6 +635,8 @@ double dimer(Config *config0, Input *input, int count, int ii)
         }
         dimer_step++;
     } while (fmax > input->f_tol);
+    oneshot(config0, input, &energy0, &force0, disp_num, disp_list);     
+    double energy_saddle = energy0;
 
     free(disp);
     free(eigenmode);
@@ -601,5 +645,5 @@ double dimer(Config *config0, Input *input, int count, int ii)
     free(disp_list);
     free(force0);
 
-    return energy0;
+    return energy_saddle - energy_initial;
 }

@@ -1,7 +1,6 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include "calculator.h"
 #include "config.h"
@@ -44,6 +43,14 @@ int main(int argc, char *argv[])
         exit(1);
     }
     srand(input->random_seed);
+    if (rank == 0) {
+        char line[64], filename[64];
+        sprintf(filename, "output/seed.dat");
+        FILE *fp = fopen(filename, "w"); 
+        sprintf(line, "Random seed: %d\n", input->random_seed);
+        fputs(line, fp);
+        fclose(fp);
+    }
 
     /* read config */
     Config *config = (Config *)malloc(sizeof(Config));
@@ -60,8 +67,9 @@ int main(int argc, char *argv[])
     int *target_list;
     errno = gen_target(config, input, &target_list, &target_num);
 
-    // TODO: fix atom
-    double E_i = atom_relax(config, input);
+    if (input->init_relax > 0) {
+        atom_relax(config, input);
+    }
 
     /* main loop */
     //for (i = 0; i < target_num; ++i) {
@@ -73,18 +81,16 @@ int main(int argc, char *argv[])
             char line[128], filename[128];
             sprintf(filename, "output/Dimer_%d.log", i);
             FILE *fp = fopen(filename, "a");
-            sprintf(line, " Opt step   Rot step   Curvature   Rot angle   Rot force\n");
-            fputs(line, fp); 
+            fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
             fclose(fp);
         }
-        double E_t = dimer(tmp_config, input, i, ii);
+        double barrier_E = dimer(tmp_config, input, i, ii);
         if (rank == 0) {
             char line[128], filename[128];
             sprintf(filename, "output/Dimer_%d.log", i);
             FILE *fp = fopen(filename, "a");
-            sprintf(line, "--------------------------------------------------------\n");
-            fputs(line, fp); 
-            sprintf(line, " Barrier energy: %f eV\n", E_t - E_i);
+            fputs("---------------------------------------------------------------------------\n", fp);
+            sprintf(line, " Barrier energy: %f eV\n", barrier_E);
             fputs(line, fp);
             fclose(fp);
         }

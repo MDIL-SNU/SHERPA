@@ -17,6 +17,7 @@ typedef struct _Config
     int *each_num;        /* the number of each types */
 
     int *id;
+    int *fix;
     int *type;            /* type index starting from 1 */
     double *pos;          /* [N * 3] dimension of positions */
 } Config;

@@ -11,6 +11,7 @@ double *perpendicular_vector(double *, double *, int);
 double *gen_eigenmode(Input *, int);
 double *get_rot_force(Input *, double *, double *, double *, int);
 double *projected_force(double *, double *, double, int);
+double *displace(Input *, int, int, int *, int);
 void rotate_vector(double *, double *, double **, double **, int, double);
 void cut_sphere(Config *, Input *, double *);
 void rotate(Config *, Input *, int, int *, double *, int, int);

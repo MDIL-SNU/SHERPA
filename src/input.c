@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "input.h"
 
 
@@ -137,6 +138,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
     if (errno) {
         return 1;
@@ -205,8 +210,11 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    return 0;
+    if (input->random_seed == -1) {
+        input->random_seed = (unsigned int)time(NULL);
+    }
     input->trial_angle *= 3.1415926535897932384626 / 180;
+    return 0;
 }
 
 
