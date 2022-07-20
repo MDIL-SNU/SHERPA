@@ -72,8 +72,7 @@ int main(int argc, char *argv[])
     }
 
     /* main loop */
-    //for (i = 0; i < target_num; ++i) {
-    for (i = 0; i < 1; ++i) {
+    for (i = 0; i < target_num; ++i) {
         ii = target_list[i];
         Config *tmp_config = (Config *)malloc(sizeof(Config));
         copy_config(tmp_config, config);

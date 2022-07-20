@@ -91,37 +91,37 @@ double *perpendicular_vector(double *vector, double *unit, int n)
 }
 
 
-void rotate_vector(double *vec0i, double *vec0j,
-                   double **vec1i, double **vec1j,
+void rotate_vector(double *vec1i, double *vec2i,
+                   double **vec1o, double **vec2o,
                    int n, double angle)
 {
     int i;
     double cAng = cos(angle);
     double sAng = sin(angle);
-    double *tmp_vec1i = (double *)malloc(sizeof(double) * n * 3);
-    double *tmp_vec1j = (double *)malloc(sizeof(double) * n * 3);
+    double *tmp_vec1o = (double *)malloc(sizeof(double) * n * 3);
+    double *tmp_vec2o = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        tmp_vec1i[i * 3 + 0] = vec0i[i * 3 + 0] * cAng + vec0j[i * 3 + 0] * sAng;
-        tmp_vec1i[i * 3 + 1] = vec0i[i * 3 + 1] * cAng + vec0j[i * 3 + 1] * sAng;
-        tmp_vec1i[i * 3 + 2] = vec0i[i * 3 + 2] * cAng + vec0j[i * 3 + 2] * sAng;
-        tmp_vec1j[i * 3 + 0] = vec0j[i * 3 + 0] * cAng - vec0i[i * 3 + 0] * sAng;
-        tmp_vec1j[i * 3 + 1] = vec0j[i * 3 + 1] * cAng - vec0i[i * 3 + 1] * sAng;
-        tmp_vec1j[i * 3 + 2] = vec0j[i * 3 + 2] * cAng - vec0i[i * 3 + 2] * sAng;
+        tmp_vec1o[i * 3 + 0] = vec1i[i * 3 + 0] * cAng + vec2i[i * 3 + 0] * sAng;
+        tmp_vec1o[i * 3 + 1] = vec1i[i * 3 + 1] * cAng + vec2i[i * 3 + 1] * sAng;
+        tmp_vec1o[i * 3 + 2] = vec1i[i * 3 + 2] * cAng + vec2i[i * 3 + 2] * sAng;
+        tmp_vec2o[i * 3 + 0] = vec2i[i * 3 + 0] * cAng - vec1i[i * 3 + 0] * sAng;
+        tmp_vec2o[i * 3 + 1] = vec2i[i * 3 + 1] * cAng - vec1i[i * 3 + 1] * sAng;
+        tmp_vec2o[i * 3 + 2] = vec2i[i * 3 + 2] * cAng - vec1i[i * 3 + 2] * sAng;
     }
-    double magnitude1 = norm(vec0i, n);
-    double magnitude2 = norm(vec0j, n);
-    *vec1i = normalize(tmp_vec1i, n);
-    *vec1j = normalize(tmp_vec1j, n);
+    double magnitude1 = norm(vec1i, n);
+    double magnitude2 = norm(vec2i, n);
+    *vec1o = normalize(tmp_vec1o, n);
+    *vec2o = normalize(tmp_vec2o, n);
     for (i = 0; i < n; ++i) {
-        (*vec1i)[i * 3 + 0] *= magnitude1;
-        (*vec1i)[i * 3 + 1] *= magnitude1;
-        (*vec1i)[i * 3 + 2] *= magnitude1;
-        (*vec1j)[i * 3 + 0] *= magnitude2;
-        (*vec1j)[i * 3 + 1] *= magnitude2;
-        (*vec1j)[i * 3 + 2] *= magnitude2;
+        (*vec1o)[i * 3 + 0] *= magnitude1;
+        (*vec1o)[i * 3 + 1] *= magnitude1;
+        (*vec1o)[i * 3 + 2] *= magnitude1;
+        (*vec2o)[i * 3 + 0] *= magnitude2;
+        (*vec2o)[i * 3 + 1] *= magnitude2;
+        (*vec2o)[i * 3 + 2] *= magnitude2;
     }
-    free(tmp_vec1i);
-    free(tmp_vec1j);
+    free(tmp_vec1o);
+    free(tmp_vec2o);
 }
 
 
@@ -276,7 +276,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, &force0, disp_num, disp_list); 
+    oneshot(config0, input, &energy0, force0, disp_num, disp_list); 
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -288,7 +288,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             config1->pos[disp_list[j] * 3 + 2] += input->dimer_dist 
                                                 * eigenmode[j * 3 + 2];
         }
-        oneshot(config1, input, &energy1, &force1, disp_num, disp_list);
+        oneshot(config1, input, &energy1, force1, disp_num, disp_list);
         free_config(config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -297,6 +297,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         }
         double *f_rot_A = get_rot_force(input, force1, force2,
                                         eigenmode, disp_num);
+
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (rank == 0) {
@@ -342,7 +343,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                                                       * input->dimer_dist;
         } 
         /* derivative of curvature */
-        oneshot(trial_config1, input, &energy1, &force1, disp_num, disp_list);
+        oneshot(trial_config1, input, &energy1, force1, disp_num, disp_list);
         free_config(trial_config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -403,21 +404,21 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
-void get_cg_direction(double *direction, double **direction_old,
-                      double **cg_direction, int n)
+void get_cg_direction(double *direction, double *direction_old,
+                      double *cg_direction, int n)
 {
     int i;
-    double old_norm = norm(*direction_old, n);
+    double old_norm = norm(direction_old, n);
     double betaPR;
-    if (fabs(old_norm) < 1e-15) {
+    if (fabs(old_norm) > 1e-8) {
         double *ddirection = (double *)malloc(sizeof(double) * n * 3);
         for (i = 0; i < n; ++i) {
             ddirection[i * 3 + 0] = direction[i * 3 + 0]
-                                  - (*direction_old)[i * 3 + 0];
+                                  - direction_old[i * 3 + 0];
             ddirection[i * 3 + 1] = direction[i * 3 + 1] 
-                                  - (*direction_old)[i * 3 + 1];
+                                  - direction_old[i * 3 + 1];
             ddirection[i * 3 + 2] = direction[i * 3 + 2] 
-                                  - (*direction_old)[i * 3 + 2];
+                                  - direction_old[i * 3 + 2];
         }
         betaPR = dot(direction, ddirection, n) / old_norm; 
         free(ddirection);
@@ -428,15 +429,15 @@ void get_cg_direction(double *direction, double **direction_old,
         betaPR = 0.0;
     }
     for (i = 0; i < n; ++i) {
-        (*cg_direction)[i * 3 + 0] = direction[i * 3 + 0]
-                                   + (*cg_direction)[i * 3 + 0] * betaPR;
-        (*cg_direction)[i * 3 + 1] = direction[i * 3 + 1] 
-                                   + (*cg_direction)[i * 3 + 1] * betaPR;
-        (*cg_direction)[i * 3 + 2] = direction[i * 3 + 2] 
-                                   + (*cg_direction)[i * 3 + 2] * betaPR;
-        (*direction_old)[i * 3 + 0] = direction[i * 3 + 0];
-        (*direction_old)[i * 3 + 1] = direction[i * 3 + 1];
-        (*direction_old)[i * 3 + 2] = direction[i * 3 + 2];
+        cg_direction[i * 3 + 0] = direction[i * 3 + 0]
+                                + cg_direction[i * 3 + 0] * betaPR;
+        cg_direction[i * 3 + 1] = direction[i * 3 + 1] 
+                                + cg_direction[i * 3 + 1] * betaPR;
+        cg_direction[i * 3 + 2] = direction[i * 3 + 2] 
+                                + cg_direction[i * 3 + 2] * betaPR;
+        direction_old[i * 3 + 0] = direction[i * 3 + 0];
+        direction_old[i * 3 + 1] = direction[i * 3 + 1];
+        direction_old[i * 3 + 2] = direction[i * 3 + 2];
     }
 }
 
@@ -450,7 +451,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, &force0, disp_num, disp_list); 
+    oneshot(config0, input, &energy0, force0, disp_num, disp_list); 
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
@@ -462,7 +463,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
-    oneshot(config1, input, &energy1, &force1, disp_num, disp_list);
+    oneshot(config1, input, &energy1, force1, disp_num, disp_list);
     free_config(config1);
     for (i = 0; i < disp_num; ++i) {
         force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
@@ -480,7 +481,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
     /* projected force */
     double *f0p = projected_force(force0, eigenmode, curvature, disp_num);
     /* cg_direction */
-    get_cg_direction(f0p, &direction_old, &cg_direction, disp_num);
+    get_cg_direction(f0p, direction_old, cg_direction, disp_num);
     double *direction = normalize(cg_direction, disp_num);
     /* step */
     double *step = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -504,7 +505,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
         double trial_energy0;
         double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
         double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
-        oneshot(trial_config0, input, &trial_energy0, &trial_force0,
+        oneshot(trial_config0, input, &trial_energy0, trial_force0,
                 disp_num, disp_list); 
         double *f0tp = projected_force(trial_force0, eigenmode,
                                        curvature, disp_num);
@@ -607,16 +608,22 @@ double dimer(Config *config0, Input *input, int count, int ii)
     double fmax;
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, &force0, disp_num, disp_list);     
+    oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
     double energy_initial = energy0;
 
+    /* trajectory */
+    if (rank == 0) {
+        char filename[128];
+        sprintf(filename, "./output/Dimer_%d.XDATCAR", count);
+        write_config(config0, filename);
+    }
     /* Fourth, run */
     do {
         rotate(config0, input, disp_num, disp_list, eigenmode,
                count, dimer_step);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction);
-        oneshot(config0, input, &energy0, &force0, disp_num, disp_list);     
+        oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
         fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
@@ -635,7 +642,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
         }
         dimer_step++;
     } while (fmax > input->f_tol);
-    oneshot(config0, input, &energy0, &force0, disp_num, disp_list);     
+    oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
     double energy_saddle = energy0;
 
     free(disp);

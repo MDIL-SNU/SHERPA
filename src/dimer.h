@@ -14,6 +14,7 @@ double *projected_force(double *, double *, double, int);
 double *displace(Input *, int, int, int *, int);
 void rotate_vector(double *, double *, double **, double **, int, double);
 void cut_sphere(Config *, Input *, double *);
+void get_cg_direction(double *, double *, double *, int);
 void rotate(Config *, Input *, int, int *, double *, int, int);
 void translate(Config *, Input *, int, int *, double *, double *, double *);
 double dimer(Config *, Input *, int, int);
