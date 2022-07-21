@@ -16,6 +16,6 @@ void rotate_vector(double *, double *, double **, double **, int, double);
 void cut_sphere(Config *, Input *, double *);
 void get_cg_direction(double *, double *, double *, int);
 void rotate(Config *, Input *, int, int *, double *, int, int);
-void translate(Config *, Input *, int, int *, double *, double *, double *);
+void translate(Config *, Input *, int, int *, double *, double *, double *, int);
 double dimer(Config *, Input *, int, int);
 #endif
