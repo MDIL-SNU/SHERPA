@@ -210,6 +210,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_char(&(input->output_dir), "OUTPUT_DIR", filename);
+    if (errno) {
+        return 1;
+    }
     if (input->random_seed == -1) {
         input->random_seed = (unsigned int)time(NULL);
     }
@@ -228,5 +232,6 @@ void free_input(Input *input)
     free(input->pair_coeff);
     free(input->init_config);
     free(input->target_list);
+    free(input->output_dir);
     free(input);
 }

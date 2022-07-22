@@ -14,6 +14,7 @@ typedef struct _Input
     char *init_config;
     char *target_list;
     char **atom_type;
+    char *output_dir;
 
     double cutoff;
     double dimer_dist;

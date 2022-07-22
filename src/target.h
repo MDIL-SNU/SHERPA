@@ -3,5 +3,5 @@
 #include "config.h"
 #include "input.h"
 
-int gen_target(Config *, Input *, int **, int *);
+int get_target(Config *, Input *, int **, int *, int *);
 #endif

@@ -39,50 +39,58 @@ CUTOFF      = 6.0
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
 TARGET      = ./TARGET
-DIMER_DIST  = 0.001
-FTOL        = 0.01
-F_ROT_MIN   = 0.01
+DIMER_DIST  = 0.0001
+F_TOL       = 0.01
+F_ROT_MIN   = 0.1
 F_ROT_MAX   = 1.0
-MAX_NUM_ROT = 1
+MAX_NUM_ROT = 100
 TRIAL_ANGLE = 45
-DISP_CUTOFF = 4.4
+DISP_CUTOFF = 5.1
 STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
+INIT_RELAX  = 1
 INIT_MODE   = 0
 
 # random parameter #
 RANDOM_SEED = 0
+
+# output parameter #
+OUTPUT_DIR  = ./OUTPUT
 ```
 
 |Tag|Description|Units|
 |:---|:---|:---|
-|NELEMENT|||
-|ATOM_TYPE|||
-|PAIR_STYLE|||
-|PAIR_COEFF|||
-|CUTOFF|||
-|INIT_CONFIG|||
-|TARGET_LIST|||
-|DIMER_DIST|||
-|F_TOL|||
-|F_ROT_MIN|||
-|F_ROT_MAX|||
-|MAX_NUM_ROT|||
-|TRIAL_ANGLE|||
-|DISP_CUTOFF|||
-|STDDEV|||
-|MAX_STEP|||
-|TRIAL_STEP|||
-|INIT_MODE|||
-|RANDOM_SEED|||
+|NELEMENT|The number of elements||
+|ATOM_TYPE|Atomic symbols of elements||
+|PAIR_STYLE|Pair style for LAMMPS input||
+|PAIR_COEFF|Pair coeff for LAMMPS input||
+|CUTOFF|Cutoff radius of potential file|Angstrom|
+|INIT_CONFIG|Initial configuration file||
+|TARGET_LIST|File containing target information||
+|DIMER_DIST|Dimer distance from the center|Angstrom|
+|F_TOL|Force tolerance for dimer method|eV/Angstrom|
+|F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
+|F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
+|MAX_NUM_ROT|The maximum number of rotation||
+|TRIAL_ANGLE|Trial rotation angle|radian|
+|DISP_CUTOFF|Radius of displacement sphere||
+|STDDEV|Standard deviation of gaussian displacement||
+|MAX_STEP|Maximum step size of translation|Angstrom|
+|TRIAL_STEP|Trial step size of translation|Angstrom|
+|INIT_MODE|User defined initial eigenmode||
+|INIT_RELAX|Initial structure optimization||
+|RANDOM_SEED|Seed for random number||
+|OUTPUT_DIR|Directory for output files||
 
 ## TARGET
 ```bash
 I 0 1 2 3
 ```
 
-TBA
+* I: Index
+* A: All (not supported yet)
+* R: Random (not supported yet)
 
 ## Command
 ```bash
@@ -91,5 +99,5 @@ mpirun -np $numproc ./LAMMPS_dimer
 $numproc stands for the number of CPU cores in parallel computation.
 
 ## Tips  
-1. `INIT_CONFIG` should be VASP5 POSCAR format. 
+1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
 2. `numproc` in command should be the multiple of nimages. 

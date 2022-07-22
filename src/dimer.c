@@ -221,7 +221,7 @@ double *displace(Input *input, int tot_num,
                 tmp_disp[disp_list[i] * 3 + 2] = normal_random(0, input->stddev); 
             }
             char filename[128];
-            sprintf(filename, "./output/Eigenmode_%d.dat", count);
+            sprintf(filename, "%s/Eigenmode_%d.dat", input->output_dir, count);
             fp = fopen(filename, "w");     
             for (i = 0; i < tot_num; ++i) {
                 sprintf(line, "%e %e %e\n",
@@ -304,7 +304,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (rank == 0) {
                 char line[128], filename[128];
-                sprintf(filename, "output/Dimer_%d.log", count);
+                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
                 sprintf(line, " %8d   %8d   %16f   ---------   ---------   %9f\n",
                         dimer_step, i, energy0, norm(f_rot_A, disp_num));
@@ -385,7 +385,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(tmp_force);
         if (rank == 0) {
             char line[128], filename[128];
-            sprintf(filename, "output/Dimer_%d.log", count);
+            sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
                     dimer_step, i + 1, energy0, cmin,
@@ -632,7 +632,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
     /* trajectory */
     if (rank == 0) {
         char filename[128];
-        sprintf(filename, "./output/Dimer_%d.XDATCAR", count);
+        sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
         write_config(config0, filename);
     }
     double fmax;
@@ -656,7 +656,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
         /* trajectory */
         if (rank == 0) {
             char filename[128];
-            sprintf(filename, "./output/Dimer_%d.XDATCAR", count);
+            sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
             write_config(config0, filename);
         }
         dimer_step++;
@@ -677,7 +677,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
     }
     if (rank == 0) {
         char filename[128];
-        sprintf(filename, "./output/Saddle_%d.POSCAR", count);
+        sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
         write_config(template, filename);
     }
 
@@ -700,7 +700,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
         if (diff_config(config1, config2, input->max_step) > 0) {
             if (rank == 0) {
                 char line[128], filename[128];
-                sprintf(filename, "output/Dimer_%d.log", count);
+                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
                 fputs("---------------------------------------------------------------------------\n", fp);
                 sprintf(line, " Split success: %f\n", 0.2 * i);
@@ -718,18 +718,18 @@ double dimer(Config *config0, Input *input, int count, int ii)
         int diff1 = diff_config(origin, config1, input->max_step);
         int diff2 = diff_config(origin, config2, input->max_step);
         char line[128], filename[128];
-        sprintf(filename, "output/Dimer_%d.log", count);
+        sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
         FILE *fp = fopen(filename, "a");
         if (diff1 * diff2 > 0) {
             fputs(" Saddle state: disconnected\n", fp);
-            sprintf(filename, "output/Initial_%d.POSCAR", count);
+            sprintf(filename, "%s/Initial_%d.POSCAR", input->output_dir, count);
             for (i = 0; i < config0->tot_num; ++i) {
                 template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
                 template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
                 template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
             }
             write_config(template, filename);
-            sprintf(filename, "output/Final_%d.POSCAR", count);
+            sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
             for (i = 0; i < config0->tot_num; ++i) {
                 template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
                 template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
@@ -739,14 +739,14 @@ double dimer(Config *config0, Input *input, int count, int ii)
         } else {
             fputs(" Saddle state: connected\n", fp);
             if (diff1 == 0) {
-                sprintf(filename, "output/Initial_%d.POSCAR", count);
+                sprintf(filename, "%s/Initial_%d.POSCAR", input->output_dir, count);
                 for (i = 0; i < config0->tot_num; ++i) {
                     template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
                     template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
                     template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
                 }
                 write_config(template, filename);
-                sprintf(filename, "output/Final_%d.POSCAR", count);
+                sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
                 for (i = 0; i < config0->tot_num; ++i) {
                     template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
                     template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
@@ -754,14 +754,14 @@ double dimer(Config *config0, Input *input, int count, int ii)
                 }
                 write_config(template, filename);
             } else {
-                sprintf(filename, "output/Initial_%d.POSCAR", count);
+                sprintf(filename, "%s/Initial_%d.POSCAR", input->output_dir, count);
                 for (i = 0; i < config0->tot_num; ++i) {
                     template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
                     template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
                     template->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
                 }
                 write_config(template, filename);
-                sprintf(filename, "output/Final_%d.POSCAR", count);
+                sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
                 for (i = 0; i < config0->tot_num; ++i) {
                     template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
                     template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];

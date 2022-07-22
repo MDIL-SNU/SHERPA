@@ -23,3 +23,6 @@ INIT_MODE   = 0
 
 # random parameter #
 RANDOM_SEED = -1
+
+# output parameter #
+OUTPUT_DIR  = ./gen_1

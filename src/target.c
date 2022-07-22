@@ -4,7 +4,8 @@
 #include "target.h"
 
 
-int gen_target(Config *config, Input *input, int **target_list, int *target_num)
+int get_target(Config *config, Input *input,
+               int **target_list, int *target_num, int *list_size)
 {
     int i;
     FILE *fp;
@@ -23,14 +24,21 @@ int gen_target(Config *config, Input *input, int **target_list, int *target_num)
             strcpy(tmp_line, line);
             strtok(line, " \n\t");
             ptr = strtok(NULL, " \n\t");
+            int tmp_target_num = 0;
             while (ptr != NULL) {
-                (*target_num)++;
+                tmp_target_num++;
                 ptr = strtok(NULL, " \n\t");
             }
-            *target_list = (int *)malloc(sizeof(int) * (*target_num));
+            if (tmp_target_num + (*target_num) > (*list_size)) {
+                do {
+                    (*list_size) = (*list_size) << 1;
+                } while (tmp_target_num + (*target_num) > (*list_size));
+                *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
+            }
             strtok(tmp_line, " \n\t");
-            for (i = 0; i < *target_num; ++i) {
-                (*target_list)[i] = atoi(strtok(NULL, " \n\t"));
+            for (i = 0; i < tmp_target_num; ++i) {
+                (*target_list)[*target_num] = atoi(strtok(NULL, " \n\t"));
+                (*target_num)++;
             }
         } else if (strncmp(ptr, "A", 1) == 0) {
             //gen_all();
@@ -42,5 +50,3 @@ int gen_target(Config *config, Input *input, int **target_list, int *target_num)
     }
     return 0;
 }
-
-
