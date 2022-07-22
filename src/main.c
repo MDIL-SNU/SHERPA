@@ -88,7 +88,6 @@ int main(int argc, char *argv[])
             char line[128], filename[128];
             sprintf(filename, "output/Dimer_%d.log", i);
             FILE *fp = fopen(filename, "a");
-            fputs("---------------------------------------------------------------------------\n", fp);
             sprintf(line, " Barrier energy: %f eV\n", barrier_E);
             fputs(line, fp);
             fclose(fp);

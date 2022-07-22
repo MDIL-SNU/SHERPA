@@ -149,12 +149,12 @@ double *projected_force(double *force0, double *eigenmode,
 }
 
 
-void cut_sphere(Config *config, Input *input, double *center)
+void cut_sphere(Config *config, Input *input, double *center, int *update_list)
 {
     int i;
     double del[3];
-
     int cut_num = 0;
+    int update_num = 0;
     int *cut_list = (int *)malloc(sizeof(int) * config->tot_num);
     for (i = 0; i < config->tot_num; ++i) {
         del[0] = config->pos[i * 3 + 0] - center[0];
@@ -166,6 +166,9 @@ void cut_sphere(Config *config, Input *input, double *center)
         if (dist > input->cutoff * 2) {
             cut_list[cut_num] = i;
             cut_num++;
+        } else {
+            update_list[update_num] = i;
+            update_num++;
         }
     }
     /* sort */
@@ -567,7 +570,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
 // TODO: orthogonalization
 double dimer(Config *config0, Input *input, int count, int ii)
 {
-    int i, rank, size;
+    int i, j, rank, size;
     int tot_num = config0->tot_num;
     double del[3];
     double center[3] = {config0->pos[ii * 3 + 0],
@@ -578,7 +581,15 @@ double dimer(Config *config0, Input *input, int count, int ii)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     /* First, cut far atoms */
-    cut_sphere(config0, input, center);
+    Config *template = (Config *)malloc(sizeof(Config));
+    copy_config(template, config0);
+    int *update_list = (int *)malloc(sizeof(int) * config0->tot_num);
+    cut_sphere(config0, input, center, update_list);
+    atom_relax(config0, input); 
+
+    /* Save initial config */
+    Config *origin = (Config *)malloc(sizeof(Config));
+    copy_config(origin, config0);
 
     /* Second, set dimer space */
     int disp_num = 0;
@@ -609,9 +620,8 @@ double dimer(Config *config0, Input *input, int count, int ii)
         config0->pos[disp_list[i] * 3 + 1] += disp[i * 3 + 1]; 
         config0->pos[disp_list[i] * 3 + 2] += disp[i * 3 + 2]; 
     }
-    
     double *eigenmode = normalize(disp, disp_num);
-    double fmax;
+
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
@@ -625,6 +635,7 @@ double dimer(Config *config0, Input *input, int count, int ii)
         sprintf(filename, "./output/Dimer_%d.XDATCAR", count);
         write_config(config0, filename);
     }
+    double fmax;
     int dimer_step = 1;
     do {
         rotate(config0, input, disp_num, disp_list, eigenmode,
@@ -654,11 +665,118 @@ double dimer(Config *config0, Input *input, int count, int ii)
     double saddle_energy = energy0;
 
     free(disp);
-    free(eigenmode);
     free(direction_old);
     free(cg_direction);
-    free(disp_list);
     free(force0);
+
+    /* saddle update */
+    for (i = 0; i < config0->tot_num; ++i) {
+        template->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
+        template->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
+        template->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
+    }
+    if (rank == 0) {
+        char filename[128];
+        sprintf(filename, "./output/Saddle_%d.POSCAR", count);
+        write_config(template, filename);
+    }
+
+    /* split */
+    Config *config1 = (Config *)malloc(sizeof(Config));
+    copy_config(config1, config0);
+    Config *config2 = (Config *)malloc(sizeof(Config));
+    copy_config(config2, config0);
+    for (i = 1; i < 11; ++i) {
+        for (j = 0; j < disp_num; ++j) {
+            config1->pos[disp_list[j] * 3 + 0] += 0.2 * i * eigenmode[j * 3 + 0];
+            config1->pos[disp_list[j] * 3 + 1] += 0.2 * i * eigenmode[j * 3 + 1];
+            config1->pos[disp_list[j] * 3 + 2] += 0.2 * i * eigenmode[j * 3 + 2];
+            config2->pos[disp_list[j] * 3 + 0] -= 0.2 * i * eigenmode[j * 3 + 0];
+            config2->pos[disp_list[j] * 3 + 1] -= 0.2 * i * eigenmode[j * 3 + 1];
+            config2->pos[disp_list[j] * 3 + 2] -= 0.2 * i * eigenmode[j * 3 + 2];
+        }
+        atom_relax(config1, input); 
+        atom_relax(config2, input); 
+        if (diff_config(config1, config2, input->max_step) > 0) {
+            if (rank == 0) {
+                char line[128], filename[128];
+                sprintf(filename, "output/Dimer_%d.log", count);
+                FILE *fp = fopen(filename, "a");
+                fputs("---------------------------------------------------------------------------\n", fp);
+                sprintf(line, " Split success: %f\n", 0.2 * i);
+                fputs(line, fp);
+                fclose(fp);
+            }
+            break;
+        };
+    }
+    free(disp_list);
+    free(eigenmode);
+
+    /* log */
+    if (rank == 0) {
+        int diff1 = diff_config(origin, config1, input->max_step);
+        int diff2 = diff_config(origin, config2, input->max_step);
+        char line[128], filename[128];
+        sprintf(filename, "output/Dimer_%d.log", count);
+        FILE *fp = fopen(filename, "a");
+        if (diff1 * diff2 > 0) {
+            fputs(" Saddle state: disconnected\n", fp);
+            sprintf(filename, "output/Initial_%d.POSCAR", count);
+            for (i = 0; i < config0->tot_num; ++i) {
+                template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
+                template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
+                template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
+            }
+            write_config(template, filename);
+            sprintf(filename, "output/Final_%d.POSCAR", count);
+            for (i = 0; i < config0->tot_num; ++i) {
+                template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
+                template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
+                template->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
+            }
+            write_config(template, filename);
+        } else {
+            fputs(" Saddle state: connected\n", fp);
+            if (diff1 == 0) {
+                sprintf(filename, "output/Initial_%d.POSCAR", count);
+                for (i = 0; i < config0->tot_num; ++i) {
+                    template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
+                    template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
+                    template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
+                }
+                write_config(template, filename);
+                sprintf(filename, "output/Final_%d.POSCAR", count);
+                for (i = 0; i < config0->tot_num; ++i) {
+                    template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
+                    template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
+                    template->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
+                }
+                write_config(template, filename);
+            } else {
+                sprintf(filename, "output/Initial_%d.POSCAR", count);
+                for (i = 0; i < config0->tot_num; ++i) {
+                    template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
+                    template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
+                    template->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
+                }
+                write_config(template, filename);
+                sprintf(filename, "output/Final_%d.POSCAR", count);
+                for (i = 0; i < config0->tot_num; ++i) {
+                    template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
+                    template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
+                    template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
+                }
+                write_config(template, filename);
+            }
+        }
+        fclose(fp);
+    }
+    free_config(template);
+    free_config(config1);
+    free_config(config2);
+    free_config(origin);
+    free(update_list);
 
     return saddle_energy - initial_energy;
 }

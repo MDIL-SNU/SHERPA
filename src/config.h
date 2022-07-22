@@ -26,5 +26,6 @@ int read_config(Config *, Input *, char *);
 void extract_atom(Config *, int);
 void write_config(Config *, char *);
 void copy_config(Config *, Config *);
+int diff_config(Config *, Config *, double);
 void free_config(Config *);
 #endif

@@ -409,6 +409,26 @@ void copy_config(Config *config2, Config *config1)
 }
 
 
+int diff_config(Config *config1, Config *config2, double tol)
+{
+    int i;
+    for (i = 0; i < config1->tot_num; ++i) {
+        if (config1->type[i] != config2->type[i]) {
+            return 1;
+        };
+        double disp[3] = {config2->pos[i * 3 + 0] - config1->pos[i * 3 + 0],
+                          config2->pos[i * 3 + 1] - config1->pos[i * 3 + 1],
+                          config2->pos[i * 3 + 2] - config1->pos[i * 3 + 2]};
+        get_minimum_image(disp, config1->boxlo, config1->boxhi,
+                          config1->xy, config1->yz, config1->xz);
+        if (norm3(disp) > tol) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
 void free_config(Config *config)
 {
     free(config->atom_num);
