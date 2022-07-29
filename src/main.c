@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
     /* main loop */
     for (i = 0; i < target_num; ++i) {
         ii = target_list[i];
-        Config *tmp_config = (Config *)malloc(sizeof(Config));
-        copy_config(tmp_config, config);
+        Config *initial_config = (Config *)malloc(sizeof(Config));
+        copy_config(initial_config, config);
         if (rank == 0) {
             char line[128], filename[128];
             sprintf(filename, "%s/Dimer_%d.log", input->output_dir, i);
@@ -96,16 +96,21 @@ int main(int argc, char *argv[])
             fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
             fclose(fp);
         }
-        double barrier_E = dimer(tmp_config, input, i, ii);
-        if (rank == 0) {
-            char line[128], filename[128];
-            sprintf(filename, "%s/Dimer_%d.log", input->output_dir, i);
-            FILE *fp = fopen(filename, "a");
-            sprintf(line, " Barrier energy: %f eV\n", barrier_E);
-            fputs(line, fp);
-            fclose(fp);
+        Config *final_config;
+        double Ea;
+        int conv = dimer(initial_config, &final_config, input, i, ii, &Ea);
+        if (conv == 0) {
+            if (rank == 0) {
+                char line[128], filename[128];
+                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, i);
+                FILE *fp = fopen(filename, "a");
+                sprintf(line, " Barrier energy: %f eV\n", Ea);
+                fputs(line, fp);
+                fclose(fp);
+            }
         }
-        free_config(tmp_config);
+        free_config(initial_config);
+        free_config(final_config);
     }
     free(target_list);
     free_config(config);

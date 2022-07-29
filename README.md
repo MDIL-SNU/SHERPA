@@ -53,7 +53,7 @@ INIT_RELAX  = 1
 INIT_MODE   = 0
 
 # random parameter #
-RANDOM_SEED = 0
+RANDOM_SEED = -1
 
 # output parameter #
 OUTPUT_DIR  = ./OUTPUT
@@ -74,7 +74,7 @@ OUTPUT_DIR  = ./OUTPUT
 |F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
 |MAX_NUM_ROT|The maximum number of rotation||
 |TRIAL_ANGLE|Trial rotation angle|radian|
-|DISP_CUTOFF|Radius of displacement sphere||
+|DISP_CUTOFF|Radius of displacement sphere|Angstrom|
 |STDDEV|Standard deviation of gaussian displacement||
 |MAX_STEP|Maximum step size of translation|Angstrom|
 |TRIAL_STEP|Trial step size of translation|Angstrom|
@@ -89,6 +89,7 @@ I 0 1 2 3
 ```
 
 * I: Index
+* T: Type (not supported yet)
 * A: All (not supported yet)
 * R: Random (not supported yet)
 

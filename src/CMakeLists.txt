@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED ( VERSION 2.8.12 )
 
-SET ( LMP_PATH /path/to/lammps )
+SET ( LMP_PATH /home/wjdwltn928/lammps-stable_29Oct2020 )
 PROJECT ( "LAMMPS_dimer" )
 SET ( PROJECT_VERSION_MAJOR 0 )
 SET ( PROJECT_VERSION_MINOR 1 )
