@@ -279,7 +279,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, force0, disp_num, disp_list); 
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list); 
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -291,7 +291,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             config1->pos[disp_list[j] * 3 + 2] += input->dimer_dist 
                                                 * eigenmode[j * 3 + 2];
         }
-        oneshot(config1, input, &energy1, force1, disp_num, disp_list);
+        oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list);
         free_config(config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -345,7 +345,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                                                       * input->dimer_dist;
         } 
         /* derivative of curvature */
-        oneshot(trial_config1, input, &energy1, force1, disp_num, disp_list);
+        oneshot_disp(trial_config1, input, &energy1, force1, disp_num, disp_list);
         free_config(trial_config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -454,7 +454,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, force0, disp_num, disp_list); 
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list); 
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
@@ -466,7 +466,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
-    oneshot(config1, input, &energy1, force1, disp_num, disp_list);
+    oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list);
     free_config(config1);
     for (i = 0; i < disp_num; ++i) {
         force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
@@ -518,8 +518,8 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
         double trial_energy0;
         double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
         double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
-        oneshot(trial_config0, input, &trial_energy0, trial_force0,
-                disp_num, disp_list); 
+        oneshot_disp(trial_config0, input, &trial_energy0, trial_force0,
+                     disp_num, disp_list); 
         double *f0tp = projected_force(trial_force0, eigenmode,
                                        curvature, disp_num);
         for (i = 0; i < disp_num; ++i) {
@@ -608,10 +608,10 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
     }
     
     /* Third, initial energy */
-    double initial_energy;
-    double *initial_force = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &initial_energy, initial_force, disp_num, disp_list);     
-    free(initial_force);
+    double ini_energy;
+    double *ini_force = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot_disp(config0, input, &ini_energy, ini_force, disp_num, disp_list);     
+    free(ini_force);
 
     /* Fourth, displacement & eigenmode */
     double *disp = displace(input, tot_num, disp_num, disp_list, count);
@@ -624,7 +624,7 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list);     
     double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
     double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
 
@@ -637,13 +637,13 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
     }
     double fmax;
     int converge = 0;
-    int dimer_step = 1;
-    for (i = 0; i < 1000; ++i) {
+    int dimer_step;
+    for (dimer_step = 1; dimer_step < 2000; ++dimer_step) {
         rotate(config0, input, disp_num, disp_list, eigenmode,
                count, dimer_step);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step);
-        oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
+        oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list);     
         fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
@@ -664,7 +664,6 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
             converge = 1;
             break;
         }
-        dimer_step++;
     }
     free(disp);
     free(direction_old);
@@ -676,10 +675,18 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
         free_config(template);
         free_config(origin);
         free(update_list);
+        if (rank == 0) {
+            char line[128], filename[128];
+            sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
+            FILE *fp = fopen(filename, "a");
+            fputs("----------------------------------------------------------------------------\n", fp);
+            fputs(" Saddle state: not converged\n", fp);
+            fclose(fp);
+        }
         return 1;
     }
 
-    oneshot(config0, input, &energy0, force0, disp_num, disp_list);     
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list);     
     double saddle_energy = energy0;
     free(force0);
 
@@ -716,7 +723,7 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
                 char line[128], filename[128];
                 sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
-                fputs("---------------------------------------------------------------------------\n", fp);
+                fputs("----------------------------------------------------------------------------\n", fp);
                 sprintf(line, " Split success: %f\n", 0.2 * i);
                 fputs(line, fp);
                 fclose(fp);
@@ -775,7 +782,7 @@ int dimer(Config *config0, Config **config3, Input *input, int count, int ii, do
                 write_config(template, filename);
             }
         }
-        *Ea = saddle_energy - initial_energy;
+        *Ea = saddle_energy - ini_energy;
         *config3 = (Config *)malloc(sizeof(Config));
         copy_config(*config3, template);
         free_config(template);

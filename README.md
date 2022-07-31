@@ -36,6 +36,12 @@ PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 CUTOFF      = 6.0
 
+# kMC parameter #
+TEMPERATURE = 353.0
+ATT_FREQ    = 1e12
+END_TIME    = 1e4
+END_STEP    = 1000000
+
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
 TARGET      = ./TARGET
@@ -66,6 +72,10 @@ OUTPUT_DIR  = ./OUTPUT
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
 |CUTOFF|Cutoff radius of potential file|Angstrom|
+|TEMPERATURE|System temperature|Kelvin|
+|ATT_FREQ|Attempt frequency of reaction|1/s|
+|END_TIME|Termination condition for kMC time|s|
+|END_STEP|Termination condition for kMC step||
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
 |DIMER_DIST|Dimer distance from the center|Angstrom|

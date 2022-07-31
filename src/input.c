@@ -63,6 +63,35 @@ int input_double(double *var, char *tag, char *filename)
 }
 
 
+int input_long_long(long long *var, char *tag, char *filename)
+{
+    FILE *fp;
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        return 1;
+    }
+    char line[128], *ptr;
+    while (1) {
+        ptr = fgets(line, 128, fp);
+        if (ptr == NULL) {
+            break;
+        } else if (strcmp(ptr, "\n") == 0 || strncmp(ptr, "#", 1) == 0) {
+            continue;
+        } else if (strncmp(ptr, tag, strlen(tag)) == 0) {
+            strtok(line, " \n\t");
+            strtok(NULL, " \n\t");
+            *var = atoll(strtok(NULL, "\n"));
+            fclose(fp);
+            return 0;
+        } else {
+            continue;
+        }
+    }
+    fclose(fp);
+    return 1;
+}
+
+
 int input_char(char **var, char *tag, char *filename)
 {
     FILE *fp;
@@ -159,6 +188,22 @@ int read_input(Input *input, char *filename)
         return 1;
     }
     errno = input_double(&(input->cutoff), "CUTOFF", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->temperature), "TEMPERATURE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->att_freq), "ATT_FREQ", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->end_time), "END_TIME", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_long_long(&(input->end_step), "END_STEP", filename);
     if (errno) {
         return 1;
     }

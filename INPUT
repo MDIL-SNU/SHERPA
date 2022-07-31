@@ -5,6 +5,12 @@ PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 CUTOFF      = 6.0
 
+# kMC parameter #
+TEMPERATURE = 353.0
+ATT_FREQ    = 1e12
+END_TIME    = 1e4
+END_STEP    = 1000000
+
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET

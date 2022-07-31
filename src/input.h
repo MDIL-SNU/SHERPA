@@ -16,6 +16,9 @@ typedef struct _Input
     char **atom_type;
     char *output_dir;
 
+    double temperature;
+    double att_freq;
+    double end_time;
     double cutoff;
     double dimer_dist;
     double f_tol;
@@ -26,10 +29,13 @@ typedef struct _Input
     double stddev;
     double max_step;
     double trial_step;
+
+    long long end_step;
 } Input;
 
 int input_int(int *, char *, char *);
 int input_double(double *, char *, char *);
+int input_long_long(long long *, char *, char *);
 int input_char(char **, char *, char *);
 int input_char_arr(char ***, char *, int, char *);
 int read_input(Input *, char *);

@@ -42,8 +42,34 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv)
 }
 
 
-void oneshot(Config *config, Input *input, double *energy, double *force,
-             int disp_num, int *disp_list)
+double oneshot(Config *config, Input *input)
+{
+    int i;
+    char cmd[1024];
+    void *lmp = NULL;
+    /* create LAMMPS instance */
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    //char *lmpargv[] = {"liblammps", "-screen", "none"};
+    int lmpargc = sizeof(lmpargv) / sizeof(char *);
+    lmp = lmp_init(config, input, lmpargc, lmpargv);
+    /* potential */
+    sprintf(cmd, "pair_style %s", input->pair_style);
+    lammps_command(lmp, cmd);
+    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
+    lammps_command(lmp, cmd);
+    /* balance */
+    lammps_command(lmp, "balance 1.0 shift xyz 10 1.0");
+    /* oneshot */
+    lammps_command(lmp, "run 0");
+    double energy = lammps_get_thermo(lmp, "pe");
+    /* delete LAMMPS instance */
+    lammps_close(lmp);
+    return energy;
+}
+
+
+void oneshot_disp(Config *config, Input *input, double *energy, double *force,
+                  int disp_num, int *disp_list)
 {
     int i;
     char cmd[1024];
