@@ -259,6 +259,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_int(&(input->ncore), "NCORE", filename);
+    if (errno) {
+        return 1;
+    }
     if (input->random_seed == -1) {
         input->random_seed = (unsigned int)time(NULL);
     }

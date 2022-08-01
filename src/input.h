@@ -8,6 +8,7 @@ typedef struct _Input
     int init_relax;
     int max_num_rot;
     int random_seed;
+    int ncore;
 
     char *pair_style;
     char *pair_coeff;

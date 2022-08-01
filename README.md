@@ -63,6 +63,9 @@ RANDOM_SEED = -1
 
 # output parameter #
 OUTPUT_DIR  = ./OUTPUT
+
+# parallelism parameter #
+NCORE       = 8
 ```
 
 |Tag|Description|Units|
@@ -92,6 +95,7 @@ OUTPUT_DIR  = ./OUTPUT
 |INIT_RELAX|Initial structure optimization||
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
+|NCORE|The number of cores for each dimer method||
 
 ## TARGET
 ```bash

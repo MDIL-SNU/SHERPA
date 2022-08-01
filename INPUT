@@ -32,3 +32,6 @@ RANDOM_SEED = -1
 
 # output parameter #
 OUTPUT_DIR  = ./gen_1
+
+# parallelism parameter #
+NCORE       = 8
