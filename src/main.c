@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
                      MPI_COMM_WORLD, &global_index, &win);
 
     /* kmc loop */
-    for (step = 0; step < input->end_step; ++step) {
+    for (step = 1; step <= input->end_step; ++step) {
         /* read target */
         int target_num = 0;
         int list_size = 64;
@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
             }
         }
 
+        int total_reac_num;
         if (local_rank == 0) {
             MPI_Allgather(&local_reac_num, 1, MPI_INT,
                           global_reac_num, 1, MPI_INT, group_comm);
@@ -195,10 +196,15 @@ int main(int argc, char *argv[])
             MPI_Gatherv(local_acti_list, local_reac_num, MPI_DOUBLE,
                         global_acti_list, global_reac_num, disp, MPI_DOUBLE,
                         0, group_comm);
+            MPI_Gatherv(local_rate_list, local_reac_num, MPI_DOUBLE,
+                        global_rate_list, global_reac_num, disp, MPI_DOUBLE,
+                        0, group_comm);
             MPI_Gatherv(local_reac_list, local_reac_num, MPI_INT,
                         global_reac_list, global_reac_num, disp, MPI_INT,
                         0, group_comm);
             MPI_Reduce(&local_rate_sum, &global_rate_sum, 1, MPI_DOUBLE,
+                       MPI_SUM, 0, group_comm);
+            MPI_Reduce(&local_reac_num, &total_reac_num, 1, MPI_INT,
                        MPI_SUM, 0, group_comm);
             free(disp);
         }
@@ -210,7 +216,7 @@ int main(int argc, char *argv[])
             double random1 = (double)rand() / RAND_MAX;
             double random2 = (double)rand() / RAND_MAX;
             double rate_acc = 0.0;
-            for (i = 0; i < global_reac_num[group_size - 1]; ++i) {
+            for (i = 0; i < total_reac_num; ++i) {
                 global_rate_list[i] /= global_rate_sum;
                 rate_acc += global_rate_list[i];
                 if (rate_acc > random1) {
@@ -220,6 +226,7 @@ int main(int argc, char *argv[])
             }
             time -= log(random2) / global_rate_sum;
         }
+
         MPI_Bcast(&time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
         double energy = oneshot(config, input, MPI_COMM_WORLD);
         /* log */

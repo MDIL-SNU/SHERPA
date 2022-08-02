@@ -142,7 +142,7 @@ int input_char_arr(char ***var, char *tag, int n, char *filename)
             *var = (char **)malloc(sizeof(char *) * n);
             for (int i = 0; i < n; ++i) {
                 ptr = strtok(NULL, " \n\t");
-                (*var)[i] = (char *)malloc(sizeof(char) * 16);
+                (*var)[i] = (char *)calloc(16, sizeof(char));
                 strcpy((*var)[i], ptr);
             }
             fclose(fp);
