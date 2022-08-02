@@ -24,7 +24,7 @@ typedef struct _Config
 
 int read_config(Config *, Input *, char *);
 void extract_atom(Config *, int);
-void write_config(Config *, char *);
+void write_config(Config *, char *, int);
 void copy_config(Config *, Config *);
 int diff_config(Config *, Config *, double);
 void free_config(Config *);

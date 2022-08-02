@@ -84,8 +84,9 @@ int main(int argc, char *argv[])
         fputs(" kMC step   Potential energy   Reaction barrier      kMC time\n", fp);
         fputs("--------------------------------------------------------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/kMC.XDATCAR", input->output_dir);
-        write_config(config, filename);
+        printf("--------------------------------------------------------------\n");
+        printf(" kMC step   Reaction index   Reaction barrier   Reaction rate\n");
+        printf("--------------------------------------------------------------\n");
     }
 
     /* one-sided communication */
@@ -153,7 +154,7 @@ int main(int argc, char *argv[])
             if (local_rank == 0) {
                 char line[128], filename[128];
                 sprintf(filename, "%s/Dimer_%d.log", input->output_dir, local_index);
-                FILE *fp = fopen(filename, "a");
+                FILE *fp = fopen(filename, "w");
                 fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
                 fclose(fp);
             }
@@ -239,7 +240,13 @@ int main(int argc, char *argv[])
             fputs(line, fp);
             fclose(fp);
             sprintf(filename, "%s/kMC.XDATCAR", input->output_dir);
-            write_config(config, filename);
+            write_config(config, filename, 1);
+            printf("--------------------------------------------------------------\n");
+            for (i = 0; i < total_reac_num; ++i) {
+                printf(" %8lld   %14d   %16f   %13e\n",
+                       step, global_reac_list[i],
+                       global_acti_list[i], global_rate_list[i]);
+            }
         }
         free_config(config);
         free(target_list);
@@ -261,6 +268,7 @@ int main(int argc, char *argv[])
         MPI_Bcast(filename, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
         config = (Config *)malloc(sizeof(Config));
         errno = read_config(config, input, filename);
+        MPI_Barrier(MPI_COMM_WORLD);
         free(local_reac_list);
         free(local_acti_list);
         free(local_rate_list);

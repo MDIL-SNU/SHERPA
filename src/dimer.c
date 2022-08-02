@@ -634,7 +634,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
-        write_config(config0, filename);
+        write_config(config0, filename, 1);
     }
     double fmax;
     int converge = 0;
@@ -659,7 +659,7 @@ int dimer(Config *config0, Config **config3, Input *input,
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
-            write_config(config0, filename);
+            write_config(config0, filename, 1);
         }
         if (fmax < input->f_tol) {
             converge = 1;
@@ -699,7 +699,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
-        write_config(template, filename);
+        write_config(template, filename, 0);
     }
 
     /* split */
@@ -760,7 +760,7 @@ int dimer(Config *config0, Config **config3, Input *input,
             if (local_rank == 0) {
                 char filename[128];
                 sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename);
+                write_config(template, filename, 0);
             }
         } else {
             for (i = 0; i < config0->tot_num; ++i) {
@@ -771,7 +771,7 @@ int dimer(Config *config0, Config **config3, Input *input,
             if (local_rank == 0) {
                 char filename[128];
                 sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename);
+                write_config(template, filename, 0);
             }
         }
         *Ea = ts_energy - ini_energy;
