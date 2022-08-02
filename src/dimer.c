@@ -207,34 +207,23 @@ double *displace(Input *input, int tot_num,
 
     if (local_rank == 0) {
         double *tmp_disp = (double *)calloc(tot_num * 3, sizeof(double));
-        char line[128];
-        FILE *fp;
         if (input->init_mode > 0) {
-            fp = fopen("./MODECAR", "r");
+            char line[128];
+            FILE *fp = fopen("./MODECAR", "r");
             for (i = 0; i < tot_num; ++i) {
                 fgets(line, 128, fp);
                 tmp_disp[i * 3 + 0] = atof(strtok(line, " \n"));
                 tmp_disp[i * 3 + 1] = atof(strtok(NULL, " \n"));
                 tmp_disp[i * 3 + 2] = atof(strtok(NULL, " \n"));
             }
+            fclose(fp);
         } else {
             for (i = 0; i < disp_num; ++i) {
                 tmp_disp[disp_list[i] * 3 + 0] = normal_random(0, input->stddev); 
                 tmp_disp[disp_list[i] * 3 + 1] = normal_random(0, input->stddev); 
                 tmp_disp[disp_list[i] * 3 + 2] = normal_random(0, input->stddev); 
             }
-            char filename[128];
-            sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
-            fp = fopen(filename, "w");     
-            for (i = 0; i < tot_num; ++i) {
-                sprintf(line, "%e %e %e\n",
-                        tmp_disp[i * 3 + 0],
-                        tmp_disp[i * 3 + 1],
-                        tmp_disp[i * 3 + 2]);
-                fputs(line, fp);
-            }
         }
-        fclose(fp);
         for (i = 0; i < disp_num; ++i) {
             disp[i * 3 + 0] = tmp_disp[disp_list[i] * 3 + 0];
             disp[i * 3 + 1] = tmp_disp[disp_list[i] * 3 + 1];
@@ -593,7 +582,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     /* First, cut far atoms */
     Config *template = (Config *)malloc(sizeof(Config));
     copy_config(template, config0);
-    int *update_list = (int *)malloc(sizeof(int) * config0->tot_num);
+    int *update_list = (int *)malloc(sizeof(int) * tot_num);
     cut_sphere(config0, input, center, update_list);
     atom_relax(config0, input, comm); 
 
@@ -677,7 +666,7 @@ int dimer(Config *config0, Config **config3, Input *input,
         free(eigenmode);
         free(force0);
         if (local_rank == 0) {
-            char line[128], filename[128];
+            char filename[128];
             sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
@@ -697,9 +686,26 @@ int dimer(Config *config0, Config **config3, Input *input,
         template->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
     }
     if (local_rank == 0) {
-        char filename[128];
+        char line[128], filename[128];
         sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
         write_config(template, filename, 0);
+        sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
+        FILE *fp = fopen(filename, "w");     
+        double *tmp_eigenmode = (double *)calloc(tot_num * 3, sizeof(double));
+        for (i = 0; i < disp_num; ++i) {
+            tmp_eigenmode[disp_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+            tmp_eigenmode[disp_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
+            tmp_eigenmode[disp_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
+        }
+        for (i = 0; i < tot_num; ++i) {
+            sprintf(line, "%.15f %.15f %.15f\n",
+                    tmp_eigenmode[i * 3 + 0],
+                    tmp_eigenmode[i * 3 + 1],
+                    tmp_eigenmode[i * 3 + 2]);
+            fputs(line, fp);
+        }
+        fclose(fp);
+        free(tmp_eigenmode);
     }
 
     /* split */
@@ -720,16 +726,16 @@ int dimer(Config *config0, Config **config3, Input *input,
         atom_relax(config1, input, comm); 
         atom_relax(config2, input, comm); 
         trial++;
-    } while (diff_config(config1, config2, input->max_step) == 0);
+    } while (diff_config(config1, config2, 2 * input->max_step) == 0);
     free(disp_list);
     free(eigenmode);
 
-    int diff1 = diff_config(origin, config1, input->max_step);
-    int diff2 = diff_config(origin, config2, input->max_step);
+    int diff1 = diff_config(origin, config1, 2 * input->max_step);
+    int diff2 = diff_config(origin, config2, 2 * input->max_step);
     /* log */
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
-            char line[128], filename[128];
+            char filename[128];
             sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);

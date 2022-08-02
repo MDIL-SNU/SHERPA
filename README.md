@@ -28,7 +28,7 @@ make
 ```
 
 ## INPUT
-```bash
+```text
 # potential parameter #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
@@ -98,7 +98,7 @@ NCORE       = 8
 |NCORE|The number of cores for each dimer method||
 
 ## TARGET
-```bash
+```text
 I 0 1 2 3
 ```
 
@@ -115,4 +115,4 @@ $numproc stands for the number of CPU cores in parallel computation.
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
-2. `numproc` in command should be the multiple of nimages. 
+3. `numproc` should be the multiple of `NCORE`. `NCORE` of 4-8 is recommended. 

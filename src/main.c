@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
         fclose(fp);
         printf("--------------------------------------------------------------\n");
         printf(" kMC step   Reaction index   Reaction barrier   Reaction rate\n");
-        printf("--------------------------------------------------------------\n");
     }
 
     /* one-sided communication */
@@ -138,6 +137,7 @@ int main(int argc, char *argv[])
         int *global_reac_list = (int *)malloc(sizeof(int) * target_num);
         double *global_acti_list = (double *)malloc(sizeof(double) * target_num);
         double *global_rate_list = (double *)malloc(sizeof(double) * target_num);
+        //TODO: recycle
         while (1) {
             if (local_rank == 0) {
                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, win);
@@ -218,8 +218,7 @@ int main(int argc, char *argv[])
             double random2 = (double)rand() / RAND_MAX;
             double rate_acc = 0.0;
             for (i = 0; i < total_reac_num; ++i) {
-                global_rate_list[i] /= global_rate_sum;
-                rate_acc += global_rate_list[i];
+                rate_acc += global_rate_list[i] / global_rate_sum;
                 if (rate_acc > random1) {
                     reac_index = i;
                     break;

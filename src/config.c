@@ -318,11 +318,11 @@ void write_config(Config *config, char *filename, int mode)
     
     /* lattice vector */
     for (i = 0; i < 3; ++i) {
-        sprintf(line, " %19.16f", config->cell[i][0]);
+        sprintf(line, " %.15f", config->cell[i][0]);
         fputs(line, fp);
-        sprintf(line, " %19.16f", config->cell[i][1]);
+        sprintf(line, " %.15f", config->cell[i][1]);
         fputs(line, fp);
-        sprintf(line, " %19.16f\n", config->cell[i][2]);
+        sprintf(line, " %.15f\n", config->cell[i][2]);
         fputs(line, fp);
     }
 
@@ -345,19 +345,19 @@ void write_config(Config *config, char *filename, int mode)
     fputs("Cartesian\n", fp);
     for (i = 0; i < config->tot_num; ++i) {
         if (config->fix[i] > 0) {
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 0]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 0]);
             fputs(line, fp);
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 1]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 1]);
             fputs(line, fp);
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 2]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 2]);
             fputs(line, fp);
             fputs(" F F F\n", fp);
         } else {
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 0]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 0]);
             fputs(line, fp);
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 1]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 1]);
             fputs(line, fp);
-            sprintf(line, "  %19.16f", config->pos[i * 3 + 2]);
+            sprintf(line, "  %.15f", config->pos[i * 3 + 2]);
             fputs(line, fp);
             fputs(" T T T\n", fp);
         }
