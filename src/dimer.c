@@ -623,7 +623,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
-        write_config(config0, filename, 1);
+        write_config(config0, filename, 0);
     }
     double fmax;
     int converge = 0;
