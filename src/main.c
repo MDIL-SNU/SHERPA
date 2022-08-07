@@ -151,13 +151,6 @@ int main(int argc, char *argv[])
             }
             Config *initial_config = (Config *)malloc(sizeof(Config));
             copy_config(initial_config, config);
-            if (local_rank == 0) {
-                char line[128], filename[128];
-                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, local_index);
-                FILE *fp = fopen(filename, "w");
-                fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
-                fclose(fp);
-            }
             Config *final_config = NULL;
             double Ea;
             int conv = dimer(initial_config, &final_config, input,
