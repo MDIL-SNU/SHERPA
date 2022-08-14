@@ -263,11 +263,11 @@ double *get_rot_force(Input *input, double *force1, double *force2,
 }
 
 
-double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
-              double *eigenmode, int count, int dimer_step, int ortho, MPI_Comm comm)
+void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
+            double *eigenmode, int count, int dimer_step, MPI_Comm comm)
 {
     int i, j, rank, size;
-    double magnitude, cmin, kappa;
+    double magnitude, cmin;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -277,17 +277,10 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 
     if ((dimer_step == 1) && (local_rank == 0)) {
         char filename[128];
-        if (ortho == 0) {
-            sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
-            FILE *fp = fopen(filename, "w");
-            fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
-            fclose(fp);
-        } else {
-            sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-            FILE *fp = fopen(filename, "w");
-            fputs(" Opt step   Rot step   Potential energy       Kappa   Rot angle   Rot force\n", fp);
-            fclose(fp);
-        }
+        sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
+        FILE *fp = fopen(filename, "w");
+        fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
+        fclose(fp);
     }
     double energy0, energy1, energy2;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -295,19 +288,167 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
     for (i = 0; i < input->max_num_rot; ++i) {
-        if (ortho > 0) {
-            double *unit_force0 = normalize(force0, disp_num);
-            double *tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
-            double *new_eigenmode = normalize(tmp_eigenmode, disp_num);
-            for (j = 0; j < disp_num; ++j) {
-                eigenmode[j * 3 + 0] = new_eigenmode[j * 3 + 0];
-                eigenmode[j * 3 + 1] = new_eigenmode[j * 3 + 1];
-                eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
-            }
-            free(unit_force0);
-            free(tmp_eigenmode);
-            free(new_eigenmode);
+        Config *config1 = (Config *)malloc(sizeof(Config));
+        copy_config(config1, config0);
+        for (j = 0; j < disp_num; ++j) {
+            config1->pos[disp_list[j] * 3 + 0] += input->dimer_dist
+                                                * eigenmode[j * 3 + 0];
+            config1->pos[disp_list[j] * 3 + 1] += input->dimer_dist 
+                                                * eigenmode[j * 3 + 1];
+            config1->pos[disp_list[j] * 3 + 2] += input->dimer_dist 
+                                                * eigenmode[j * 3 + 2];
         }
+        oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
+        free_config(config1);
+        for (j = 0; j < disp_num; ++j) {
+            force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
+            force2[j * 3 + 1] = 2 * force0[j * 3 + 1] - force1[j * 3 + 1];
+            force2[j * 3 + 2] = 2 * force0[j * 3 + 2] - force1[j * 3 + 2];
+        }
+        double *f_rot_A = get_rot_force(input, force1, force2, eigenmode, disp_num);
+        /* no rotation */
+        if (norm(f_rot_A, disp_num) < input->f_rot_min) {
+            if (local_rank == 0) {
+                char line[128], filename[128];
+                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
+                FILE *fp = fopen(filename, "a");
+                sprintf(line, " %8d   %8d   %16f   ---------   ---------   %9f\n",
+                        dimer_step, i, energy0, norm(f_rot_A, disp_num));
+                fputs(line, fp);
+                fclose(fp);
+            }
+            free(f_rot_A);
+            break;
+        }
+        double *rot_unit_A = normalize(f_rot_A, disp_num);
+        /* curvature */
+        double *dforce = (double *)malloc(sizeof(double) * disp_num * 3);
+        double *n_A = (double *)malloc(sizeof(double) * disp_num * 3);
+        for (j = 0; j < disp_num; ++j) {
+            n_A[j * 3 + 0] = eigenmode[j * 3 + 0];
+            n_A[j * 3 + 1] = eigenmode[j * 3 + 1];
+            n_A[j * 3 + 2] = eigenmode[j * 3 + 2];
+            dforce[j * 3 + 0] = force2[j * 3 + 0] - force1[j * 3 + 0];
+            dforce[j * 3 + 1] = force2[j * 3 + 1] - force1[j * 3 + 1];
+            dforce[j * 3 + 2] = force2[j * 3 + 2] - force1[j * 3 + 2];
+        }
+        magnitude = dot(dforce, eigenmode, disp_num);
+        double c0 = magnitude / (2.0 * input->dimer_dist);
+        magnitude = dot(dforce, rot_unit_A, disp_num);
+        double c0d = magnitude / input->dimer_dist;
+        /* trial rotation */
+        double *n_B, *rot_unit_B;
+        rotate_vector(n_A, rot_unit_A, &n_B, &rot_unit_B,
+                      disp_num, input->trial_angle); 
+        Config *trial_config1 = (Config *)malloc(sizeof(Config));
+        copy_config(trial_config1, config0);
+        for (j = 0; j < disp_num; ++j) {
+            trial_config1->pos[disp_list[j] * 3 + 0] += n_B[j * 3 + 0]
+                                                      * input->dimer_dist;
+            trial_config1->pos[disp_list[j] * 3 + 1] += n_B[j * 3 + 1]
+                                                      * input->dimer_dist;
+            trial_config1->pos[disp_list[j] * 3 + 2] += n_B[j * 3 + 2]
+                                                      * input->dimer_dist;
+        } 
+        /* derivative of curvature */
+        oneshot_disp(trial_config1, input, &energy1, force1, disp_num, disp_list, comm);
+        free_config(trial_config1);
+        for (j = 0; j < disp_num; ++j) {
+            force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
+            force2[j * 3 + 1] = 2 * force0[j * 3 + 1] - force1[j * 3 + 1];
+            force2[j * 3 + 2] = 2 * force0[j * 3 + 2] - force1[j * 3 + 2];
+            dforce[j * 3 + 0] = force2[j * 3 + 0] - force1[j * 3 + 0];
+            dforce[j * 3 + 1] = force2[j * 3 + 1] - force1[j * 3 + 1];
+            dforce[j * 3 + 2] = force2[j * 3 + 2] - force1[j * 3 + 2];
+        }
+        magnitude = dot(dforce, rot_unit_B, disp_num);
+        double c1d = magnitude / input->dimer_dist;
+        /* fourier coefficients */
+        double a1 = (c0d * cos(2 * input->trial_angle) - c1d) 
+                  / (2 * sin(2 * input->trial_angle));
+        double b1 = 0.5 * c0d;
+        double a0 = 2 * (c0 - a1);
+        /* rotational angle */
+        double rotangle = 0.5 * atan(b1 / a1);
+        cmin = 0.5 * a0 + a1 * cos(2 * rotangle) + b1 * sin(2 * rotangle);
+        if (c0 < cmin) {
+            rotangle += 3.1415926535897932384626 * 0.5;
+        }
+        double *new_eigenmode, *tmp_force;
+        rotate_vector(n_A, rot_unit_A, &new_eigenmode, &tmp_force,
+                      disp_num, rotangle);
+        for (j = 0; j < disp_num; ++j) {
+            eigenmode[j * 3 + 0] = new_eigenmode[j * 3 + 0];
+            eigenmode[j * 3 + 1] = new_eigenmode[j * 3 + 1];
+            eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
+        }
+        free(n_A);
+        free(n_B);
+        free(dforce);
+        free(rot_unit_A);
+        free(rot_unit_B);
+        free(new_eigenmode);
+        free(tmp_force);
+        if (local_rank == 0) {
+            char line[128], filename[128];
+            sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
+            FILE *fp = fopen(filename, "a");
+            sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
+                    dimer_step, i + 1, energy0, cmin,
+                    rotangle * 180 / 3.1415926535897932384626,
+                    norm(f_rot_A, disp_num));
+            fputs(line, fp);
+            fclose(fp);
+        }
+        if (norm(f_rot_A, disp_num) < input->f_rot_max) {
+            free(f_rot_A);
+            break;
+        }
+        free(f_rot_A);
+    }
+    free(force0);
+    free(force1);
+    free(force2);
+}
+
+
+double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp_list,
+                          double *eigenmode, int count, int dimer_step, MPI_Comm comm)
+{
+    int i, j, rank, size;
+    double magnitude, cmin, kappa;
+    double *new_eigenmode;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int group_size = size / input->ncore;
+    int group_rank = rank / input->ncore;
+    int local_rank = rank % input->ncore;
+
+    if ((dimer_step == 1) && (local_rank == 0)) {
+        char filename[128];
+        sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
+        FILE *fp = fopen(filename, "w");
+        fputs(" Opt step   Rot step              Kappa   Rot angle   Rot force\n", fp);
+        fclose(fp);
+    }
+    double energy0, energy1, energy2;
+    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
+    double *unit_force0 = normalize(force0, disp_num);
+    for (i = 0; i < input->max_num_rot; ++i) {
+        /* let eigenmode normal to force */
+        double *tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
+        new_eigenmode = normalize(tmp_eigenmode, disp_num);
+        for (j = 0; j < disp_num; ++j) {
+            eigenmode[j * 3 + 0] = new_eigenmode[j * 3 + 0];
+            eigenmode[j * 3 + 1] = new_eigenmode[j * 3 + 1];
+            eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
+        }
+        free(tmp_eigenmode);
+        free(new_eigenmode);
 
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -327,30 +468,24 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             force2[j * 3 + 2] = 2 * force0[j * 3 + 2] - force1[j * 3 + 2];
         }
         double *f_rot_A = get_rot_force(input, force1, force2, eigenmode, disp_num);
-        if (ortho > 0) {
-            double *unit_force0 = normalize(force0, disp_num);
-            double *new_f_rot_A = perpendicular_vector(f_rot_A, unit_force0, disp_num);
-            for (j = 0; j < disp_num; ++j) {
-                f_rot_A[j * 3 + 0] = new_f_rot_A[j * 3 + 0];
-                f_rot_A[j * 3 + 1] = new_f_rot_A[j * 3 + 1];
-                f_rot_A[j * 3 + 2] = new_f_rot_A[j * 3 + 2];
-            }
-            free(new_f_rot_A);
-            free(unit_force0);
+        /* let rotational force normal to force */
+        double *new_f_rot_A = perpendicular_vector(f_rot_A, unit_force0, disp_num);
+        for (j = 0; j < disp_num; ++j) {
+            f_rot_A[j * 3 + 0] = new_f_rot_A[j * 3 + 0];
+            f_rot_A[j * 3 + 1] = new_f_rot_A[j * 3 + 1];
+            f_rot_A[j * 3 + 2] = new_f_rot_A[j * 3 + 2];
         }
+        free(new_f_rot_A);
+        free(unit_force0);
 
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
                 char line[128], filename[128];
-                if (ortho == 0) {
-                    sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
-                } else {
-                    sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-                }
+                sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   %16f   ---------   ---------   %9f\n",
-                        dimer_step, i, energy0, norm(f_rot_A, disp_num));
+                sprintf(line, " %8d   %8d   ----------------   ---------   %9f\n",
+                        dimer_step, i, norm(f_rot_A, disp_num));
                 fputs(line, fp);
                 fclose(fp);
             }
@@ -412,7 +547,7 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         if (c0 < cmin) {
             rotangle += 3.1415926535897932384626 * 0.5;
         }
-        double *new_eigenmode, *tmp_force;
+        double *tmp_force;
         rotate_vector(n_A, rot_unit_A, &new_eigenmode, &tmp_force,
                       disp_num, rotangle);
         for (j = 0; j < disp_num; ++j) {
@@ -425,29 +560,17 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(dforce);
         free(rot_unit_A);
         free(rot_unit_B);
-        free(new_eigenmode);
         free(tmp_force);
         if (local_rank == 0) {
             char line[128], filename[128];
-            if (ortho == 0) {
-                sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
-                FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
-                        dimer_step, i + 1, energy0, cmin,
-                        rotangle * 180 / 3.1415926535897932384626,
-                        norm(f_rot_A, disp_num));
-                fputs(line, fp);
-                fclose(fp);
-            } else {
-                sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-                FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
-                        dimer_step, i + 1, energy0, kappa,
-                        rotangle * 180 / 3.1415926535897932384626,
-                        norm(f_rot_A, disp_num));
-                fputs(line, fp);
-                fclose(fp);
-            }
+            sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
+            FILE *fp = fopen(filename, "a");
+            sprintf(line, " %8d   %8d   %16f   %9f   %9f\n",
+                    dimer_step, i + 1, kappa,
+                    rotangle * 180 / 3.1415926535897932384626,
+                    norm(f_rot_A, disp_num));
+            fputs(line, fp);
+            fclose(fp);
         }
         if (norm(f_rot_A, disp_num) < input->f_rot_max) {
             free(f_rot_A);
@@ -458,6 +581,8 @@ double rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     free(force0);
     free(force1);
     free(force2);
+    free(unit_force0);
+    free(new_eigenmode);
     return kappa;
 }
 
@@ -695,8 +820,8 @@ int dimer(Config *config0, Config **config3, Input *input,
     int converge = 0;
     int dimer_step;
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
-        rotate(config0, input, disp_num, disp_list, eigenmode,
-               count, dimer_step, 0, comm);
+        rotate(config0, input, disp_num, disp_list,
+               eigenmode, count, dimer_step, comm);
         /* kappa-dimer */
         double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
@@ -704,8 +829,8 @@ int dimer(Config *config0, Config **config3, Input *input,
             tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
             tmp_eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
         }
-        kappa = rotate(config0, input, disp_num, disp_list, tmp_eigenmode,
-                       count, dimer_step, 1, comm);
+        kappa = constrained_rotate(config0, input, disp_num, disp_list,
+                                   tmp_eigenmode, count, dimer_step, comm);
         free(tmp_eigenmode);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step, kappa, comm);
