@@ -299,16 +299,12 @@ int read_config(Config *config, Input *input, char *filename)
 }
 
 
-void write_config(Config *config, char *filename, int mode)
+void write_config(Config *config, char *filename, char *mode)
 {
     int i;
     char line[MAXLINE];
     FILE *fp;
-    if (mode == 0) {
-        fp = fopen(filename, "w");
-    } else {
-        fp = fopen(filename, "a");
-    }
+    fp = fopen(filename, mode);
 
     /* title */
     fputs("POSCAR\n", fp);

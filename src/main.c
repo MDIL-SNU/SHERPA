@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
             fputs(line, fp);
             fclose(fp);
             sprintf(filename, "%s/kMC.XDATCAR", input->output_dir);
-            write_config(config, filename, 1);
+            write_config(config, filename, "a");
             printf("--------------------------------------------------------------\n");
             for (i = 0; i < total_reac_num; ++i) {
                 printf(" %8lld   %14d   %16f   %13e\n",

@@ -814,7 +814,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
-        write_config(config0, filename, 0);
+        write_config(config0, filename, "w");
     }
     double fmax, kappa;
     int converge = 0;
@@ -849,7 +849,7 @@ int dimer(Config *config0, Config **config3, Input *input,
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
-            write_config(config0, filename, 1);
+            write_config(config0, filename, "a");
         }
         if (fmax < input->f_tol) {
             converge = 1;
@@ -889,7 +889,7 @@ int dimer(Config *config0, Config **config3, Input *input,
     if (local_rank == 0) {
         char line[128], filename[128];
         sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
-        write_config(template, filename, 0);
+        write_config(template, filename, "w");
         sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
         FILE *fp = fopen(filename, "w");     
         double *tmp_eigenmode = (double *)calloc(tot_num * 3, sizeof(double));
@@ -967,7 +967,7 @@ int dimer(Config *config0, Config **config3, Input *input,
             if (local_rank == 0) {
                 char filename[128];
                 sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename, 0);
+                write_config(template, filename, "w");
             }
         } else {
             for (i = 0; i < config0->tot_num; ++i) {
@@ -978,7 +978,7 @@ int dimer(Config *config0, Config **config3, Input *input,
             if (local_rank == 0) {
                 char filename[128];
                 sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename, 0);
+                write_config(template, filename, "w");
             }
         }
         *Ea = ts_energy - ini_energy;
