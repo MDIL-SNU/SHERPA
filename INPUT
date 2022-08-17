@@ -26,6 +26,7 @@ MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 INIT_MODE   = 0
+CONFIDENCE  = 0.9
 
 # random parameter #
 RANDOM_SEED = -1

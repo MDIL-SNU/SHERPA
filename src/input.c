@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -163,10 +164,6 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_int(&(input->init_mode), "INIT_MODE", filename);
-    if (errno) {
-        return 1;
-    }
     errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
     if (errno) {
         return 1;
@@ -255,6 +252,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_double(&(input->confidence), "CONFIDENCE", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_char(&(input->output_dir), "OUTPUT_DIR", filename);
     if (errno) {
         return 1;
@@ -267,6 +268,7 @@ int read_input(Input *input, char *filename)
         input->random_seed = (unsigned int)time(NULL);
     }
     input->trial_angle *= 3.1415926535897932384626 / 180;
+    input->nredundant = (int)round(1 / (1 - input->confidence));
     return 0;
 }
 

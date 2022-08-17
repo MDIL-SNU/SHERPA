@@ -154,55 +154,36 @@ double *projected_force(double *force0, double *eigenmode,
 }
 
 
-void cut_sphere(Config *config, Input *input, double *center, int *update_list)
+void cut_sphere(Config *config, Input *input, int update_num, int *update_list)
 {
     int i;
-    double del[3];
+    int *update_flag = (int *)calloc(config->tot_num, sizeof(int));
+    for (i = 0; i < update_num; ++i) {
+        update_flag[update_list[i]] = 1;
+    }
     int cut_num = 0;
-    int update_num = 0;
-    int *cut_list = (int *)malloc(sizeof(int) * config->tot_num);
-    for (i = 0; i < config->tot_num; ++i) {
-        del[0] = config->pos[i * 3 + 0] - center[0];
-        del[1] = config->pos[i * 3 + 1] - center[1];
-        del[2] = config->pos[i * 3 + 2] - center[2];
-        get_minimum_image(del, config->boxlo, config->boxhi,
-                          config->xy, config->yz, config->xz);
-        double dist = sqrt(del[0] * del[0] + del[1] * del[1] + del[2] * del[2]);
-        if (dist > input->cutoff * 2) {
+    int *cut_list = (int *)malloc(sizeof(int) * config->tot_num - update_num);
+    for (i = config->tot_num - 1; i >= 0; --i) {
+        if (update_flag[i] == 0) {
             cut_list[cut_num] = i;
             cut_num++;
-        } else {
-            update_list[update_num] = i;
-            update_num++;
         }
     }
     /* sort */
-    while (1) {
-        int done = 1;
-        for (i = 1; i < cut_num; ++i) {
-            if (cut_list[i - 1] < cut_list[i]) {
-                int tmp_cut = cut_list[i - 1];
-                cut_list[i - 1] = cut_list[i];
-                cut_list[i] = tmp_cut;
-                done = 0;
-            }
-        }
-        if (done) {
-            break;
-        }
-    }
+    int_sort(cut_list, cut_num);
     for (i = 0; i < cut_num; ++i) {
         extract_atom(config, cut_list[i]);
     }
+    free(update_flag);
     free(cut_list);
 }
 
 
-double *displace(Input *input, int tot_num,
-                 int disp_num, int *disp_list, int count, MPI_Comm comm)
+/* not normalized */
+double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
 {
     int i, rank, size;
-    double *disp = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -210,35 +191,138 @@ double *displace(Input *input, int tot_num,
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
-    if (local_rank == 0) {
-        double *tmp_disp = (double *)calloc(tot_num * 3, sizeof(double));
-        if (input->init_mode > 0) {
-            char line[128];
-            FILE *fp = fopen("./MODECAR", "r");
-            for (i = 0; i < tot_num; ++i) {
-                fgets(line, 128, fp);
-                tmp_disp[i * 3 + 0] = atof(strtok(line, " \n"));
-                tmp_disp[i * 3 + 1] = atof(strtok(NULL, " \n"));
-                tmp_disp[i * 3 + 2] = atof(strtok(NULL, " \n"));
-            }
-            fclose(fp);
-        } else {
-            for (i = 0; i < disp_num; ++i) {
-                tmp_disp[disp_list[i] * 3 + 0] = normal_random(0, input->stddev); 
-                tmp_disp[disp_list[i] * 3 + 1] = normal_random(0, input->stddev); 
-                tmp_disp[disp_list[i] * 3 + 2] = normal_random(0, input->stddev); 
-            }
-        }
-        for (i = 0; i < disp_num; ++i) {
-            disp[i * 3 + 0] = tmp_disp[disp_list[i] * 3 + 0];
-            disp[i * 3 + 1] = tmp_disp[disp_list[i] * 3 + 1];
-            disp[i * 3 + 2] = tmp_disp[disp_list[i] * 3 + 2];
-        }
-        free(tmp_disp);
+    int q = n / input->ncore;
+    int r = n % input->ncore;
+    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
+    int end = begin + q;
+    if (r > local_rank) {
+        end++;
     }
-    MPI_Bcast(disp, disp_num * 3, MPI_DOUBLE, 0, comm);
+    for (i = begin; i < end; ++i) {
+        eigenmode[i * 3 + 0] = normal_random(0, input->stddev);
+        eigenmode[i * 3 + 1] = normal_random(0, input->stddev);
+        eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
+    }
+    int count = (end - begin) * 3;
+    int *counts = (int *)malloc(sizeof(int) * group_size);
+    MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    int *disp = (int *)malloc(sizeof(int) * group_size);
+    disp[0] = 0;
+    if (group_size > 1) {
+        for (i = 1; i < group_size; ++i) {
+            disp[i] = disp[i - 1] + counts[i - 1];
+        }
+    }
+    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
+                   eigenmode, counts, disp, MPI_DOUBLE, comm); 
+    free(disp);
+    free(counts);
+    return eigenmode;
+}
 
-    return disp;
+
+/* update_list < 2 * cutoff
+   extract_list < disp_cutoff */
+void gen_list(Config *config, Input *input, double *center,
+              int *update_num, int **update_list,
+              int *extract_num, int **extract_list, MPI_Comm comm)
+{
+    int i, rank, size;
+    double del[3];
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int group_size = size / input->ncore;
+    int group_rank = rank / input->ncore;
+    int local_rank = rank % input->ncore;
+
+    int q = config->tot_num / input->ncore;
+    int r = config->tot_num % input->ncore;
+    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
+    int end = begin + q;
+    if (r > local_rank) {
+        end++;
+    }
+    int tmp_update_num = 0;
+    int *tmp_update_list = (int *)malloc(sizeof(int) * config->tot_num);
+    int tmp_extract_num = 0;
+    int *tmp_extract_list = (int *)malloc(sizeof(int) * config->tot_num);
+    for (i = begin; i < end; ++i) {
+        del[0] = config->pos[i * 3 + 0] - center[0];
+        del[1] = config->pos[i * 3 + 1] - center[1];
+        del[2] = config->pos[i * 3 + 2] - center[2];
+        get_minimum_image(del, config->boxlo, config->boxhi,
+                          config->xy, config->yz, config->xz);
+        double dist = sqrt(del[0] * del[0] + del[1] * del[1] + del[2] * del[2]);
+        if (dist < 2 * input->cutoff) {
+            tmp_update_list[tmp_update_num] = i;
+            tmp_update_num++; 
+            if (dist < input->disp_cutoff) {
+                tmp_extract_list[tmp_extract_num] = i;
+                tmp_extract_num++;
+            }
+        }
+    }
+    MPI_Allreduce(&tmp_update_num, update_num, 1, MPI_INT, MPI_SUM, comm);
+    MPI_Allreduce(&tmp_extract_num, extract_num, 1, MPI_INT, MPI_SUM, comm);
+    *update_list = (int *)malloc(sizeof(int) * (*update_num));
+    *extract_list = (int *)malloc(sizeof(int) * (*extract_num));
+
+    int *counts = (int *)malloc(sizeof(int) * group_size);
+    int *disp = (int *)malloc(sizeof(int) * group_size);
+
+    /* update list */
+    MPI_Allgather(&tmp_update_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    disp[0] = 0;
+    if (group_size > 1) {
+        for (i = 0; i < group_size; ++i) {
+            disp[i] = disp[i - 1] + counts[i - 1];
+        }
+    }
+    MPI_Allgatherv(tmp_update_list, tmp_update_num, MPI_INT,
+                   *update_list, counts, disp, MPI_INT, comm);
+
+    /* extract list */
+    MPI_Allgather(&tmp_extract_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    disp[0] = 0;
+    if (group_size > 1) {
+        for (i = 0; i < group_size; ++i) {
+            disp[i] = disp[i - 1] + counts[i - 1];
+        }
+    }
+    MPI_Allgatherv(tmp_extract_list, tmp_extract_num, MPI_INT,
+                   *extract_list, counts, disp, MPI_INT, comm);
+
+    free(tmp_update_list);
+    free(tmp_extract_list);
+    free(counts);
+    free(disp);
+
+    /* sort */
+    int_sort(*extract_list, *extract_num);
+
+    /*
+    int key_index = 0;
+    int key_len = (*extract_num) * (*extract_num - 1) / 2;
+    *key = (int *)malloc(sizeof(int) * key_len);
+    for (i = 0; i < *extract_num; ++i) {
+        for (j = i + 1; j < *extract_num; ++j) {
+            del[0] = config->pos[extract_list[i] * 3 + 0]
+                   - config->pos[extract_list[j] * 3 + 0];
+            del[1] = config->pos[extract_list[i] * 3 + 1]
+                   - config->pos[extract_list[j] * 3 + 1];
+            del[2] = config->pos[extract_list[i] * 3 + 2]
+                   - config->pos[extract_list[j] * 3 + 2];
+            get_minimum_image(del, config->boxlo, config->boxhi,
+                              config->xy, config->yz, config->xz);
+            int dist = (int)ronud(sqrt(del[0] * del[0]
+                                     + del[1] * del[1]
+                                     + del[2] * del[2]));
+            key[key_index] = dist;
+            key_index++;
+        }
+    }
+    */
 }
 
 
@@ -749,14 +833,11 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
 
 
 // TODO: orthogonalization
-int dimer(Config *config0, Config **config3, Input *input,
-          int count, int index, double *Ea, MPI_Comm comm)
+int dimer(Config *initial, Config *saddle, Config *final, Input *input,
+          int count, int index, double *full_eigenmode,
+          double *Ea, MPI_Comm comm)
 {
     int i, j, rank, size;
-    int tot_num = config0->tot_num;
-    double center[3] = {config0->pos[index * 3 + 0],
-                        config0->pos[index * 3 + 1],
-                        config0->pos[index * 3 + 2]};
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -764,53 +845,66 @@ int dimer(Config *config0, Config **config3, Input *input,
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
-    /* First, cut far atoms */
-    Config *template = (Config *)malloc(sizeof(Config));
-    copy_config(template, config0);
-    int *update_list = (int *)malloc(sizeof(int) * tot_num);
-    cut_sphere(config0, input, center, update_list);
-    atom_relax(config0, input, comm); 
+    /* generate lists */
+    double center[3] = {initial->pos[index * 3 + 0],
+                        initial->pos[index * 3 + 1],
+                        initial->pos[index * 3 + 2]};
+    int update_num;
+    int extract_num;
+    int *update_list;
+    int *extract_list;
+    gen_list(initial, input, center, &update_num, &update_list,
+             &extract_num, &extract_list, comm);
 
-    /* Save initial config */
-    Config *origin = (Config *)malloc(sizeof(Config));
-    copy_config(origin, config0);
+    /* index: the largest RMSD */
+    
+    /* cut far atoms and save initial state */ 
+    cut_sphere(initial, input, update_num, update_list);
+    atom_relax(initial, input, comm);
 
-    /* Second, set dimer space */
+    /* cut far atoms for starting dimer */ 
+    Config *config0 = (Config *)malloc(sizeof(Config));
+    copy_config(config0, saddle);
+    cut_sphere(saddle, input, update_num, update_list);
+
+    /* set dimer space */
     double del[3];
-    int disp_num = 0;
-    int *disp_list = (int *)malloc(sizeof(int) * config0->tot_num);
-    for (i = 0; i < config0->tot_num; ++i) {
-        del[0] = config0->pos[i * 3 + 0] - center[0];
-        del[1] = config0->pos[i * 3 + 1] - center[1];
-        del[2] = config0->pos[i * 3 + 2] - center[2];
-        get_minimum_image(del, config0->boxlo, config0->boxhi,
-                          config0->xy, config0->yz, config0->xz);
-        double dist = sqrt(del[0] * del[0] + del[1] * del[1] + del[2] * del[2]);
+    int disp_num = extract_num;
+    int *disp_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    for (i = 0; i < initial->tot_num; ++i) {
+        del[0] = initial->pos[i * 3 + 0] - center[0];
+        del[1] = initial->pos[i * 3 + 1] - center[1];
+        del[2] = initial->pos[i * 3 + 2] - center[2];
+        get_minimum_image(del, initial->boxlo, initial->boxhi,
+                          initial->xy, initial->yz, initial->xz);
+        double dist = sqrt(del[0] * del[0]
+                         + del[1] * del[1] 
+                         + del[2] * del[2]);
         if (dist < input->disp_cutoff) {
             disp_list[disp_num] = i;
             disp_num++;
         }
     }
-    
-    /* Third, initial energy */
+
+    /* eigenmode */
+    double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
+    for (i = 0; i < disp_num; ++i) {
+        tmp_eigenmode[i * 3 + 0] = full_eigenmode[extract_list[i] * 3 + 0];
+        tmp_eigenmode[i * 3 + 1] = full_eigenmode[extract_list[i] * 3 + 1];
+        tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
+    }
+    double *eigenmode = normalize(tmp_eigenmode, disp_num);
+
+    /* force at first step */
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
-    double ini_energy = energy0;
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
 
-    /* Fourth, initial eigenmode */
-    double *disp = displace(input, tot_num, disp_num, disp_list, count, comm);
-//    for (i = 0; i < disp_num; ++i) {
-//        config0->pos[disp_list[i] * 3 + 0] += disp[i * 3 + 0];
-//        config0->pos[disp_list[i] * 3 + 1] += disp[i * 3 + 1];
-//        config0->pos[disp_list[i] * 3 + 2] += disp[i * 3 + 2];
-//    }
-    double *eigenmode = normalize(disp, disp_num);
+    /* cg optimization */
     double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
     double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
 
-    /* Fifth, run */
-    /* trajectory */
+    /* run */
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Dimer_%d.XDATCAR", input->output_dir, count);
@@ -823,7 +917,6 @@ int dimer(Config *config0, Config **config3, Input *input,
         rotate(config0, input, disp_num, disp_list,
                eigenmode, count, dimer_step, comm);
         /* kappa-dimer */
-        double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
             tmp_eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
             tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
@@ -831,7 +924,6 @@ int dimer(Config *config0, Config **config3, Input *input,
         }
         kappa = constrained_rotate(config0, input, disp_num, disp_list,
                                    tmp_eigenmode, count, dimer_step, comm);
-        free(tmp_eigenmode);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step, kappa, comm);
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);     
@@ -856,15 +948,10 @@ int dimer(Config *config0, Config **config3, Input *input,
             break;
         }
     }
-    free(disp);
+    free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
     if (converge == 0) {
-        free_config(template);
-        free_config(origin);
-        free(update_list);
-        free(disp_list);
-        free(eigenmode);
         free(force0);
         if (local_rank == 0) {
             char filename[128];
@@ -876,37 +963,38 @@ int dimer(Config *config0, Config **config3, Input *input,
         }
         return 1;
     }
+    oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
+    double i_energy = energy0;
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
     double ts_energy = energy0;
     free(force0);
+    *Ea = ts_energy - i_energy;
 
     /* saddle update */
     for (i = 0; i < config0->tot_num; ++i) {
-        template->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
-        template->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
-        template->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
+        saddle->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
+        saddle->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
+        saddle->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
+    }
+    for (i = 0; i < disp_num; ++i) {
+        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
     }
     if (local_rank == 0) {
         char line[128], filename[128];
         sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
-        write_config(template, filename, "w");
+        write_config(saddle, filename, "w");
         sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
         FILE *fp = fopen(filename, "w");     
-        double *tmp_eigenmode = (double *)calloc(tot_num * 3, sizeof(double));
-        for (i = 0; i < disp_num; ++i) {
-            tmp_eigenmode[disp_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-            tmp_eigenmode[disp_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
-            tmp_eigenmode[disp_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
-        }
-        for (i = 0; i < tot_num; ++i) {
+        for (i = 0; i < saddle->tot_num; ++i) {
             sprintf(line, "%.15f %.15f %.15f\n",
-                    tmp_eigenmode[i * 3 + 0],
-                    tmp_eigenmode[i * 3 + 1],
-                    tmp_eigenmode[i * 3 + 2]);
+                    full_eigenmode[i * 3 + 0],
+                    full_eigenmode[i * 3 + 1],
+                    full_eigenmode[i * 3 + 2]);
             fputs(line, fp);
         }
         fclose(fp);
-        free(tmp_eigenmode);
     }
 
     /* split */
@@ -917,12 +1005,12 @@ int dimer(Config *config0, Config **config3, Input *input,
     int trial = 1;
     do {
         for (j = 0; j < disp_num; ++j) {
-            config1->pos[disp_list[j] * 3 + 0] += 0.2 * trial * eigenmode[j * 3 + 0];
-            config1->pos[disp_list[j] * 3 + 1] += 0.2 * trial * eigenmode[j * 3 + 1];
-            config1->pos[disp_list[j] * 3 + 2] += 0.2 * trial * eigenmode[j * 3 + 2];
-            config2->pos[disp_list[j] * 3 + 0] -= 0.2 * trial * eigenmode[j * 3 + 0];
-            config2->pos[disp_list[j] * 3 + 1] -= 0.2 * trial * eigenmode[j * 3 + 1];
-            config2->pos[disp_list[j] * 3 + 2] -= 0.2 * trial * eigenmode[j * 3 + 2];
+            config1->pos[disp_list[j] * 3 + 0] += 0.1 * trial * eigenmode[j * 3 + 0];
+            config1->pos[disp_list[j] * 3 + 1] += 0.1 * trial * eigenmode[j * 3 + 1];
+            config1->pos[disp_list[j] * 3 + 2] += 0.1 * trial * eigenmode[j * 3 + 2];
+            config2->pos[disp_list[j] * 3 + 0] -= 0.1 * trial * eigenmode[j * 3 + 0];
+            config2->pos[disp_list[j] * 3 + 1] -= 0.1 * trial * eigenmode[j * 3 + 1];
+            config2->pos[disp_list[j] * 3 + 2] -= 0.1 * trial * eigenmode[j * 3 + 2];
         }
         atom_relax(config1, input, comm); 
         atom_relax(config2, input, comm); 
@@ -931,8 +1019,8 @@ int dimer(Config *config0, Config **config3, Input *input,
     free(disp_list);
     free(eigenmode);
 
-    int diff1 = diff_config(origin, config1, 2 * input->max_step);
-    int diff2 = diff_config(origin, config2, 2 * input->max_step);
+    int diff1 = diff_config(initial, config1, 2 * input->max_step);
+    int diff2 = diff_config(initial, config2, 2 * input->max_step);
     /* log */
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
@@ -943,10 +1031,8 @@ int dimer(Config *config0, Config **config3, Input *input,
             fputs(" Saddle state: disconnected\n", fp);
             fclose(fp);
         }
-        free_config(template);
         free_config(config1);
         free_config(config2);
-        free_config(origin);
         free(update_list);
         return 1;
     } else {
@@ -960,34 +1046,19 @@ int dimer(Config *config0, Config **config3, Input *input,
         }
         if (diff1 == 0) {
             for (i = 0; i < config0->tot_num; ++i) {
-                template->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
-                template->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
-                template->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
-            }
-            if (local_rank == 0) {
-                char filename[128];
-                sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename, "w");
+                final->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
+                final->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
+                final->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
             }
         } else {
             for (i = 0; i < config0->tot_num; ++i) {
-                template->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
-                template->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
-                template->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
-            }
-            if (local_rank == 0) {
-                char filename[128];
-                sprintf(filename, "%s/Final_%d.POSCAR", input->output_dir, count);
-                write_config(template, filename, "w");
+                final->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
+                final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
+                final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
             }
         }
-        *Ea = ts_energy - ini_energy;
-        *config3 = (Config *)malloc(sizeof(Config));
-        copy_config(*config3, template);
-        free_config(template);
         free_config(config1);
         free_config(config2);
-        free_config(origin);
         free(update_list);
         return 0;
     }

@@ -56,7 +56,7 @@ STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
-INIT_MODE   = 0
+CONFIDENCE  = 0.9
 
 # random parameter #
 RANDOM_SEED = -1
@@ -91,8 +91,8 @@ NCORE       = 8
 |STDDEV|Standard deviation of gaussian displacement||
 |MAX_STEP|Maximum step size of translation|Angstrom|
 |TRIAL_STEP|Trial step size of translation|Angstrom|
-|INIT_MODE|User defined initial eigenmode||
 |INIT_RELAX|Initial structure optimization||
+|CONFIDENCE|Confidence level of event table||
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
 |NCORE|The number of cores for each dimer method||
@@ -115,4 +115,5 @@ $numproc stands for the number of CPU cores in parallel computation.
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
-3. `numproc` should be the multiple of `NCORE`. `NCORE` of 4-8 is recommended. 
+2. `numproc` should be the multiple of `NCORE`. `NCORE` of 4-8 is recommended. 
+3. Set DISP_CUTOFF shorter than CUTOFF.

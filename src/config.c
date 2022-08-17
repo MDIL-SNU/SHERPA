@@ -410,6 +410,7 @@ void copy_config(Config *config2, Config *config1)
 }
 
 
+/* 0: identical, 1: different */
 int diff_config(Config *config1, Config *config2, double tol)
 {
     int i;

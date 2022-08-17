@@ -4,11 +4,11 @@
 typedef struct _Input
 {
     int nelem;
-    int init_mode;
     int init_relax;
     int max_num_rot;
     int random_seed;
     int ncore;
+    int nredundant;
 
     char *pair_style;
     char *pair_coeff;
@@ -30,6 +30,7 @@ typedef struct _Input
     double stddev;
     double max_step;
     double trial_step;
+    double confidence;
 
     long long end_step;
 } Input;
