@@ -162,7 +162,7 @@ void cut_sphere(Config *config, Input *input, int update_num, int *update_list)
         update_flag[update_list[i]] = 1;
     }
     int cut_num = 0;
-    int *cut_list = (int *)malloc(sizeof(int) * config->tot_num - update_num);
+    int *cut_list = (int *)malloc(sizeof(int) * (config->tot_num - update_num));
     for (i = config->tot_num - 1; i >= 0; --i) {
         if (update_flag[i] == 0) {
             cut_list[cut_num] = i;
@@ -204,12 +204,12 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
         eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
     }
     int count = (end - begin) * 3;
-    int *counts = (int *)malloc(sizeof(int) * group_size);
+    int *counts = (int *)malloc(sizeof(int) * input->ncore);
     MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    int *disp = (int *)malloc(sizeof(int) * group_size);
+    int *disp = (int *)malloc(sizeof(int) * input->ncore);
     disp[0] = 0;
-    if (group_size > 1) {
-        for (i = 1; i < group_size; ++i) {
+    if (input->ncore > 1) {
+        for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
@@ -253,7 +253,9 @@ void gen_list(Config *config, Input *input, double *center,
         del[2] = config->pos[i * 3 + 2] - center[2];
         get_minimum_image(del, config->boxlo, config->boxhi,
                           config->xy, config->yz, config->xz);
-        double dist = sqrt(del[0] * del[0] + del[1] * del[1] + del[2] * del[2]);
+        double dist = sqrt(del[0] * del[0]
+                         + del[1] * del[1]
+                         + del[2] * del[2]);
         if (dist < 2 * input->cutoff) {
             tmp_update_list[tmp_update_num] = i;
             tmp_update_num++; 
@@ -268,14 +270,14 @@ void gen_list(Config *config, Input *input, double *center,
     *update_list = (int *)malloc(sizeof(int) * (*update_num));
     *extract_list = (int *)malloc(sizeof(int) * (*extract_num));
 
-    int *counts = (int *)malloc(sizeof(int) * group_size);
-    int *disp = (int *)malloc(sizeof(int) * group_size);
+    int *counts = (int *)malloc(sizeof(int) * input->ncore);
+    int *disp = (int *)malloc(sizeof(int) * input->ncore);
 
     /* update list */
     MPI_Allgather(&tmp_update_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
     disp[0] = 0;
-    if (group_size > 1) {
-        for (i = 0; i < group_size; ++i) {
+    if (input->ncore > 1) {
+        for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
@@ -285,8 +287,8 @@ void gen_list(Config *config, Input *input, double *center,
     /* extract list */
     MPI_Allgather(&tmp_extract_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
     disp[0] = 0;
-    if (group_size > 1) {
-        for (i = 0; i < group_size; ++i) {
+    if (input->ncore > 1) {
+        for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
@@ -501,7 +503,7 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
 {
     int i, j, rank, size;
     double magnitude, cmin, kappa;
-    double *new_eigenmode;
+    double *tmp_eigenmode, *new_eigenmode;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -509,13 +511,13 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
-    if ((dimer_step == 1) && (local_rank == 0)) {
-        char filename[128];
-        sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-        FILE *fp = fopen(filename, "w");
-        fputs(" Opt step   Rot step              Kappa   Rot angle   Rot force\n", fp);
-        fclose(fp);
-    }
+//    if ((dimer_step == 1) && (local_rank == 0)) {
+//        char filename[128];
+//        sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
+//        FILE *fp = fopen(filename, "w");
+//        fputs(" Opt step   Rot step              Kappa   Rot angle   Rot force\n", fp);
+//        fclose(fp);
+//    }
     double energy0, energy1, energy2;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -524,7 +526,7 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
     double *unit_force0 = normalize(force0, disp_num);
     for (i = 0; i < input->max_num_rot; ++i) {
         /* let eigenmode normal to force */
-        double *tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
+        tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
         new_eigenmode = normalize(tmp_eigenmode, disp_num);
         for (j = 0; j < disp_num; ++j) {
             eigenmode[j * 3 + 0] = new_eigenmode[j * 3 + 0];
@@ -560,19 +562,18 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
             f_rot_A[j * 3 + 2] = new_f_rot_A[j * 3 + 2];
         }
         free(new_f_rot_A);
-        free(unit_force0);
 
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
-            if (local_rank == 0) {
-                char line[128], filename[128];
-                sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-                FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   ----------------   ---------   %9f\n",
-                        dimer_step, i, norm(f_rot_A, disp_num));
-                fputs(line, fp);
-                fclose(fp);
-            }
+//            if (local_rank == 0) {
+//                char line[128], filename[128];
+//                sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
+//                FILE *fp = fopen(filename, "a");
+//                sprintf(line, " %8d   %8d   ----------------   ---------   %9f\n",
+//                        dimer_step, i, norm(f_rot_A, disp_num));
+//                fputs(line, fp);
+//                fclose(fp);
+//            }
             free(f_rot_A);
             break;
         }
@@ -645,17 +646,18 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
         free(rot_unit_A);
         free(rot_unit_B);
         free(tmp_force);
-        if (local_rank == 0) {
-            char line[128], filename[128];
-            sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            sprintf(line, " %8d   %8d   %16f   %9f   %9f\n",
-                    dimer_step, i + 1, kappa,
-                    rotangle * 180 / 3.1415926535897932384626,
-                    norm(f_rot_A, disp_num));
-            fputs(line, fp);
-            fclose(fp);
-        }
+        free(new_eigenmode);
+//        if (local_rank == 0) {
+//            char line[128], filename[128];
+//            sprintf(filename, "%s/Dimer_%d_kappa.log", input->output_dir, count);
+//            FILE *fp = fopen(filename, "a");
+//            sprintf(line, " %8d   %8d   %16f   %9f   %9f\n",
+//                    dimer_step, i + 1, kappa,
+//                    rotangle * 180 / 3.1415926535897932384626,
+//                    norm(f_rot_A, disp_num));
+//            fputs(line, fp);
+//            fclose(fp);
+//        }
         if (norm(f_rot_A, disp_num) < input->f_rot_max) {
             free(f_rot_A);
             break;
@@ -666,7 +668,6 @@ double constrained_rotate(Config *config0, Input *input, int disp_num, int *disp
     free(force1);
     free(force2);
     free(unit_force0);
-    free(new_eigenmode);
     return kappa;
 }
 
@@ -856,20 +857,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     gen_list(initial, input, center, &update_num, &update_list,
              &extract_num, &extract_list, comm);
 
-    /* index: the largest RMSD */
-    
-    /* cut far atoms and save initial state */ 
+    /* cut far atoms */ 
     cut_sphere(initial, input, update_num, update_list);
-    atom_relax(initial, input, comm);
-
-    /* cut far atoms for starting dimer */ 
-    Config *config0 = (Config *)malloc(sizeof(Config));
-    copy_config(config0, saddle);
-    cut_sphere(saddle, input, update_num, update_list);
 
     /* set dimer space */
     double del[3];
-    int disp_num = extract_num;
+    int disp_num = 0;
     int *disp_list = (int *)malloc(sizeof(int) * initial->tot_num);
     for (i = 0; i < initial->tot_num; ++i) {
         del[0] = initial->pos[i * 3 + 0] - center[0];
@@ -886,6 +879,16 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         }
     }
 
+    /* cut far atoms for starting dimer */ 
+    Config *config0 = (Config *)malloc(sizeof(Config));
+    copy_config(config0, saddle);
+    cut_sphere(config0, input, update_num, update_list);
+
+    /* oneshot for first force */
+    double energy0;
+    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
+
     /* eigenmode */
     double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
@@ -894,11 +897,6 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
     }
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
-
-    /* force at first step */
-    double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
 
     /* cg optimization */
     double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -952,7 +950,6 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     free(direction_old);
     free(cg_direction);
     if (converge == 0) {
-        free(force0);
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
@@ -961,8 +958,15 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
+        free_config(config0);
+        free(force0);
+        free(eigenmode);
+        free(update_list);
+        free(extract_list);
         return 1;
     }
+    /* relax initial structure and barrier energy */
+    atom_relax(initial, input, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
@@ -986,14 +990,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         sprintf(filename, "%s/Saddle_%d.POSCAR", input->output_dir, count);
         write_config(saddle, filename, "w");
         sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
-        FILE *fp = fopen(filename, "w");     
-        for (i = 0; i < saddle->tot_num; ++i) {
-            sprintf(line, "%.15f %.15f %.15f\n",
-                    full_eigenmode[i * 3 + 0],
-                    full_eigenmode[i * 3 + 1],
-                    full_eigenmode[i * 3 + 2]);
-            fputs(line, fp);
-        }
+        FILE *fp = fopen(filename, "wb");     
+        fwrite(full_eigenmode, sizeof(double), saddle->tot_num * 3, fp);
         fclose(fp);
     }
 
@@ -1017,6 +1015,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         trial++;
     } while (diff_config(config1, config2, 2 * input->max_step) == 0);
     free(disp_list);
+    free(extract_list);
     free(eigenmode);
 
     int diff1 = diff_config(initial, config1, 2 * input->max_step);
@@ -1031,6 +1030,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
             fputs(" Saddle state: disconnected\n", fp);
             fclose(fp);
         }
+        free_config(config0);
         free_config(config1);
         free_config(config2);
         free(update_list);
@@ -1057,6 +1057,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
             }
         }
+        free_config(config0);
         free_config(config1);
         free_config(config2);
         free(update_list);

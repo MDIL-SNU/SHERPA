@@ -1,88 +1,98 @@
+#include <dirent.h>
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "dataset.h"
 #include "utils.h"
 
 
-void insert_data(Dataset *dataset, int key_len, int *key,
-                 int recycle_num, int *recycle_list,
-                 int *type, double *initial, double *saddle, double *eigenmode)
+void insert_data(Dataset *dataset, int n, int index,
+                 int *type, double *saddle, double *eigenmode)
 {
     int i;
     Data *data = (Data *)malloc(sizeof(Data));
-    data->recycle_num = recycle_num;
-    data->key = (int *)malloc(sizeof(int) * key_len);
-    data->type = (int *)malloc(sizeof(int) * recycle_num);
-    data->initial = (double *)malloc(sizeof(double) * recycle_num * 3);
-    data->saddle = (double *)malloc(sizeof(double) * recycle_num * 3);
-    for (i = 0; i < natom; ++i) {
+    data->index = index;
+    data->type = (int *)malloc(sizeof(int) * n);
+    data->saddle = (double *)malloc(sizeof(double) * n * 3);
+    data->eigenmode = (double *)malloc(sizeof(double) * n * 3);
+    for (i = 0; i < n; ++i) {
         data->type[i] = type[i];
-        data->initial[i * 3 + 0] = initial[index[i] * 3 + 0];
-        data->initial[i * 3 + 1] = initial[index[i] * 3 + 1];
-        data->initial[i * 3 + 2] = initial[index[i] * 3 + 2];
-        data->saddle[i * 3 + 0] = saddle[index[i] * 3 + 0];
-        data->saddle[i * 3 + 1] = saddle[index[i] * 3 + 1];
-        data->saddle[i * 3 + 2] = saddle[index[i] * 3 + 2];
+        data->saddle[i * 3 + 0] = saddle[i * 3 + 0];
+        data->saddle[i * 3 + 1] = saddle[i * 3 + 1];
+        data->saddle[i * 3 + 2] = saddle[i * 3 + 2];
+        data->eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
+        data->eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
+        data->eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
     }
     if (dataset->head == NULL) {
         dataset->head = data;
+        dataset->head->next = NULL;
     } else {
         data->next = dataset->head;
         dataset->head = data;
     }
     dataset->numdata++;
-    if (dataset->numdata > 5000) {
-        delete_data(dataset);
-    }
 }
 
 
-void delete_data(Dataset *dataset) {
-    Data *data = dataset->head;
-    while (data->next->next != NULL) {
-        data = data->next;
-    }
-    free(data->next->key)
-    free(data->next->type);
-    free(data->next->initial);
-    free(data->next->saddle);
-    free(data->next);
-    data->next = NULL;
-    dataset->numdata--; 
-}
-
-
-Data *search_data(Dataset *dataset, Config *config, long long key,
-                  int *index, int numindex, int index)
+void build_dataset(Dataset *dataset, Config *config, Input *input)
 {
-    Data *ptr = dataset->head;
-    while (1) {
-        if (ptr == NULL) {
-            return ptr;
-        } else if ((ptr->key == key) && (numindex == ptr->numatom)) {
-            int i;
-            int numatom = 0;
-            double vec[3];
-            for (i = 0; i < numindex; ++i) {
-                if (ptr->type[i] != config->type[index[i] - 1]) {
-                    break;
-                }
-                vec[0] = ptr->initial[i * 3 + 0] - config->pos[(index[i] - 1) * 3 + 0];
-                vec[1] = ptr->initial[i * 3 + 1] - config->pos[(index[i] - 1) * 3 + 1];
-                vec[2] = ptr->initial[i * 3 + 2] - config->pos[(index[i] - 1) * 3 + 2];
-                if ((norm(vec) > 1.0) && (index[i] - 1 != index)) {
-                    break;
-                }
-                numatom++;
+    int i, j, errno;
+    double del[3];
+    char *ptr;
+    FILE *fp;
+    struct dirent **namelist;
+
+    int count = scandir(input->output_dir, &namelist, name_filter, NULL); 
+    if (count > 0) {
+        for (i = 0; i < count; ++i) {
+            /* load saddle */
+            char filename[128];
+            strtok(namelist[i]->d_name, "_");
+            ptr = strtok(NULL, ".");
+            sprintf(filename, "%s/Saddle_%s.POSCAR", input->output_dir, ptr);
+            Config *tmp_config = (Config *)malloc(sizeof(Config));
+            errno = read_config(tmp_config, input, filename);
+            if (errno > 0) {
+                printf("Cannot find %s\n", filename);
             }
-            if (numatom == numindex) {
-                return ptr;
-            } else {
-                ptr = ptr->next;
+            /* load eigenmode */
+            int n = config->tot_num;
+            double max_dist = 0.0;
+            int index = 0;
+            for (j = 0; j < n; ++j) {
+                del[0] = config->pos[j * 3 + 0] - tmp_config->pos[j * 3 + 0];
+                del[1] = config->pos[j * 3 + 1] - tmp_config->pos[j * 3 + 1];
+                del[2] = config->pos[j * 3 + 2] - tmp_config->pos[j * 3 + 2];
+                if ((abs(del[0]) < max_dist) || (abs(del[1]) < max_dist) || (abs(del[2]) < max_dist)) {
+                    continue;
+                }
+                get_minimum_image(del, config->boxlo, config->boxhi,
+                                  config->xy, config->yz, config->xz);
+                double dist = sqrt(del[0] * del[0]
+                                 + del[1] * del[1] 
+                                 + del[2] * del[2]);
+                if (dist > max_dist) {
+                    index = j;
+                    max_dist = dist;
+                }                 
             }
-        } else {
-            ptr = ptr->next;
+            double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
+            sprintf(filename, "%s/%s.MODECAR", input->output_dir, ptr);
+            fp = fopen(filename, "rb");
+            int why = fread(eigenmode, sizeof(double), n * 3, fp);
+            fclose(fp);
+            /* insert data */
+            insert_data(dataset, n, index, tmp_config->type, tmp_config->pos, eigenmode);
+            free(tmp_config);
+            free(eigenmode);
         }
     }
+    for (i = 0; i < count; ++i) {
+        free(namelist[i]);
+    }
+    free(namelist);
 }
 
 
@@ -93,8 +103,8 @@ void free_dataset(Dataset *dataset)
         Data *next = ptr->next;
         while (1) {
             free(ptr->type);
-            free(ptr->initial);
             free(ptr->saddle);
+            free(ptr->eigenmode);
             free(ptr);
             if (next == NULL) {
                 break;

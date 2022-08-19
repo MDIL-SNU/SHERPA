@@ -7,11 +7,8 @@ typedef struct _Data
 {
     struct _Data *next;
 
-    int natom;
-    int *type;
     int index;
-
-    double *initial;
+    int *type;
     double *saddle;
     double *eigenmode;
 } Data;
@@ -22,9 +19,7 @@ typedef struct _Dataset
     struct _Data *head;
 } Dataset;
 
-void insert_data(Dataset *, int, int *, int, int *, int *,
-                 double *, double *, double *);
-Data *search_data(Dataset *, Config *, long long, int *, int, int);
-void delete_data(Dataset *);
+void insert_data(Dataset *, int, int, int *, double *, double *);
+void build_dataset(Dataset *, Config *, Input *);
 void free_dataset(Dataset *);
 #endif

@@ -1,5 +1,7 @@
 #include <math.h>
+#include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "utils.h"
 
@@ -124,4 +126,61 @@ char *get_symbol(int atom_num)
     "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At",
     "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U"};
     return name[atom_num - 1];
+}
+
+
+int name_filter(const struct dirent *info)
+{
+    if (strncmp(info->d_name, "Final", 5) == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+/* 0: not unique, 1: unique */
+int check_unique(Config *config, Input *input)
+{
+    int i, j, errno, unique;
+    struct dirent **namelist;
+
+    int rank, size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
+    printf("rank %d count %d\n", rank, count);
+    if (count > 0) {
+        /* test */
+        for (i = 0; i < count; ++i) {
+            printf("rank %d filename %s\n", rank, namelist[i]->d_name);
+        }
+        for (i = 0; i < count; ++i) {
+            char filename[128];
+            sprintf(filename, "%s/%s", input->output_dir, namelist[i]->d_name);
+            Config *tmp_config = (Config *)malloc(sizeof(Config));
+            errno = read_config(tmp_config, input, filename);
+            if (errno > 0) {
+                printf("Cannot find %s\n", filename);
+            }
+            unique = diff_config(tmp_config, config, 2 * input->max_step);
+            printf("rank %d filename %s unique %d\n", rank, filename, unique);
+            free_config(tmp_config);
+            if (unique == 0) {
+                for (j = 0; j < count; ++j) {
+                    free(namelist[j]);
+                }
+                free(namelist);
+                return 0;
+            }
+        }
+        for (j = 0; j < count; ++j) {
+            free(namelist[j]);
+        }
+        free(namelist);
+        return 1;
+    } else {
+        return 1;
+    }
 }
