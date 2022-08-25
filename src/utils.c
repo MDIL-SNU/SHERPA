@@ -1,5 +1,4 @@
 #include <math.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -140,32 +139,27 @@ int name_filter(const struct dirent *info)
 
 
 /* 0: not unique, 1: unique */
-int check_unique(Config *config, Input *input)
+int check_unique(Config *config, Input *input, char *self)
 {
     int i, j, errno, unique;
     struct dirent **namelist;
 
-    int rank, size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
     int count = scandir(input->output_dir, &namelist, name_filter, NULL);
-    printf("rank %d count %d\n", rank, count);
     if (count > 0) {
-        /* test */
         for (i = 0; i < count; ++i) {
-            printf("rank %d filename %s\n", rank, namelist[i]->d_name);
-        }
-        for (i = 0; i < count; ++i) {
+            if (strcmp(self, namelist[i]->d_name) == 0) {
+                continue;
+            }
             char filename[128];
             sprintf(filename, "%s/%s", input->output_dir, namelist[i]->d_name);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
+            /* already deleted */
             if (errno > 0) {
-                printf("Cannot find %s\n", filename);
+                free(tmp_config);
+                continue;
             }
             unique = diff_config(tmp_config, config, 2 * input->max_step);
-            printf("rank %d filename %s unique %d\n", rank, filename, unique);
             free_config(tmp_config);
             if (unique == 0) {
                 for (j = 0; j < count; ++j) {
@@ -183,4 +177,40 @@ int check_unique(Config *config, Input *input)
     } else {
         return 1;
     }
+}
+
+
+void clear_unique(Input *input)
+{
+    int i;
+    struct dirent **namelist;
+
+    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
+    if (count > 0) {
+        for (i = 0; i < count; ++i) {
+            char filename[128];
+            sprintf(filename, "%s/%s", input->output_dir, namelist[i]->d_name);
+            remove(filename);
+        }
+        for (i = 0; i < count; ++i) {
+            free(namelist[i]);
+        }
+        free(namelist);
+    }    
+}
+
+
+int count_unique(Input *input)
+{
+    int i;
+    struct dirent **namelist;
+
+    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
+    if (count > 0) {
+        for (i = 0; i < count; ++i) {
+            free(namelist[i]);
+        }
+        free(namelist);
+    }
+    return count;
 }

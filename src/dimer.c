@@ -398,9 +398,8 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                 char line[128], filename[128];
                 sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
-                sprintf(line, " %8d   %8d   %16f   ---------   ---------   %9f\n",
+                fprintf(fp, " %8d   %8d   %16f   ---------   ---------   %9f\n",
                         dimer_step, i, energy0, norm(f_rot_A, disp_num));
-                fputs(line, fp);
                 fclose(fp);
             }
             free(f_rot_A);
@@ -479,11 +478,10 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             char line[128], filename[128];
             sprintf(filename, "%s/Dimer_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            sprintf(line, " %8d   %8d   %16f   %9f   %9f   %9f\n",
+            fprintf(fp, " %8d   %8d   %16f   %9f   %9f   %9f\n",
                     dimer_step, i + 1, energy0, cmin,
                     rotangle * 180 / 3.1415926535897932384626,
                     norm(f_rot_A, disp_num));
-            fputs(line, fp);
             fclose(fp);
         }
         if (norm(f_rot_A, disp_num) < input->f_rot_max) {
@@ -1056,6 +1054,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
                 final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
             }
+        }
+        if (local_rank == 0) {
+            char filename[128];
+            sprintf(filename, "%s/Final_%d.POSCAR",
+                    input->output_dir, count);
+            write_config(final, filename, "w");
         }
         free_config(config0);
         free_config(config1);

@@ -10,6 +10,7 @@ SET ( SRC_FILES
         main.c 
         calculator.c
         config.c
+        dataset.c
         dimer.c
         input.c
         target.c

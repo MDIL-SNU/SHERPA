@@ -12,5 +12,7 @@ int get_atom_num(char *);
 double get_mass(int);
 char *get_symbol(int);
 int name_filter(const struct dirent *);
-int check_unique(Config *config, Input *input);
+int check_unique(Config *config, Input *input, char *);
+void clear_unique(Input *input);
+int count_unique(Input *input);
 #endif

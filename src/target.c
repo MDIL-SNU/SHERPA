@@ -1,7 +1,10 @@
+#include <math.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "target.h"
+#include "utils.h"
 
 
 int get_target(Config *config, Input *input,
@@ -49,4 +52,61 @@ int get_target(Config *config, Input *input,
         }
     }
     return 0;
+}
+
+
+int get_index(Config *config_new, Config *config_old)
+{
+    int i, rank, size;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    int n = config_new->tot_num;
+    int q = n / size;
+    int r = n % size;
+    int begin = rank * q + ((rank > r) ? r : rank);
+    int end = begin + q;
+    if (r > rank) {
+        end++;
+    }
+
+    double del[3];
+    double max_dist = 0.0;
+    int max_index = 0;
+    for (i = begin; i < end; ++i) {
+        del[0] = config_new->pos[i * 3 + 0] - config_old->pos[i * 3 + 0]; 
+        del[1] = config_new->pos[i * 3 + 1] - config_old->pos[i * 3 + 1]; 
+        del[2] = config_new->pos[i * 3 + 2] - config_old->pos[i * 3 + 2]; 
+        get_minimum_image(del, config_new->boxlo, config_new->boxhi,
+                          config_new->xy, config_new->yz, config_new->xz);
+        double dist = sqrt(del[0] * del[0]
+                         + del[1] * del[1]
+                         + del[2] * del[2]);
+        if (dist > max_dist) {
+            max_dist = dist;
+            max_index = i;
+        }
+    }
+    double *dist_list = (double *)malloc(sizeof(double) * size);
+    MPI_Gather(&max_dist, 1, MPI_DOUBLE,
+               dist_list, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    int *index_list = (int *)malloc(sizeof(int) * size);
+    MPI_Gather(&max_index, 1, MPI_INT,
+               index_list, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    max_dist = 0.0;
+    max_index = 0;
+    for (i = 0; i < size; ++i) {
+        if (dist_list[i] > max_dist) {
+            max_dist = dist_list[i];
+            max_index = index_list[i];
+        }
+    }
+    free(dist_list);
+    free(index_list);
+
+    MPI_Bcast(&max_index, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    return max_index;
 }

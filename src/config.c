@@ -302,7 +302,6 @@ int read_config(Config *config, Input *input, char *filename)
 void write_config(Config *config, char *filename, char *mode)
 {
     int i;
-    char line[MAXLINE];
     FILE *fp;
     fp = fopen(filename, mode);
 
@@ -314,25 +313,19 @@ void write_config(Config *config, char *filename, char *mode)
     
     /* lattice vector */
     for (i = 0; i < 3; ++i) {
-        sprintf(line, " %.15f", config->cell[i][0]);
-        fputs(line, fp);
-        sprintf(line, " %.15f", config->cell[i][1]);
-        fputs(line, fp);
-        sprintf(line, " %.15f\n", config->cell[i][2]);
-        fputs(line, fp);
+        fprintf(fp, " %.15f %.15f %.15f\n",
+                config->cell[i][0], config->cell[i][1], config->cell[i][2]);
     }
 
     /* symbols */
     for (i = 0; i < config->ntype; ++i) {
-        sprintf(line, " %s", get_symbol(config->atom_num[i]));
-        fputs(line, fp);
+        fprintf(fp, " %s", get_symbol(config->atom_num[i]));
     }
     fputs("\n", fp);
 
     /* the number of each type */
     for (i = 0; i < config->ntype; ++i) {
-        sprintf(line, " %d", config->each_num[i]);
-        fputs(line, fp);
+        fprintf(fp, " %d", config->each_num[i]);
     }
     fputs("\n", fp);
 
@@ -341,21 +334,15 @@ void write_config(Config *config, char *filename, char *mode)
     fputs("Cartesian\n", fp);
     for (i = 0; i < config->tot_num; ++i) {
         if (config->fix[i] > 0) {
-            sprintf(line, "  %.15f", config->pos[i * 3 + 0]);
-            fputs(line, fp);
-            sprintf(line, "  %.15f", config->pos[i * 3 + 1]);
-            fputs(line, fp);
-            sprintf(line, "  %.15f", config->pos[i * 3 + 2]);
-            fputs(line, fp);
-            fputs(" F F F\n", fp);
+            fprintf(fp, "  %.15f  %.15f  %.15f  F F F\n",
+                    config->pos[i * 3 + 0],
+                    config->pos[i * 3 + 1],
+                    config->pos[i * 3 + 2]);
         } else {
-            sprintf(line, "  %.15f", config->pos[i * 3 + 0]);
-            fputs(line, fp);
-            sprintf(line, "  %.15f", config->pos[i * 3 + 1]);
-            fputs(line, fp);
-            sprintf(line, "  %.15f", config->pos[i * 3 + 2]);
-            fputs(line, fp);
-            fputs(" T T T\n", fp);
+            fprintf(fp, "  %.15f  %.15f  %.15f  T T T\n",
+                    config->pos[i * 3 + 0],
+                    config->pos[i * 3 + 1],
+                    config->pos[i * 3 + 2]);
         }
     }
     fclose(fp);

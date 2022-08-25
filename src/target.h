@@ -4,4 +4,5 @@
 #include "input.h"
 
 int get_target(Config *, Input *, int **, int *, int *);
+int get_index(Config *, Config *);
 #endif
