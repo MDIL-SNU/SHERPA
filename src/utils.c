@@ -138,20 +138,23 @@ int name_filter(const struct dirent *info)
 }
 
 
-/* 0: not unique, 1: unique */
-int check_unique(Config *config, Input *input, char *self)
+/* nonpositive: not unique, positive: unique */
+int check_unique(Config *config, Input *input, char *self, long long step)
 {
     int i, j, errno, unique;
     struct dirent **namelist;
 
-    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
+    char path[128];
+    sprintf(path, "%s/%lld", input->output_dir, step);
+    int count = scandir(path, &namelist, name_filter, NULL);
     if (count > 0) {
         for (i = 0; i < count; ++i) {
             if (strcmp(self, namelist[i]->d_name) == 0) {
                 continue;
             }
             char filename[128];
-            sprintf(filename, "%s/%s", input->output_dir, namelist[i]->d_name);
+            sprintf(filename, "%s/%lld/%s",
+                    input->output_dir, step, namelist[i]->d_name);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
             /* already deleted */
@@ -159,14 +162,17 @@ int check_unique(Config *config, Input *input, char *self)
                 free(tmp_config);
                 continue;
             }
+            /* 0: identical, 1: different */
             unique = diff_config(tmp_config, config, 2 * input->max_step);
             free_config(tmp_config);
             if (unique == 0) {
+                strtok(namelist[i]->d_name, "_");
+                int index = atoi(strtok(NULL, "."));
                 for (j = 0; j < count; ++j) {
                     free(namelist[j]);
                 }
                 free(namelist);
-                return 0;
+                return -index;
             }
         }
         for (j = 0; j < count; ++j) {
@@ -180,32 +186,14 @@ int check_unique(Config *config, Input *input, char *self)
 }
 
 
-void clear_unique(Input *input)
+int count_unique(Input *input, long long step)
 {
     int i;
     struct dirent **namelist;
 
-    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
-    if (count > 0) {
-        for (i = 0; i < count; ++i) {
-            char filename[128];
-            sprintf(filename, "%s/%s", input->output_dir, namelist[i]->d_name);
-            remove(filename);
-        }
-        for (i = 0; i < count; ++i) {
-            free(namelist[i]);
-        }
-        free(namelist);
-    }    
-}
-
-
-int count_unique(Input *input)
-{
-    int i;
-    struct dirent **namelist;
-
-    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
+    char path[128];
+    sprintf(path, "%s/%lld", input->output_dir, step);
+    int count = scandir(path, &namelist, name_filter, NULL);
     if (count > 0) {
         for (i = 0; i < count; ++i) {
             free(namelist[i]);

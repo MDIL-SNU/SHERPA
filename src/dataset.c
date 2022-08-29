@@ -36,7 +36,7 @@ void insert_data(Dataset *dataset, int n, int index,
 }
 
 
-void build_dataset(Dataset *dataset, Config *config, Input *input)
+void build_dataset(Dataset *dataset, Config *config, Input *input, long long step)
 {
     int i, j, errno;
     double del[3];
@@ -44,14 +44,17 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
     FILE *fp;
     struct dirent **namelist;
 
-    int count = scandir(input->output_dir, &namelist, name_filter, NULL); 
+    char path[128];
+    sprintf(path, "%s/%lld", input->output_dir, step);
+    int count = scandir(path, &namelist, name_filter, NULL); 
     if (count > 0) {
         for (i = 0; i < count; ++i) {
             /* load saddle */
             char filename[128];
             strtok(namelist[i]->d_name, "_");
             ptr = strtok(NULL, ".");
-            sprintf(filename, "%s/Saddle_%s.POSCAR", input->output_dir, ptr);
+            sprintf(filename, "%s/%lld/Saddle_%s.POSCAR",
+                    input->output_dir, step, ptr);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
             if (errno > 0) {
@@ -79,9 +82,10 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
                 }                 
             }
             double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
-            sprintf(filename, "%s/%s.MODECAR", input->output_dir, ptr);
+            sprintf(filename, "%s/%lld/%s.MODECAR",
+                    input->output_dir, step, ptr);
             fp = fopen(filename, "rb");
-            int why = fread(eigenmode, sizeof(double), n * 3, fp);
+            fread(eigenmode, sizeof(double), n * 3, fp);
             fclose(fp);
             /* insert data */
             insert_data(dataset, n, index, tmp_config->type, tmp_config->pos, eigenmode);

@@ -20,6 +20,6 @@ typedef struct _Dataset
 } Dataset;
 
 void insert_data(Dataset *, int, int, int *, double *, double *);
-void build_dataset(Dataset *, Config *, Input *);
+void build_dataset(Dataset *, Config *, Input *, long long);
 void free_dataset(Dataset *);
 #endif
