@@ -13,70 +13,6 @@
 #include "utils.h"
 
 
-void recycle(Config *saddle, Config *config_new, Config *config_old,
-             Input *input, Data *data, double *eigenmode, MPI_Comm comm)
-{
-    int i, rank, size;
-    double del[3];
-
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
-    int local_rank = rank % input->ncore;
-
-    int q = saddle->tot_num / input->ncore;
-    int r = saddle->tot_num % input->ncore;
-    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
-    int end = begin + q;
-    if (r > local_rank) {
-        end++;
-    }
-
-    for (i = begin; i < end; ++i) {
-        del[0] = config_new->pos[i * 3 + 0] - config_old->pos[i * 3 + 0];
-        del[1] = config_new->pos[i * 3 + 1] - config_old->pos[i * 3 + 1];
-        del[2] = config_new->pos[i * 3 + 2] - config_old->pos[i * 3 + 2];
-        get_minimum_image(del, saddle->boxlo, saddle->boxhi,
-                          saddle->xy, saddle->yz, saddle->xz);
-        double dist = sqrt(del[0] * del[0]
-                         + del[1] * del[1] 
-                         + del[2] * del[2]);
-        if (dist < 2 * input->max_step) {
-            saddle->pos[i * 3 + 0] = data->saddle[i * 3 + 0];
-            saddle->pos[i * 3 + 1] = data->saddle[i * 3 + 1];
-            saddle->pos[i * 3 + 2] = data->saddle[i * 3 + 2];
-            eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        } else {
-            saddle->pos[i * 3 + 0] = config_new->pos[i * 3 + 0];
-            saddle->pos[i * 3 + 1] = config_new->pos[i * 3 + 1];
-            saddle->pos[i * 3 + 2] = config_new->pos[i * 3 + 2];
-            eigenmode[i * 3 + 0] = 0.0;
-            eigenmode[i * 3 + 1] = 0.0;
-            eigenmode[i * 3 + 2] = 0.0;
-        }
-    }
-    int count = (end - begin) * 3;
-    int *counts = (int *)malloc(sizeof(int) * input->ncore);
-    MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    int *disp = (int *)malloc(sizeof(int) * input->ncore);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   saddle->pos, counts, disp, MPI_DOUBLE, comm);
-    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   eigenmode, counts, disp, MPI_DOUBLE, comm);
-    free(counts);
-    free(disp);
-}
-
-
 int main(int argc, char *argv[])
 {
     int i, j, atom_index, errno, rank, size;
@@ -132,6 +68,24 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /* read config_old */
+    Config *config_old = (Config *)malloc(sizeof(Config));
+    if (input->restart > 0) {
+        char filename[64];
+        sprintf(filename, "%s/POSCAR", input->dataset_dir);
+        errno = read_config(config_old, input, filename);
+        if (errno > 0) {
+            printf("ERROR in INIT_CONFIG FILE!\n");
+            free_input(input);
+            free_config(config);
+            free(config_old);
+            MPI_Finalize();
+            return 1;
+        }
+    } else {
+        copy_config(config_old, config);
+    }
+
     /* read target */
     int target_num = 0;
     int list_size = 64;
@@ -141,6 +95,7 @@ int main(int argc, char *argv[])
         printf("ERROR in TARGET FILE!\n");
         free_input(input);
         free_config(config);
+        free_config(config_old);
         MPI_Finalize();
         return 1;
     }
@@ -150,30 +105,27 @@ int main(int argc, char *argv[])
         atom_relax(config, input, MPI_COMM_WORLD);
     }
 
-    long long step;
-    double time = 0.0;
     /* log */
     if (rank == 0) {
         FILE *fp;
         char filename[128];
-        sprintf(filename, "%s/kMC.log", input->output_dir);
-        fp = fopen(filename, "w");
-        fputs("--------------------------------------------------------------\n", fp);
-        fputs(" kMC step   Potential energy   Reaction barrier      kMC time\n", fp);
-        fputs("--------------------------------------------------------------\n", fp);
-        fclose(fp);
         sprintf(filename, "%s/Statistics.log", input->output_dir);
         fp = fopen(filename, "w");
-        fputs("---------------------------------------------------------------------------\n", fp);
-        fputs(" kMC step   Recycled events   New unique events   Relevant events   Trials\n", fp);    
-        fputs("---------------------------------------------------------------------------\n", fp);
+        fputs("----------------------------------------------------------------\n", fp);
+        fputs(" Recycled events   New unique events   Relevant events   Trials\n", fp);    
+        fputs("----------------------------------------------------------------\n", fp);
         fclose(fp);
         sprintf(filename, "%s/Event.log", input->output_dir);
         fp = fopen(filename, "w");
-        fputs("---------------------------------------------------------------------------\n", fp);
-        fputs(" kMC step   Reaction index   Reaction barrier   Reaction rate   Degeneracy\n", fp);
+        fputs("----------------------------------------------------------------\n", fp);
+        fputs(" Reaction index   Reaction barrier   Reaction rate   Degeneracy\n", fp);
+        fputs("----------------------------------------------------------------\n", fp);
         fclose(fp);
+        sprintf(filename, "%s/POSCAR", input->output_dir);
+        write_config(config, filename, "w");
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     /* one-sided communication */
     int group_size = size / input->ncore;
@@ -200,6 +152,11 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_redundant, &redundant_win);
 
+    MPI_Win recycle_win;
+    int *global_recycle;
+    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
+                     MPI_COMM_WORLD, &global_recycle, &recycle_win);
+
     MPI_Win conv_win;
     int *global_conv;
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
@@ -210,470 +167,319 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_exit, &exit_win);
 
-    /* for recycle */
-    Config *config_old = (Config *)malloc(sizeof(Config));
-    copy_config(config_old, config);
+    int local_count;
+    *global_count = 0;
+    int local_recycle;
+    *global_recycle = 0;
+    int local_conv;
+    *global_conv = 0;
+    int local_redundant;
+    *global_redundant = 0;
+    int local_exit;
+    *global_exit = 0;
 
-    /* dataset */
+    int zero = 0;
+    int one = 1;
+    int mone = -1;
+    int local_reac_num = 0;
+    int local_dege_num = 0;
+    double local_rate_sum = 0.0;
+    int *local_reac_list = (int *)malloc(sizeof(int) * target_num);
+    int *local_dege_list = (int *)malloc(sizeof(int) * target_num);
+    double *local_acti_list = (double *)malloc(sizeof(double) * target_num);
+    double *local_rate_list = (double *)malloc(sizeof(double) * target_num);
+    /* all data in dataset are unique */
+    /* do not have to count redundant search */
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
     dataset->numdata = 0;
     dataset->head = NULL;
+    /* dataset */
+    Data *data;
+    if (input->restart > 0) {
+        build_dataset(dataset, config, input);
+    }
 
-    /* kmc loop */
-    for (step = 1; step <= input->end_step; ++step) {
-        int unique;
-        double Ea;
-        double *eigenmode;
-
-        if (rank == 0) {
-            char path[128];
-            sprintf(path, "%s/%lld", input->output_dir, step);
-            errno = mkdir(path, 0775);
-        }
-
-        /* dimer loop */
-        int unique_num = (dataset->numdata > 0) ? dataset->numdata : 1;
-        while (1) {
-            if (unique_num < target_num) {
-                unique_num = unique_num << 1;
-            } else {
-                break;
-            }
-        }
-        int local_count = 0;
-        *global_count = 0;
-        int local_conv = 0;
-        *global_conv = 0;
-        int zero = 0;
-        int one = 1;
-        int local_reac_num = 0;
-        int local_dege_num = 0;
-        double local_rate_sum = 0.0;
-        int *local_reac_list = (int *)malloc(sizeof(int) * unique_num);
-        int *local_dege_list = (int *)malloc(sizeof(int) * unique_num);
-        double *local_acti_list = (double *)malloc(sizeof(double) * unique_num);
-        double *local_rate_list = (double *)malloc(sizeof(double) * unique_num);
-        /* all data in dataset are unique */
-        /* do not have to count redundant search */
-        if (dataset->numdata > 0) {
-            while (1) {
-                /* one-side communication */
-                if (local_rank == 0) {
-                    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
-                    MPI_Fetch_and_op(&one, &local_count, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_SUM, count_win);
-                    MPI_Win_unlock(0, count_win);
-                }
-                MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
-                Data *data = dataset->head;
-                if (local_count > 0) {
-                    for (i = 0; i < local_count; ++i) {
-                        data = data->next;
-                        if (data == NULL) {
-                            break;
-                        }
-                    }
-                    if (data == NULL) {
-                        break;
-                    }
-                }
-                /* initial/saddle/final configuration */
-                Config *initial = (Config *)malloc(sizeof(Config));
-                copy_config(initial, config);
-                Config *saddle = (Config *)malloc(sizeof(Config));
-                copy_config(saddle, config);
-                Config *final = (Config *)malloc(sizeof(Config));
-                copy_config(final, config);
-                eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
-                /* recycle */
-                recycle(saddle, config, config_old,
-                        input, data, eigenmode, local_comm);
-                int conv = dimer(initial, saddle, final, input, eigenmode,
-                                 local_count, data->index, step,
-                                 &Ea, local_comm);
-                /* conv == 0 -> success */
-                if (conv == 0) {
-                    if (local_rank == 0) {
-                        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
-                        MPI_Fetch_and_op(&one, &local_conv, MPI_INT,
-                                         0, (MPI_Aint)0, MPI_SUM, conv_win);
-                        MPI_Win_unlock(0, conv_win);
-                        char filename[128];
-                        sprintf(filename, "%s/%lld/Dimer_%d.log",
-                                input->output_dir, step, local_count);
-                        FILE *fp = fopen(filename, "a");
-                        fprintf(fp, " Barrier energy: %f eV\n", Ea);
-                        fclose(fp);
-                        sprintf(filename, "Final_%d.POSCAR", local_count);
-                        unique = check_unique(final, input, filename, step);
-                    }
-                    MPI_Bcast(&unique, 1, MPI_INT, 0, local_comm);
-                    if (unique > 0) {
-                        local_reac_list[local_reac_num] = local_count;
-                        local_acti_list[local_reac_num] = Ea;
-                        double kT = 8.61733034e-5 * input->temperature;
-                        local_rate_list[local_reac_num] = input->att_freq * exp(- Ea / kT);
-                        local_rate_sum += local_rate_list[local_reac_num];
-                        local_reac_num++;
-                        if (local_reac_num > unique_num) {
-                            unique_num = unique_num << 1;
-                            local_reac_list = (int *)realloc(local_reac_list,
-                                                     sizeof(int) * unique_num);
-                            local_acti_list = (double *)realloc(local_acti_list,
-                                                        sizeof(double) * unique_num);
-                            local_rate_list = (double *)realloc(local_rate_list,
-                                                        sizeof(double) * unique_num);
-                        }
-                    } else {
-//                        char old_filename[128];
-//                        sprintf(old_filename, "%s/%lld/Final_%d.POSCAR",
-//                                input->output_dir, step, local_count);
-//                        char new_filename[128];
-//                        sprintf(new_filename, "%s/%lld/rFinal_%d.POSCAR",
-//                                input->output_dir, step, local_count);
-//                        rename(old_filename, new_filename);
-                        char filename[128];
-                        sprintf(filename, "%s/%lld/Final_%d.POSCAR",
-                                input->output_dir, step, local_count);
-                        remove(filename);
-                        local_dege_list[local_dege_num] = -unique;
-                        local_dege_num++;
-                        if (local_dege_num > unique_num) {
-                            unique_num = unique_num << 1;
-                            local_dege_list = (int *)realloc(local_dege_list,
-                                                     sizeof(int) * unique_num);
-                        }
-                    }
-                }
-                free(initial);
-                free(saddle);
-                free(final);
-                free(eigenmode);
-            }
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        int recycle_num;
-        if (rank == 0) {
-            recycle_num = count_unique(input, step);
-        }
-        int local_redundant;
-        *global_redundant = 0;
-        int local_exit;
-        *global_exit = 0;
-        if (step > 1) {
-            atom_index = get_index(config, config_old);
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-        while (1) {
-            /* confidence check */
-            if (local_rank == 0) {
-                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
-                MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
-                                 0, (MPI_Aint)0, MPI_SUM, redundant_win);
-                MPI_Win_unlock(0, redundant_win);
-                if (local_redundant >= input->nredundant) {
-                    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
-                    MPI_Fetch_and_op(&one, &local_exit, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_SUM, exit_win);
-                    MPI_Win_unlock(0, exit_win);
-                }
+    int conv, unique;
+    double Ea;
+    double *eigenmode;
+    while (1) {
+        /* confidence check */
+        if (local_rank == 0) {
+            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
+            MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
+                             0, (MPI_Aint)0, MPI_SUM, redundant_win);
+            MPI_Win_unlock(0, redundant_win);
+            if (local_redundant >= input->nredundant) {
                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
-                MPI_Fetch_and_op(&zero, &local_exit, MPI_INT,
+                MPI_Fetch_and_op(&one, &local_exit, MPI_INT,
                                  0, (MPI_Aint)0, MPI_SUM, exit_win);
                 MPI_Win_unlock(0, exit_win);
             }
-            MPI_Bcast(&local_exit, 1, MPI_INT, 0, local_comm);
-            if (local_exit > 0) {
-                break;
+            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
+            MPI_Fetch_and_op(&zero, &local_exit, MPI_INT,
+                             0, (MPI_Aint)0, MPI_SUM, exit_win);
+            MPI_Win_unlock(0, exit_win);
+        }
+        MPI_Bcast(&local_exit, 1, MPI_INT, 0, local_comm);
+        if (local_exit > 0) {
+            break;
+        }
+        MPI_Bcast(&local_redundant, 1, MPI_INT, 0, local_comm);
+
+        int recycle_flag = 0;
+        if (local_rank == 0) {
+            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
+            MPI_Fetch_and_op(&one, &local_count, MPI_INT,
+                             0, (MPI_Aint)0, MPI_SUM, count_win);
+            MPI_Win_unlock(0, count_win);
+        }
+        MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
+        
+        if (input->restart > 0) {
+            recycle_flag = 1;
+            data = dataset->head;
+            if (local_count > 0) {
+                for (i = 0; i < local_count; ++i) {
+                    data = data->next;
+                    if (data == NULL) {
+                        recycle_flag = 0;
+                        break;
+                    }
+                }
             }
-            MPI_Bcast(&local_redundant, 1, MPI_INT, 0, local_comm);
-            /* one-sided communication */
-            if (local_rank == 0) {
-                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
-                MPI_Fetch_and_op(&one, &local_count, MPI_INT,
-                                 0, (MPI_Aint)0, MPI_SUM, count_win);
-                MPI_Win_unlock(0, count_win);
-            }
-            MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
-            /* atom index */
-            if (step == 1) {
-                atom_index = target_list[rand() % target_num];
-                MPI_Bcast(&atom_index, 1, MPI_INT, 0, local_comm);
-            } 
-            /* initial/saddle/final configuration */
-            Config *initial = (Config *)malloc(sizeof(Config));
-            copy_config(initial, config);
-            Config *saddle = (Config *)malloc(sizeof(Config));
-            copy_config(saddle, config);
-            Config *final = (Config *)malloc(sizeof(Config));
-            copy_config(final, config);
+        }
+        /* initial/saddle/final configuration */
+        Config *initial = (Config *)malloc(sizeof(Config));
+        copy_config(initial, config);
+        Config *saddle = (Config *)malloc(sizeof(Config));
+        copy_config(saddle, config);
+        Config *final = (Config *)malloc(sizeof(Config));
+        copy_config(final, config);
+        if (recycle_flag > 0) {
+            eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
+            recycle_data(config, config_old, input, data,
+                         saddle, eigenmode, local_comm);
+            conv = dimer(initial, saddle, final, input, eigenmode,
+                         local_count, data->index, &Ea, local_comm);
+        } else {
             /* generate not normalized eigenmode */
             eigenmode = gen_eigenmode(input, config->tot_num, local_comm);
-            int conv = dimer(initial, saddle, final, input, eigenmode,
-                             local_count, atom_index, step, &Ea, local_comm);
-            /* conv == 0 -> success */
-            if (conv == 0) {
-                if (local_rank == 0) {
-                    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
-                    MPI_Fetch_and_op(&one, &local_conv, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_SUM, conv_win);
-                    MPI_Win_unlock(0, conv_win);
-                    char filename[128];
-                    sprintf(filename, "%s/%lld/Dimer_%d.log",
-                            input->output_dir, step, local_count);
-                    FILE *fp = fopen(filename, "a");
-                    fprintf(fp, " Barrier energy: %f eV\n", Ea);
-                    fclose(fp);
-                    sprintf(filename, "Final_%d.POSCAR", local_count);
-                    unique = check_unique(final, input, filename, step);
+            atom_index = target_list[rand() % target_num];
+            MPI_Bcast(&atom_index, 1, MPI_INT, 0, local_comm);
+            conv = dimer(initial, saddle, final, input, eigenmode,
+                         local_count, atom_index, &Ea, local_comm);
+        }
+        /* conv == 0 -> success */
+        if (conv == 0) {
+            if (local_rank == 0) {
+                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
+                MPI_Fetch_and_op(&one, &local_conv, MPI_INT,
+                                 0, (MPI_Aint)0, MPI_SUM, conv_win);
+                MPI_Win_unlock(0, conv_win);
+                char filename[128];
+                sprintf(filename, "%s/Dimer_%d.log",
+                        input->output_dir, local_count);
+                FILE *fp = fopen(filename, "a");
+                fprintf(fp, " Barrier energy: %f eV\n", Ea);
+                fclose(fp);
+                sprintf(filename, "Final_%d.POSCAR", local_count);
+                unique = check_unique(final, input, filename);
+            }
+            MPI_Bcast(&unique, 1, MPI_INT, 0, local_comm);
+            /* unique == 1 -> unique */
+            if (unique > 0) {
+                local_reac_list[local_reac_num] = local_count;
+                local_acti_list[local_reac_num] = Ea;
+                double kT = 8.61733034e-5 * input->temperature;
+                local_rate_list[local_reac_num] = input->frequency * exp(- Ea / kT);
+                local_rate_sum += local_rate_list[local_reac_num];
+                local_reac_num++;
+                if (local_reac_num > target_num) {
+                    target_num = target_num << 1;
+                    local_reac_list = (int *)realloc(local_reac_list,
+                                             sizeof(int) * target_num);
+                    local_acti_list = (double *)realloc(local_acti_list,
+                                                sizeof(double) * target_num);
+                    local_rate_list = (double *)realloc(local_rate_list,
+                                                sizeof(double) * target_num);
                 }
-                MPI_Bcast(&unique, 1, MPI_INT, 0, local_comm);
-                if (unique > 0) {
-                    if (local_rank == 0) {
-                        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
-                        MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
-                                         0, (MPI_Aint)0, MPI_REPLACE, redundant_win);
-                        MPI_Win_unlock(0, redundant_win);
-                    }
-                    local_reac_list[local_reac_num] = local_count;
-                    local_acti_list[local_reac_num] = Ea;
-                    double kT = 8.61733034e-5 * input->temperature;
-                    local_rate_list[local_reac_num] = input->att_freq * exp(-Ea / kT);
-                    local_rate_sum += local_rate_list[local_reac_num];
-                    local_reac_num++;
-                    if (local_reac_num > unique_num) {
-                        unique_num = unique_num << 1;
-                        local_reac_list = (int *)realloc(local_reac_list,
-                                                 sizeof(int) * unique_num);
-                        local_acti_list = (double *)realloc(local_acti_list,
-                                                    sizeof(double) * unique_num);
-                        local_rate_list = (double *)realloc(local_rate_list,
-                                                    sizeof(double) * unique_num);
-                    }
-                } else {
-                    if (local_rank == 0) {
-//                        char old_filename[128];
-//                        sprintf(old_filename, "%s/%lld/Final_%d.POSCAR",
-//                                input->output_dir, step, local_count);
-//                        char new_filename[128];
-//                        sprintf(new_filename, "%s/%lld/%d_Final_%d.POSCAR",
-//                                input->output_dir, step, -unique, local_count);
-//                        rename(old_filename, new_filename);
-                        char filename[128];
-                        sprintf(filename, "%s/%lld/Final_%d.POSCAR",
-                                input->output_dir, step, local_count);
-                        remove(filename);
+                if ((local_rank == 0) && (recycle_flag > 0)) {
+                    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
+                    MPI_Fetch_and_op(&one, &local_recycle, MPI_INT,
+                                     0, (MPI_Aint)0, MPI_SUM, recycle_win);
+                    MPI_Win_unlock(0, recycle_win);
+                }
+            } else {
+                if (local_rank == 0) {
+                    char old_filename[128];
+                    sprintf(old_filename, "%s/Final_%d.POSCAR",
+                            input->output_dir, local_count);
+                    char new_filename[128];
+                    sprintf(new_filename, "%s/%d_Final_%d.POSCAR",
+                            input->output_dir, -unique, local_count);
+                    rename(old_filename, new_filename);
+//                        char filename[128];
+//                        sprintf(filename, "%s/Final_%d.POSCAR",
+//                                input->output_dir, local_count);
+//                        remove(filename);
+                    if (recycle_flag == 0) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
                                          0, (MPI_Aint)0, MPI_SUM, redundant_win);
                         MPI_Win_unlock(0, redundant_win);
                     }
-                    local_dege_list[local_dege_num] = -unique;
-                    local_dege_num++;
-                    if (local_dege_num > unique_num) {
-                        unique_num = unique_num << 1;
-                        local_dege_list = (int *)realloc(local_dege_list,
-                                                 sizeof(int) * unique_num);
-                    }
+                }
+                local_dege_list[local_dege_num] = -unique;
+                local_dege_num++;
+                if (local_dege_num > target_num) {
+                    target_num = target_num << 1;
+                    local_dege_list = (int *)realloc(local_dege_list,
+                                             sizeof(int) * target_num);
                 }
             }
-            free_config(initial);
-            free_config(saddle);
-            free_config(final);
-            free(eigenmode);
         }
-
-        int total_reac_num;
-        int total_dege_num;
-        double total_rate_sum;
-        if (local_rank == 0) {
-            MPI_Allreduce(&local_rate_sum, &total_rate_sum, 1, MPI_DOUBLE,
-                          MPI_SUM, group_comm);
-            MPI_Allreduce(&local_reac_num, &total_reac_num, 1, MPI_INT,
-                          MPI_SUM, group_comm);
-            MPI_Allreduce(&local_dege_num, &total_dege_num, 1, MPI_INT,
-                          MPI_SUM, group_comm);
-        }
-        MPI_Bcast(&total_reac_num, 1, MPI_INT, 0, local_comm);
-
-        if (rank == 0) {
-            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
-            MPI_Fetch_and_op(&zero, &local_conv, MPI_INT,
-                             0, (MPI_Aint)0, MPI_SUM, conv_win);
-            MPI_Win_unlock(0, conv_win);
-            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
-            MPI_Fetch_and_op(&zero, &local_count, MPI_INT,
-                             0, (MPI_Aint)0, MPI_SUM, count_win);
-            MPI_Win_unlock(0, count_win);
-            char filename[128];
-            sprintf(filename, "%s/Statistics.log", input->output_dir);
-            FILE *fp = fopen(filename, "a");
-            fprintf(fp, " %8lld   %15d   %17d   %15d   %6d\n",
-                    step, recycle_num, total_reac_num - recycle_num,
-                    local_conv, local_count);
-            fclose(fp);
-        }
-
-        int *global_reac_num = (int *)malloc(sizeof(int) * group_size);
-        int *global_dege_num = (int *)malloc(sizeof(int) * group_size);
-        int *global_reac_list = (int *)malloc(sizeof(int) * total_reac_num);
-        int *global_dege_list = (int *)malloc(sizeof(int) * total_dege_num);
-        double *global_acti_list = (double *)malloc(sizeof(double) * total_reac_num);
-        double *global_rate_list = (double *)malloc(sizeof(double) * total_reac_num);
-        if (local_rank == 0) {
-            /* reaction */
-            MPI_Allgather(&local_reac_num, 1, MPI_INT,
-                          global_reac_num, 1, MPI_INT, group_comm);
-            int *disp = (int *)malloc(sizeof(int) * group_size);
-            disp[0] = 0;
-            if (group_size > 1) {
-                for (i = 1; i < group_size; ++i) {
-                    disp[i] = disp[i - 1] + global_reac_num[i - 1];
-                }
-            }
-            MPI_Gatherv(local_acti_list, local_reac_num, MPI_DOUBLE,
-                        global_acti_list, global_reac_num, disp, MPI_DOUBLE,
-                        0, group_comm);
-            MPI_Gatherv(local_rate_list, local_reac_num, MPI_DOUBLE,
-                        global_rate_list, global_reac_num, disp, MPI_DOUBLE,
-                        0, group_comm);
-            MPI_Gatherv(local_reac_list, local_reac_num, MPI_INT,
-                        global_reac_list, global_reac_num, disp, MPI_INT,
-                        0, group_comm);
-
-            /* degeneracy */
-            MPI_Allgather(&local_dege_num, 1, MPI_INT,
-                          global_dege_num, 1, MPI_INT, group_comm);
-            disp[0] = 0;
-            if (group_size > 1) {
-                for (i = 1; i < group_size; ++i) {
-                    disp[i] = disp[i - 1] + global_dege_num[i - 1];
-                }
-            }
-            MPI_Gatherv(local_dege_list, local_dege_num, MPI_INT,
-                        global_dege_list, global_dege_num, disp, MPI_INT,
-                        0, group_comm);
-            free(disp);
-        }
-
-        /* selection */
-        int reac_index;
-        if (rank == 0) {
-            double random1 = (double)rand() / RAND_MAX;
-            double random2 = (double)rand() / RAND_MAX;
-            double rate_acc = 0.0;
-            for (i = 0; i < total_reac_num; ++i) {
-                rate_acc += global_rate_list[i] / total_rate_sum;
-                if (rate_acc > random1) {
-                    reac_index = i;
-                    break;
-                } 
-            }
-            time -= log(random2) / total_rate_sum;
-        }
-
-        MPI_Bcast(&time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        double energy = oneshot(config, input, MPI_COMM_WORLD);
-        /* log */
-        if (rank == 0) {
-            char filename[128];
-            FILE *fp;
-            sprintf(filename, "%s/kMC.log", input->output_dir);
-            fp = fopen(filename, "a");
-            fprintf(fp, " %8lld   %16f   %16f   %8e\n",
-                    step, energy, global_acti_list[reac_index], time);
-            fclose(fp);
-
-            int *dege_num = (int *)calloc(total_reac_num, sizeof(int));
-            for (i = 0; i < total_reac_num; ++i) {
-                for (j = 0; j < total_dege_num; ++j) {
-                    if (global_dege_list[j] == global_reac_list[i]) {
-                        dege_num[i]++;
-                    }
-                }
-            }
-
-            sprintf(filename, "%s/Event.log", input->output_dir);
-            fp = fopen(filename, "a");
-            fputs("---------------------------------------------------------------------------\n", fp);
-            for (i = 0; i < total_reac_num; ++i) {
-                fprintf(fp, " %8lld   %14d   %16f   %13e   %10d\n",
-                        step, global_reac_list[i],
-                        global_acti_list[i], global_rate_list[i], dege_num[i]);
-            }
-            fclose(fp);
-            free(dege_num);
-            sprintf(filename, "%s/kMC.XDATCAR", input->output_dir);
-            write_config(config, filename, "a");
-        }
-        if (time > input->end_time) {
-            free(local_reac_list);
-            free(local_acti_list);
-            free(local_rate_list);
-            free(local_dege_list);
-            free(global_reac_num);
-            free(global_reac_list);
-            free(global_acti_list);
-            free(global_rate_list);
-            free(global_dege_list);
-            break;
-        }
-
-        /* free and build dataset */
-        free_dataset(dataset);
-        dataset = (Dataset *)malloc(sizeof(Dataset));
-        dataset->numdata = 0;
-        dataset->head = NULL;
-        build_dataset(dataset, config, input, step);
-
-        free_config(config_old);
-        config_old = (Config *)malloc(sizeof(Config));
-        copy_config(config_old, config);
-        free_config(config);
-        char filename[128];
-        if (rank == 0) {
-            sprintf(filename, "%s/%lld/Final_%d.POSCAR",
-                    input->output_dir, step, global_reac_list[reac_index]);
-        }
-        MPI_Bcast(filename, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
-        config = (Config *)malloc(sizeof(Config));
-        errno = read_config(config, input, filename);
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (errno > 0) {
-            printf("ERROR in INIT_CONFIG FILE!\n");
-            free_input(input);
-            free(config);
-            free_config(config_old);
-            free_dataset(dataset);
-            free(target_list);
-            free(local_reac_list);
-            free(local_acti_list);
-            free(local_rate_list);
-            free(local_dege_list);
-            free(global_reac_num);
-            free(global_reac_list);
-            free(global_acti_list);
-            free(global_rate_list);
-            free(global_dege_list);
-            MPI_Win_free(&count_win);
-            MPI_Win_free(&redundant_win);
-            MPI_Win_free(&conv_win);
-            MPI_Win_free(&exit_win);
-            MPI_Comm_free(&local_comm);
-            MPI_Comm_free(&group_comm);
-            MPI_Finalize();
-            return 1;
-        }
+        free_config(initial);
+        free_config(saddle);
+        free_config(final);
+        free(eigenmode);
     }
-    free_input(input);
-    free_config(config);
-    free_config(config_old);
-    free_dataset(dataset);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    int recycle_num;
+    if (rank == 0) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
+        MPI_Fetch_and_op(&zero, &local_recycle, MPI_INT,
+                         0, (MPI_Aint)0, MPI_SUM, recycle_win);
+        MPI_Win_unlock(0, recycle_win);
+        recycle_num = local_recycle;
+    }
+    /* overestimated local_count */
+    if (local_rank == 0) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
+        MPI_Fetch_and_op(&mone, &local_count, MPI_INT,
+                         0, (MPI_Aint)0, MPI_SUM, count_win);
+        MPI_Win_unlock(0, count_win);
+    }
+
+    int total_reac_num;
+    int total_dege_num;
+    double total_rate_sum;
+    if (local_rank == 0) {
+        MPI_Allreduce(&local_rate_sum, &total_rate_sum, 1, MPI_DOUBLE,
+                      MPI_SUM, group_comm);
+        MPI_Allreduce(&local_reac_num, &total_reac_num, 1, MPI_INT,
+                      MPI_SUM, group_comm);
+        MPI_Allreduce(&local_dege_num, &total_dege_num, 1, MPI_INT,
+                      MPI_SUM, group_comm);
+    }
+    MPI_Bcast(&total_reac_num, 1, MPI_INT, 0, local_comm);
+
+    if (rank == 0) {
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
+        MPI_Fetch_and_op(&zero, &local_conv, MPI_INT,
+                         0, (MPI_Aint)0, MPI_SUM, conv_win);
+        MPI_Win_unlock(0, conv_win);
+        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
+        MPI_Fetch_and_op(&zero, &local_count, MPI_INT,
+                         0, (MPI_Aint)0, MPI_SUM, count_win);
+        MPI_Win_unlock(0, count_win);
+        char filename[128];
+        sprintf(filename, "%s/Statistics.log", input->output_dir);
+        FILE *fp = fopen(filename, "a");
+        fprintf(fp, " %15d   %17d   %15d   %6d\n",
+                recycle_num, total_reac_num - recycle_num,
+                local_conv, local_count);
+        fclose(fp);
+    }
+
+    int *global_reac_num = (int *)malloc(sizeof(int) * group_size);
+    int *global_dege_num = (int *)malloc(sizeof(int) * group_size);
+    int *global_reac_list = (int *)malloc(sizeof(int) * total_reac_num);
+    int *global_dege_list = (int *)malloc(sizeof(int) * total_dege_num);
+    double *global_acti_list = (double *)malloc(sizeof(double) * total_reac_num);
+    double *global_rate_list = (double *)malloc(sizeof(double) * total_reac_num);
+    if (local_rank == 0) {
+        /* reaction */
+        MPI_Allgather(&local_reac_num, 1, MPI_INT,
+                      global_reac_num, 1, MPI_INT, group_comm);
+        int *disp = (int *)malloc(sizeof(int) * group_size);
+        disp[0] = 0;
+        if (group_size > 1) {
+            for (i = 1; i < group_size; ++i) {
+                disp[i] = disp[i - 1] + global_reac_num[i - 1];
+            }
+        }
+        MPI_Gatherv(local_acti_list, local_reac_num, MPI_DOUBLE,
+                    global_acti_list, global_reac_num, disp, MPI_DOUBLE,
+                    0, group_comm);
+        MPI_Gatherv(local_rate_list, local_reac_num, MPI_DOUBLE,
+                    global_rate_list, global_reac_num, disp, MPI_DOUBLE,
+                    0, group_comm);
+        MPI_Gatherv(local_reac_list, local_reac_num, MPI_INT,
+                    global_reac_list, global_reac_num, disp, MPI_INT,
+                    0, group_comm);
+
+        /* degeneracy */
+        MPI_Allgather(&local_dege_num, 1, MPI_INT,
+                      global_dege_num, 1, MPI_INT, group_comm);
+        disp[0] = 0;
+        if (group_size > 1) {
+            for (i = 1; i < group_size; ++i) {
+                disp[i] = disp[i - 1] + global_dege_num[i - 1];
+            }
+        }
+        MPI_Gatherv(local_dege_list, local_dege_num, MPI_INT,
+                    global_dege_list, global_dege_num, disp, MPI_INT,
+                    0, group_comm);
+        free(disp);
+    }
+
+    double energy = oneshot(config, input, MPI_COMM_WORLD);
+    /* log */
+    if (rank == 0) {
+        int *dege_num = (int *)calloc(total_reac_num, sizeof(int));
+        for (i = 0; i < total_reac_num; ++i) {
+            for (j = 0; j < total_dege_num; ++j) {
+                if (global_dege_list[j] == global_reac_list[i]) {
+                    dege_num[i]++;
+                }
+            }
+        }
+
+        char filename[128];
+        sprintf(filename, "%s/Event.log", input->output_dir);
+        FILE *fp;
+        fp = fopen(filename, "a");
+        for (i = 0; i < total_reac_num; ++i) {
+            fprintf(fp, " %14d   %16f   %13e   %10d\n",
+                    global_reac_list[i], global_acti_list[i],
+                    global_rate_list[i], dege_num[i]);
+        }
+        fclose(fp);
+        free(dege_num);
+    }
+
     free(target_list);
+    free(local_reac_list);
+    free(local_acti_list);
+    free(local_rate_list);
+    free(local_dege_list);
+    free(global_reac_num);
+    free(global_reac_list);
+    free(global_acti_list);
+    free(global_rate_list);
+    free(global_dege_list);
+
+    free_dataset(dataset);
+    free_config(config_old);
+    free_config(config);
+    free_input(input);
+
     MPI_Win_free(&count_win);
     MPI_Win_free(&redundant_win);
     MPI_Win_free(&conv_win);
     MPI_Win_free(&exit_win);
+
     MPI_Comm_free(&local_comm);
     MPI_Comm_free(&group_comm);
     MPI_Finalize();

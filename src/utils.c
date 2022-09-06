@@ -139,22 +139,20 @@ int name_filter(const struct dirent *info)
 
 
 /* nonpositive: not unique, positive: unique */
-int check_unique(Config *config, Input *input, char *self, long long step)
+int check_unique(Config *config, Input *input, char *self)
 {
     int i, j, errno, unique;
     struct dirent **namelist;
 
-    char path[128];
-    sprintf(path, "%s/%lld", input->output_dir, step);
-    int count = scandir(path, &namelist, name_filter, NULL);
+    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
     if (count > 0) {
         for (i = 0; i < count; ++i) {
             if (strcmp(self, namelist[i]->d_name) == 0) {
                 continue;
             }
             char filename[128];
-            sprintf(filename, "%s/%lld/%s",
-                    input->output_dir, step, namelist[i]->d_name);
+            sprintf(filename, "%s/%s",
+                    input->output_dir, namelist[i]->d_name);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
             /* already deleted */
@@ -183,22 +181,4 @@ int check_unique(Config *config, Input *input, char *self, long long step)
     } else {
         return 1;
     }
-}
-
-
-int count_unique(Input *input, long long step)
-{
-    int i;
-    struct dirent **namelist;
-
-    char path[128];
-    sprintf(path, "%s/%lld", input->output_dir, step);
-    int count = scandir(path, &namelist, name_filter, NULL);
-    if (count > 0) {
-        for (i = 0; i < count; ++i) {
-            free(namelist[i]);
-        }
-        free(namelist);
-    }
-    return count;
 }

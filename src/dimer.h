@@ -16,8 +16,8 @@ void gen_list(Config *, Input *, double *, int *, int **, int *, int **, MPI_Com
 void rotate_vector(double *, double *, double **, double **, int, double);
 void cut_sphere(Config *, Input *, int, int *);
 void get_cg_direction(double *, double *, double *, int);
-void rotate(Config *, Input *, int, int *, double *, int, int, long long, MPI_Comm);
+void rotate(Config *, Input *, int, int *, double *, int, int, MPI_Comm);
 double constrained_rotate(Config *, Input *, int, int *, double *, MPI_Comm);
 void translate(Config *, Input *, int, int *, double *, double *, double *, int, double, MPI_Comm);
-int dimer(Config *, Config *, Config *, Input *, double *, int, int, long long, double *, MPI_Comm);
+int dimer(Config *, Config *, Config *, Input *, double *, int, int, double *, MPI_Comm);
 #endif

@@ -202,6 +202,7 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
         eigenmode[i * 3 + 0] = normal_random(0, input->stddev);
         eigenmode[i * 3 + 1] = normal_random(0, input->stddev);
         eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
+        printf("gen %f %f %f\n", eigenmode[i * 3 + 0], eigenmode[i * 3 + 1], eigenmode[i * 3 + 2]);
     }
     int count = (end - begin) * 3;
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
@@ -217,6 +218,11 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
                    eigenmode, counts, disp, MPI_DOUBLE, comm); 
     free(disp);
     free(counts);
+    if (local_rank == 0) {
+        for (i = 0; i < n; ++i) {
+            printf("done %f %f %f\n", eigenmode[i * 3 + 0], eigenmode[i * 3 + 1], eigenmode[i * 3 + 2]);
+        }
+    }
     return eigenmode;
 }
 
@@ -256,7 +262,7 @@ void gen_list(Config *config, Input *input, double *center,
         double dist = sqrt(del[0] * del[0]
                          + del[1] * del[1]
                          + del[2] * del[2]);
-        if (dist < 2 * input->cutoff) {
+        if (dist < 2 * input->pair_cutoff) {
             tmp_update_list[tmp_update_num] = i;
             tmp_update_num++; 
             if (dist < input->disp_cutoff) {
@@ -350,8 +356,7 @@ double *get_rot_force(Input *input, double *force1, double *force2,
 
 
 void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
-            double *eigenmode, int count, int dimer_step, long long kmc_step,
-            MPI_Comm comm)
+            double *eigenmode, int count, int dimer_step, MPI_Comm comm)
 {
     int i, j, rank, size;
     double magnitude, cmin;
@@ -390,8 +395,8 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
                 char line[128], filename[128];
-                sprintf(filename, "%s/%lld/Dimer_%d.log",
-                        input->output_dir, kmc_step, count);
+                sprintf(filename, "%s/Dimer_%d.log",
+                        input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
                 fprintf(fp, " %8d   %8d   %16f   ---------   ---------   %9f\n",
                         dimer_step, i, energy0, norm(f_rot_A, disp_num));
@@ -471,8 +476,8 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(tmp_force);
         if (local_rank == 0) {
             char line[128], filename[128];
-            sprintf(filename, "%s/%lld/Dimer_%d.log",
-                    input->output_dir, kmc_step, count);
+            sprintf(filename, "%s/Dimer_%d.log",
+                    input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fprintf(fp, " %8d   %8d   %16f   %9f   %9f   %9f\n",
                     dimer_step, i + 1, energy0, cmin,
@@ -803,7 +808,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
 
 // TODO: orthogonalization
 int dimer(Config *initial, Config *saddle, Config *final, Input *input,
-          double *full_eigenmode, int count, int index, long long kmc_step, 
+          double *full_eigenmode, int count, int index,
           double *Ea, MPI_Comm comm)
 {
     int i, j, rank, size;
@@ -871,26 +876,26 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
 
     /* run */
-//    if (local_rank == 0) {
-//        char filename[128];
-//        sprintf(filename, "%s/%lld/Dimer_%d.XDATCAR",
-//                input->output_dir, kmc_step, count);
-//        write_config(config0, filename, "w");
-//    }
+    if (local_rank == 0) {
+        char filename[128];
+        sprintf(filename, "%s/Dimer_%d.XDATCAR",
+                input->output_dir, count);
+        write_config(config0, filename, "w");
+    }
     double fmax, kappa;
     int converge = 0;
     int dimer_step;
     if (local_rank == 0) {
         char filename[128];
-        sprintf(filename, "%s/%lld/Dimer_%d.log",
-                input->output_dir, kmc_step, count);
+        sprintf(filename, "%s/Dimer_%d.log",
+                input->output_dir, count);
         FILE *fp = fopen(filename, "w");
         fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
         fclose(fp);
     }
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
         rotate(config0, input, disp_num, disp_list,
-               eigenmode, count, dimer_step, kmc_step, comm);
+               eigenmode, count, dimer_step, comm);
         /* kappa-dimer */
         for (i = 0; i < disp_num; ++i) {
             tmp_eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
@@ -913,12 +918,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
             } 
         }
         /* trajectory */
-//        if (local_rank == 0) {
-//            char filename[128];
-//            sprintf(filename, "%s/%lld/Dimer_%d.XDATCAR",
-//                    input->output_dir, kmc_step, count);
-//            write_config(config0, filename, "a");
-//        }
+        if (local_rank == 0) {
+            char filename[128];
+            sprintf(filename, "%s/Dimer_%d.XDATCAR",
+                    input->output_dir, count);
+            write_config(config0, filename, "a");
+        }
         if (fmax < input->f_tol) {
             converge = 1;
             break;
@@ -930,8 +935,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     if (converge == 0) {
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/%lld/Dimer_%d.log",
-                    input->output_dir, kmc_step, count);
+            sprintf(filename, "%s/Dimer_%d.log",
+                    input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: not converged\n", fp);
@@ -966,11 +971,11 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
     if (local_rank == 0) {
         char line[128], filename[128];
-        sprintf(filename, "%s/%lld/Saddle_%d.POSCAR",
-                input->output_dir, kmc_step, count);
+        sprintf(filename, "%s/Saddle_%d.POSCAR",
+                input->output_dir, count);
         write_config(saddle, filename, "w");
-        sprintf(filename, "%s/%lld/%d.MODECAR",
-                input->output_dir, kmc_step, count);
+        sprintf(filename, "%s/%d.MODECAR",
+                input->output_dir, count);
         FILE *fp = fopen(filename, "wb");     
         fwrite(full_eigenmode, sizeof(double), saddle->tot_num * 3, fp);
         fclose(fp);
@@ -1005,8 +1010,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/%lld/Dimer_%d.log",
-                    input->output_dir, kmc_step, count);
+            sprintf(filename, "%s/Dimer_%d.log",
+                    input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: disconnected\n", fp);
@@ -1020,8 +1025,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     } else {
         if (local_rank == 0) {
             char  filename[128];
-            sprintf(filename, "%s/%lld/Dimer_%d.log",
-                    input->output_dir, kmc_step, count);
+            sprintf(filename, "%s/Dimer_%d.log",
+                    input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: connected\n", fp);
@@ -1042,8 +1047,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         }
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/%lld/Final_%d.POSCAR",
-                    input->output_dir, kmc_step, count);
+            sprintf(filename, "%s/Final_%d.POSCAR",
+                    input->output_dir, count);
             write_config(final, filename, "w");
         }
         free_config(config0);

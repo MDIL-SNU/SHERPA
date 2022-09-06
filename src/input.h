@@ -9,6 +9,7 @@ typedef struct _Input
     int random_seed;
     int ncore;
     int nredundant;
+    int restart;
 
     char *pair_style;
     char *pair_coeff;
@@ -16,11 +17,9 @@ typedef struct _Input
     char *target_list;
     char **atom_type;
     char *output_dir;
+    char *dataset_dir;
 
-    double temperature;
-    double att_freq;
-    double end_time;
-    double cutoff;
+    double pair_cutoff;
     double dimer_dist;
     double f_tol;
     double f_rot_min;
@@ -31,15 +30,15 @@ typedef struct _Input
     double max_step;
     double trial_step;
     double confidence;
-
-    long long end_step;
+    double temperature;
+    double frequency;
 } Input;
 
 int input_int(int *, char *, char *);
 int input_double(double *, char *, char *);
-int input_long_long(long long *, char *, char *);
 int input_char(char **, char *, char *);
 int input_char_arr(char ***, char *, int, char *);
 int read_input(Input *, char *);
+void write_input(Input *);
 void free_input(Input *);
 #endif

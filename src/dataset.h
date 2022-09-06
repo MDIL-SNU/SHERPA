@@ -1,6 +1,8 @@
 #ifndef __DATASET_H__
 #define __DATASET_H__
+#include <mpi.h>
 #include "config.h"
+#include "input.h"
 
 
 typedef struct _Data
@@ -20,6 +22,7 @@ typedef struct _Dataset
 } Dataset;
 
 void insert_data(Dataset *, int, int, int *, double *, double *);
-void build_dataset(Dataset *, Config *, Input *, long long);
+void recycle_data(Config *, Config *, Input *, Data *, Config *, double *, MPI_Comm);
+void build_dataset(Dataset *, Config *, Input *);
 void free_dataset(Dataset *);
 #endif
