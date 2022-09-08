@@ -30,6 +30,9 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
+    if (rank == 0) {
+        write_input(input);
+    }
 
     /* make directory */
     if (rank == 0) {
@@ -89,7 +92,7 @@ int main(int argc, char *argv[])
     int target_num = 0;
     int list_size = 64;
     int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = get_target(config, input, &target_list, &target_num, &list_size);
+    errno = read_target(config, input, &target_list, &target_num, &list_size);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
         free_input(input);
@@ -97,6 +100,9 @@ int main(int argc, char *argv[])
         free_config(config_old);
         MPI_Finalize();
         return 1;
+    }
+    if (rank == 0) {
+        write_target(input, target_list, target_num);
     }
 
     /* initial relax */

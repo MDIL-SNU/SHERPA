@@ -7,7 +7,7 @@
 #include "utils.h"
 
 
-int get_target(Config *config, Input *input,
+int read_target(Config *config, Input *input,
                int **target_list, int *target_num, int *list_size)
 {
     int i;
@@ -52,6 +52,21 @@ int get_target(Config *config, Input *input,
         }
     }
     return 0;
+}
+
+
+//TODO: A, R
+void write_target(Input *input, int *target_list, int target_num)
+{
+    int i;
+    char filename[128];
+    sprintf(filename, "%s/TARGET", input->output_dir);
+    FILE *fp = fopen(filename, "w");
+    fputs("I", fp);
+    for (i = 0; i < target_num; ++i) {
+        fprintf(fp, " %d", target_list[i]);
+    }
+    fclose(fp);
 }
 
 

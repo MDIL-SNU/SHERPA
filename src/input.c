@@ -246,7 +246,61 @@ int read_input(Input *input, char *filename)
 
 void write_input(Input *input)
 {
-    return;
+    int i;
+    char filename[128];
+    sprintf(filename, "%s/INPUT", input->output_dir);
+    FILE *fp = fopen(filename, "w");
+
+    fputs("# potential parameter #\n", fp);
+    fprintf(fp, "NELEMENT\t= %d\n", input->nelem);
+    fputs("ATOM_TYPE\t=", fp);
+    for (i = 0; i < input->nelem; ++i) {
+        fprintf(fp, " %s", input->atom_type[i]);
+    }
+    fputs("\n", fp);
+    fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
+    fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
+    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
+    fputs("\n", fp);
+
+    fputs("# dimer parameter #\n", fp);
+    fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
+    fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
+    fprintf(fp, "DIMER_DIST\t= %f\n", input->dimer_dist);
+    fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
+    fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
+    fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
+    fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
+    fprintf(fp, "TRIAL_ANGLE\t= %f\n", input->trial_angle * 180 / 3.141592);
+    fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
+    fprintf(fp, "STDDEV\t\t= %f\n", input->stddev);
+    fprintf(fp, "MAX_STEP\t= %f\n", input->max_step);
+    fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
+    fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
+    fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+    fputs("\n", fp);
+
+    fputs("# system parameter #\n", fp);
+    fprintf(fp, "FREQUENCY\t= %f\n", input->frequency);
+    fprintf(fp, "TEMPERATURE\t= %f\n", input->temperature);
+    fputs("\n", fp);
+
+    fputs("# random parameter #\n", fp);
+    fprintf(fp, "RANDOM_SEED\t= %d\n", input->random_seed);
+    fputs("\n", fp);
+
+    fputs("# directory parameter #\n", fp);
+    fprintf(fp, "OUTPUT_DIR\t= %s\n", input->output_dir);
+    fputs("\n", fp);
+
+    fputs("# restart parameter #\n", fp);
+    fprintf(fp, "RESTART\t= %d\n", input->restart);
+    fprintf(fp, "DATASET_DIR\t= %s\n", input->dataset_dir);
+    fputs("\n", fp);
+
+    fputs("# parallelism parameter #\n", fp);
+    fprintf(fp, "NCORE\t= %d\n", input->ncore);
+    fclose(fp);
 }
 
 

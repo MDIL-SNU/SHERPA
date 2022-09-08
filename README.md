@@ -14,12 +14,17 @@ mkdir build; cd build
 cmake ../cmake -D BUILD_SHARED_LIBS=yes
 cmake --build . --target install
 ```
-2. Check your compiler
+2. Check compiler type in `CMakeLists.txt`
+```bash
+cd Saddle_point_search/src
+```
 ```text
 SET (CMAKE_C_COMPILER "mpiicc" CACHE PATH "")
 ```
 If you don't have intel compiler, change "mpiicc" to "mpicc".
-3. Build and Install
+
+
+3. Build and install
 ``` bash
 cmake CMakeLists.txt
 make
