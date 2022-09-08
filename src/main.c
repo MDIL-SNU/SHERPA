@@ -30,10 +30,6 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
-    if (rank == 0) {
-        write_input(input);
-    }
-
     /* make directory */
     if (rank == 0) {
         errno = mkdir(input->output_dir, 0775);
@@ -47,6 +43,11 @@ int main(int argc, char *argv[])
         free_input(input);
         MPI_Finalize();
         return 1;
+    }
+
+    /* write_input */
+    if (rank == 0) {
+        write_input(input);
     }
 
     /* random number */

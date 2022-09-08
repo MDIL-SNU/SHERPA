@@ -294,12 +294,12 @@ void write_input(Input *input)
     fputs("\n", fp);
 
     fputs("# restart parameter #\n", fp);
-    fprintf(fp, "RESTART\t= %d\n", input->restart);
+    fprintf(fp, "RESTART\t\t= %d\n", input->restart);
     fprintf(fp, "DATASET_DIR\t= %s\n", input->dataset_dir);
     fputs("\n", fp);
 
     fputs("# parallelism parameter #\n", fp);
-    fprintf(fp, "NCORE\t= %d\n", input->ncore);
+    fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
     fclose(fp);
 }
 
