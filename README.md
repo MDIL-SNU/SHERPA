@@ -1,4 +1,4 @@
-# LAMMPS_dimer
+# Saddle_point_search
 Dimer method combined with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator).  
 Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU/SIMPLE-NN_v2) are also possible.  
 
