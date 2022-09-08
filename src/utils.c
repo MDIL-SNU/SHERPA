@@ -150,7 +150,7 @@ int check_unique(Config *config, Input *input, char *self)
             if (strcmp(self, namelist[i]->d_name) == 0) {
                 continue;
             }
-            char filename[128];
+            char filename[512];
             sprintf(filename, "%s/%s",
                     input->output_dir, namelist[i]->d_name);
             Config *tmp_config = (Config *)malloc(sizeof(Config));

@@ -3,13 +3,7 @@ NELEMENT    = 2
 ATOM_TYPE   = O Pt
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-CUTOFF      = 6.0
-
-# kMC parameter #
-TEMPERATURE = 353.0
-ATT_FREQ    = 1e12
-END_TIME    = 1e4
-END_STEP    = 1000000
+PAIR_CUTOFF = 6.0
 
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
@@ -18,7 +12,7 @@ DIMER_DIST  = 0.0001
 F_TOL       = 0.01
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
-MAX_NUM_ROT = 100
+MAX_NUM_ROT = 4
 TRIAL_ANGLE = 45
 DISP_CUTOFF = 5.1
 STDDEV      = 0.1
@@ -28,11 +22,19 @@ INIT_RELAX  = 1
 INIT_MODE   = 0
 CONFIDENCE  = 0.9
 
+# system parameter #
+FREQUENCY   = 1e12
+TEMPERATURE = 353
+
 # random parameter #
 RANDOM_SEED = -1
 
-# output parameter #
+# directory parameter #
 OUTPUT_DIR  = ./gen_1
+
+# restart parameter #
+RESTART     = 0
+DATASET_DIR = ./gen_0
 
 # parallelism parameter #
 NCORE       = 8

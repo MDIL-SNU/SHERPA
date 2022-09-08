@@ -3,25 +3,23 @@ Dimer method combined with LAMMPS (Large Atomic/Molecular Massively Parallel Sim
 Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU/SIMPLE-NN_v2) are also possible.  
 
 ## Requirement
-- CMake >= 2.8.12
-- LAMMPS == 29Oct2020
+- CMake >= 3.10
+- LAMMPS >= 23Jun2022
 
 ## Installation
 1. Build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
 ```bash
-cd /path/to/lammps/src
-make mpi
-make mode=shlib mpi
+cd lammps
+mkdir build; cd build
+cmake ../cmake -D BUILD_SHARED_LIBS=yes
+cmake --build . --target install
 ```
-2. Set the environment variable. [[link](https://docs.lammps.org/Build_link.html)]
-```bash
-export LD_LIBRARY_PATH=/path/to/lammps/src:$LD_LIBRARY_PATH
-```
-3. Modify `LMP_PATH` in `CMakeLists.txt`.
+2. Check your compiler
 ```text
-SET ( LMP_PATH /path/to/lammps )
+SET (CMAKE_C_COMPILER "mpiicc" CACHE PATH "")
 ```
-4. Make `Makefile` and build
+If you don't have intel compiler, change "mpiicc" to "mpicc".
+3. Build and Install
 ``` bash
 cmake CMakeLists.txt
 make
@@ -109,11 +107,11 @@ I 0 1 2 3
 
 ## Command
 ```bash
-mpirun -np $numproc ./LAMMPS_dimer
+mpirun -np $numproc ./SPS
 ```
 $numproc stands for the number of CPU cores in parallel computation.
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
-2. `numproc` should be the multiple of `NCORE`. `NCORE` of 4-8 is recommended. 
-3. Set DISP_CUTOFF shorter than CUTOFF.
+2. `NCORE` of 4-8 is recommended. 
+3. Set DISP_CUTOFF shorter than PAIR_CUTOFF.

@@ -187,8 +187,6 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
     int q = n / input->ncore;
@@ -202,7 +200,6 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
         eigenmode[i * 3 + 0] = normal_random(0, input->stddev);
         eigenmode[i * 3 + 1] = normal_random(0, input->stddev);
         eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
-        printf("gen %f %f %f\n", eigenmode[i * 3 + 0], eigenmode[i * 3 + 1], eigenmode[i * 3 + 2]);
     }
     int count = (end - begin) * 3;
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
@@ -218,11 +215,6 @@ double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
                    eigenmode, counts, disp, MPI_DOUBLE, comm); 
     free(disp);
     free(counts);
-    if (local_rank == 0) {
-        for (i = 0; i < n; ++i) {
-            printf("done %f %f %f\n", eigenmode[i * 3 + 0], eigenmode[i * 3 + 1], eigenmode[i * 3 + 2]);
-        }
-    }
     return eigenmode;
 }
 
@@ -238,8 +230,6 @@ void gen_list(Config *config, Input *input, double *center,
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
     int q = config->tot_num / input->ncore;
@@ -363,11 +353,9 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
-    double energy0, energy1, energy2;
+    double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -394,7 +382,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
-                char line[128], filename[128];
+                char filename[128];
                 sprintf(filename, "%s/Dimer_%d.log",
                         input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
@@ -475,7 +463,7 @@ void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(new_eigenmode);
         free(tmp_force);
         if (local_rank == 0) {
-            char line[128], filename[128];
+            char filename[128];
             sprintf(filename, "%s/Dimer_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
@@ -501,17 +489,12 @@ double constrained_rotate(Config *config0, Input *input,
                           int disp_num, int *disp_list,
                           double *eigenmode, MPI_Comm comm)
 {
-    int i, j, rank, size;
-    double magnitude, cmin, kappa;
+    int i, j;
+    double magnitude, cmin;
+    double kappa = 0.0;
     double *tmp_eigenmode, *new_eigenmode;
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
-    int local_rank = rank % input->ncore;
-
-    double energy0, energy1, energy2;
+    double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -689,7 +672,7 @@ void translate(Config *config0, Input *input, int disp_num, int *disp_list,
 {
     int i;
     double magnitude;
-    double energy0, energy1, energy2;
+    double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -815,8 +798,6 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
     /* generate lists */
@@ -970,7 +951,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
     }
     if (local_rank == 0) {
-        char line[128], filename[128];
+        char filename[128];
         sprintf(filename, "%s/Saddle_%d.POSCAR",
                 input->output_dir, count);
         write_config(saddle, filename, "w");

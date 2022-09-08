@@ -44,8 +44,6 @@ void recycle_data(Config *config_new, Config *config_old, Input *input,
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int group_size = size / input->ncore;
-    int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
 
     int q = saddle->tot_num / input->ncore;

@@ -44,7 +44,6 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv, MPI_Co
 
 double oneshot(Config *config, Input *input, MPI_Comm comm)
 {
-    int i;
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
@@ -90,7 +89,7 @@ void oneshot_disp(Config *config, Input *input, double *energy, double *force,
     lammps_command(lmp, "run 0");
     *energy = lammps_get_thermo(lmp, "pe");
     double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
-    lammps_gather_atoms(lmp, "f", 2, 3, tmp_force);
+    lammps_gather_atoms(lmp, "f", 1, 3, tmp_force);
     for (i = 0; i < disp_num; ++i) {
         force[i * 3 + 0] = tmp_force[disp_list[i] * 3 + 0];
         force[i * 3 + 1] = tmp_force[disp_list[i] * 3 + 1];
@@ -143,7 +142,7 @@ double atom_relax(Config *config, Input *input, MPI_Comm comm)
     lammps_command(lmp, cmd);
     double pe = lammps_get_thermo(lmp, "pe");
     /* update positions */
-    lammps_gather_atoms(lmp, "x", 2, 3, config->pos);
+    lammps_gather_atoms(lmp, "x", 1, 3, config->pos);
     /* delete LAMMPS instance */
     lammps_close(lmp);
 

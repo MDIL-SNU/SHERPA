@@ -16,7 +16,6 @@
 int main(int argc, char *argv[])
 {
     int i, j, atom_index, errno, rank, size;
-    int buffer_size = 4096;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -203,8 +202,13 @@ int main(int argc, char *argv[])
     double Ea;
     double *eigenmode;
     while (1) {
-        /* confidence check */
+        /* check exit condition */
+        int recycle_flag = 0;
         if (local_rank == 0) {
+            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
+            MPI_Fetch_and_op(&one, &local_count, MPI_INT,
+                             0, (MPI_Aint)0, MPI_SUM, count_win);
+            MPI_Win_unlock(0, count_win);
             MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
             MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
                              0, (MPI_Aint)0, MPI_SUM, redundant_win);
@@ -224,16 +228,8 @@ int main(int argc, char *argv[])
         if (local_exit > 0) {
             break;
         }
-        MPI_Bcast(&local_redundant, 1, MPI_INT, 0, local_comm);
-
-        int recycle_flag = 0;
-        if (local_rank == 0) {
-            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
-            MPI_Fetch_and_op(&one, &local_count, MPI_INT,
-                             0, (MPI_Aint)0, MPI_SUM, count_win);
-            MPI_Win_unlock(0, count_win);
-        }
         MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
+        MPI_Bcast(&local_redundant, 1, MPI_INT, 0, local_comm);
         
         if (input->restart > 0) {
             recycle_flag = 1;
@@ -345,7 +341,7 @@ int main(int argc, char *argv[])
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    int recycle_num;
+    int recycle_num = 0;
     if (rank == 0) {
         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
         MPI_Fetch_and_op(&zero, &local_recycle, MPI_INT,
@@ -434,7 +430,7 @@ int main(int argc, char *argv[])
         free(disp);
     }
 
-    double energy = oneshot(config, input, MPI_COMM_WORLD);
+    //double energy = oneshot(config, input, MPI_COMM_WORLD);
     /* log */
     if (rank == 0) {
         int *dege_num = (int *)calloc(total_reac_num, sizeof(int));
@@ -477,6 +473,7 @@ int main(int argc, char *argv[])
 
     MPI_Win_free(&count_win);
     MPI_Win_free(&redundant_win);
+    MPI_Win_free(&recycle_win);
     MPI_Win_free(&conv_win);
     MPI_Win_free(&exit_win);
 
