@@ -211,6 +211,14 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->snc_dimer), "SNC_DIMER", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_double(&(input->temperature), "TEMPERATURE", filename);
     if (errno) {
         return 1;
@@ -227,7 +235,7 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_char(&(input->dataset_dir), "DATASET_DIR", filename);
+    errno = input_char(&(input->restart_dir), "RESTART_DIR", filename);
     if (errno) {
         return 1;
     }
@@ -240,6 +248,9 @@ int read_input(Input *input, char *filename)
     }
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
+    if ((input->kappa_dimer > 0) && (input->snc_dimer > 0)) {
+        return 1;
+    }
     return 0;
 }
 
@@ -278,6 +289,8 @@ void write_input(Input *input)
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+    fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
+    fprintf(fp, "SNC_DIMER\t= %d\n", input->snc_dimer);
     fputs("\n", fp);
 
     fputs("# system parameter #\n", fp);
@@ -295,7 +308,7 @@ void write_input(Input *input)
 
     fputs("# restart parameter #\n", fp);
     fprintf(fp, "RESTART\t\t= %d\n", input->restart);
-    fprintf(fp, "DATASET_DIR\t= %s\n", input->dataset_dir);
+    fprintf(fp, "RESTART_DIR\t= %s\n", input->restart_dir);
     fputs("\n", fp);
 
     fputs("# parallelism parameter #\n", fp);
@@ -315,6 +328,6 @@ void free_input(Input *input)
     free(input->init_config);
     free(input->target_list);
     free(input->output_dir);
-    free(input->dataset_dir);
+    free(input->restart_dir);
     free(input);
 }

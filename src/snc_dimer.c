@@ -1,128 +1,13 @@
 #include <math.h>
 #include <mpi.h>
+#include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "calculator.h"
 #include "config.h"
-#include "dimer.h"
+#include "snc_dimer.h"
 #include "utils.h"
-
-
-double normal_random(double mean, double std)
-{
-    double u, v, s;
-    do {
-        u = ((double)rand() / RAND_MAX) * 2 - 1;
-        v = ((double)rand() / RAND_MAX) * 2 - 1;
-        s = u * u + v * v;
-    } while (s >= 1.0 || s == 0.0);
-    s = sqrt(-2 * log(s) / s);
-    return mean + std * u * s;
-}
-
-
-double norm(double *vec, int n)
-{
-    int i;
-    double output = 0.0;
-    for (i = 0; i < n; ++i) {
-        output += vec[i * 3 + 0] * vec[i * 3 + 0];
-        output += vec[i * 3 + 1] * vec[i * 3 + 1];
-        output += vec[i * 3 + 2] * vec[i * 3 + 2];
-    }
-    return sqrt(output);
-}
-
-
-double *normalize(double *vec, int n)
-{
-    int i;
-    double *output = (double *)malloc(sizeof(double) * n * 3); 
-    double magnitude = norm(vec, n);
-    for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = vec[i * 3 + 0] / magnitude;
-        output[i * 3 + 1] = vec[i * 3 + 1] / magnitude;
-        output[i * 3 + 2] = vec[i * 3 + 2] / magnitude;
-    }
-    return output;
-}
-
-
-double dot(double *vec1, double *vec2, int n)
-{
-    int i;
-    double output = 0.0;
-    for (i = 0; i < n; ++i) {
-        output += vec1[i * 3 + 0] * vec2[i * 3 + 0];
-        output += vec1[i * 3 + 1] * vec2[i * 3 + 1];
-        output += vec1[i * 3 + 2] * vec2[i * 3 + 2];
-    }
-    return output;
-}
-
-
-double *parallel_vector(double *vector, double *unit, int n)
-{
-    int i; 
-    double magnitude = dot(vector, unit, n);
-    double *output = (double *)malloc(sizeof(double) * n * 3);
-    for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = magnitude * unit[i * 3 + 0];
-        output[i * 3 + 1] = magnitude * unit[i * 3 + 1];
-        output[i * 3 + 2] = magnitude * unit[i * 3 + 2];
-    } 
-    return output;
-}
-
-
-double *perpendicular_vector(double *vector, double *unit, int n)
-{
-    int i;
-    double *tmp_vector = parallel_vector(vector, unit, n);
-    double *output = (double *)malloc(sizeof(double) * n * 3);
-    for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = vector[i * 3 + 0] - tmp_vector[i * 3 + 0];
-        output[i * 3 + 1] = vector[i * 3 + 1] - tmp_vector[i * 3 + 1];
-        output[i * 3 + 2] = vector[i * 3 + 2] - tmp_vector[i * 3 + 2];
-    } 
-    free(tmp_vector);
-    return output;
-}
-
-
-void rotate_vector(double *vec1i, double *vec2i,
-                   double **vec1o, double **vec2o,
-                   int n, double angle)
-{
-    int i;
-    double cAng = cos(angle);
-    double sAng = sin(angle);
-    double *tmp_vec1o = (double *)malloc(sizeof(double) * n * 3);
-    double *tmp_vec2o = (double *)malloc(sizeof(double) * n * 3);
-    for (i = 0; i < n; ++i) {
-        tmp_vec1o[i * 3 + 0] = vec1i[i * 3 + 0] * cAng + vec2i[i * 3 + 0] * sAng;
-        tmp_vec1o[i * 3 + 1] = vec1i[i * 3 + 1] * cAng + vec2i[i * 3 + 1] * sAng;
-        tmp_vec1o[i * 3 + 2] = vec1i[i * 3 + 2] * cAng + vec2i[i * 3 + 2] * sAng;
-        tmp_vec2o[i * 3 + 0] = vec2i[i * 3 + 0] * cAng - vec1i[i * 3 + 0] * sAng;
-        tmp_vec2o[i * 3 + 1] = vec2i[i * 3 + 1] * cAng - vec1i[i * 3 + 1] * sAng;
-        tmp_vec2o[i * 3 + 2] = vec2i[i * 3 + 2] * cAng - vec1i[i * 3 + 2] * sAng;
-    }
-    double magnitude1 = norm(vec1i, n);
-    double magnitude2 = norm(vec2i, n);
-    *vec1o = normalize(tmp_vec1o, n);
-    *vec2o = normalize(tmp_vec2o, n);
-    for (i = 0; i < n; ++i) {
-        (*vec1o)[i * 3 + 0] *= magnitude1;
-        (*vec1o)[i * 3 + 1] *= magnitude1;
-        (*vec1o)[i * 3 + 2] *= magnitude1;
-        (*vec2o)[i * 3 + 0] *= magnitude2;
-        (*vec2o)[i * 3 + 1] *= magnitude2;
-        (*vec2o)[i * 3 + 2] *= magnitude2;
-    }
-    free(tmp_vec1o);
-    free(tmp_vec2o);
-}
 
 
 static double *projected_force(double *force0, double *eigenmode,
@@ -149,176 +34,126 @@ static double *projected_force(double *force0, double *eigenmode,
 }
 
 
-void cut_sphere(Config *config, Input *input, int update_num, int *update_list)
+static double *get_hessian(Config *config, Input *input,
+                           int disp_num, int *disp_list, MPI_Comm comm)
 {
-    int i;
-    int *update_flag = (int *)calloc(config->tot_num, sizeof(int));
-    for (i = 0; i < update_num; ++i) {
-        update_flag[update_list[i]] = 1;
-    }
-    int cut_num = 0;
-    int *cut_list = (int *)malloc(sizeof(int) * (config->tot_num - update_num));
-    for (i = config->tot_num - 1; i >= 0; --i) {
-        if (update_flag[i] == 0) {
-            cut_list[cut_num] = i;
-            cut_num++;
-        }
-    }
-    /* sort */
-    int_sort(cut_list, cut_num);
-    for (i = 0; i < cut_num; ++i) {
-        extract_atom(config, cut_list[i]);
-    }
-    free(update_flag);
-    free(cut_list);
-}
-
-
-/* not normalized */
-double *gen_eigenmode(Input *input, int n, MPI_Comm comm)
-{
-    int i, rank, size;
-    double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
-
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int local_rank = rank % input->ncore;
-
-    int q = n / input->ncore;
-    int r = n % input->ncore;
-    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
-    int end = begin + q;
-    if (r > local_rank) {
-        end++;
-    }
-    for (i = begin; i < end; ++i) {
-        eigenmode[i * 3 + 0] = normal_random(0, input->stddev);
-        eigenmode[i * 3 + 1] = normal_random(0, input->stddev);
-        eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
-    }
-    int count = (end - begin) * 3;
-    int *counts = (int *)malloc(sizeof(int) * input->ncore);
-    MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    int *disp = (int *)malloc(sizeof(int) * input->ncore);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   eigenmode, counts, disp, MPI_DOUBLE, comm); 
-    free(disp);
-    free(counts);
-    return eigenmode;
-}
-
-
-/* update_list < 2 * cutoff
-   extract_list < disp_cutoff */
-void gen_list(Config *config, Input *input, double *center,
-              int *update_num, int **update_list,
-              int *extract_num, int **extract_list, MPI_Comm comm)
-{
-    int i, rank, size;
-    double del[3];
-
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int local_rank = rank % input->ncore;
-
-    int q = config->tot_num / input->ncore;
-    int r = config->tot_num % input->ncore;
-    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
-    int end = begin + q;
-    if (r > local_rank) {
-        end++;
-    }
-    int tmp_update_num = 0;
-    int *tmp_update_list = (int *)malloc(sizeof(int) * config->tot_num);
-    int tmp_extract_num = 0;
-    int *tmp_extract_list = (int *)malloc(sizeof(int) * config->tot_num);
-    for (i = begin; i < end; ++i) {
-        del[0] = config->pos[i * 3 + 0] - center[0];
-        del[1] = config->pos[i * 3 + 1] - center[1];
-        del[2] = config->pos[i * 3 + 2] - center[2];
-        get_minimum_image(del, config->boxlo, config->boxhi,
-                          config->xy, config->yz, config->xz);
-        double dist = sqrt(del[0] * del[0]
-                         + del[1] * del[1]
-                         + del[2] * del[2]);
-        if (dist < 2 * input->pair_cutoff) {
-            tmp_update_list[tmp_update_num] = i;
-            tmp_update_num++; 
-            if (dist < input->disp_cutoff) {
-                tmp_extract_list[tmp_extract_num] = i;
-                tmp_extract_num++;
+    int i, j, k, l;
+    int N = config->tot_num;
+    double *H = (double *)calloc(N * N, sizeof(double));
+    double energy;
+    double *force_1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force_2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    for (i = 0; i < disp_num; ++i) {
+        for (j = 0; j < 3; ++j) {
+            config->pos[disp_list[i] * 3 + j] += 0.001;
+            oneshot_disp(config, input, &energy, force_1, disp_num, disp_list, comm);     
+            config->pos[disp_list[i] * 3 + j] -= 2 * 0.001;
+            oneshot_disp(config, input, &energy, force_2, disp_num, disp_list, comm);     
+            config->pos[disp_list[i] * 3 + j] += 0.001;
+            /* column-major lower triangle matrix */
+            for (k = i * 3 + j; k < 3 * disp_num; ++k) {
+                /* f = -dE/dx */
+                double dforce = force_2[k] - force_1[k];
+                H[i * 3 * disp_num * 3 + j * disp_num * 3 + k] = dforce / (2 * 0.001);
             }
         }
     }
-    MPI_Allreduce(&tmp_update_num, update_num, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&tmp_extract_num, extract_num, 1, MPI_INT, MPI_SUM, comm);
-    *update_list = (int *)malloc(sizeof(int) * (*update_num));
-    *extract_list = (int *)malloc(sizeof(int) * (*extract_num));
-
-    int *counts = (int *)malloc(sizeof(int) * input->ncore);
-    int *disp = (int *)malloc(sizeof(int) * input->ncore);
-
-    /* update list */
-    MPI_Allgather(&tmp_update_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(tmp_update_list, tmp_update_num, MPI_INT,
-                   *update_list, counts, disp, MPI_INT, comm);
-
-    /* extract list */
-    MPI_Allgather(&tmp_extract_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(tmp_extract_list, tmp_extract_num, MPI_INT,
-                   *extract_list, counts, disp, MPI_INT, comm);
-
-    free(tmp_update_list);
-    free(tmp_extract_list);
-    free(counts);
-    free(disp);
-
-    /* sort */
-    int_sort(*extract_list, *extract_num);
+    free(force_1);
+    free(force_2);
+    return H;
 }
 
 
-double *get_rot_force(Input *input, double *force1, double *force2,
-                      double *eigenmode, int disp_num)
+static double *get_eigenvalue(double *H, int disp_num)
+{
+    MKL_INT n = disp_num * 3;
+    MKL_INT info, lwork;
+    double wkopt;
+    double *w = (double *)malloc(sizeof(double) * disp_num * 3);
+    lwork = -1;
+    /* query and allocate the optimal workspace */
+    dsyev("V", "L", &n, H, &n, w, &wkopt, &lwork, &info);
+    lwork = (MKL_INT)wkopt;
+    double *work = (double *)malloc(lwork * sizeof(double));
+    /* solve */
+    /* w: eigenvalues in ascending order
+       H: the columns of H contain the orthonormal eigenvectors */
+    dsyev("V", "L", &n, H, &n, w, work, &lwork, &info);
+    free(work);
+    return w;
+}
+
+
+/* cartesian -> snc */
+static void transform_x(double *vector, double *H, double *w, int N)
 {
     int i;
-    double *dforce = (double *)malloc(sizeof(double) * disp_num * 3);
-    for (i = 0; i < disp_num; ++i) {
-        dforce[i * 3 + 0] = force1[i * 3 + 0] - force2[i * 3 + 0];
-        dforce[i * 3 + 1] = force1[i * 3 + 1] - force2[i * 3 + 1];
-        dforce[i * 3 + 2] = force1[i * 3 + 2] - force2[i * 3 + 2];
+
+    CBLAS_LAYOUT layout = CblasColMajor;
+    CBLAS_TRANSPOSE trans = CblasTrans;
+    MKL_INT n = 3 * N;
+    double alpha = 1.0;
+    double beta = 0.0;
+    double *output = (double *)malloc(sizeof(double) * 3 * N);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, vector, 1, beta, output, 1);
+    for (i = 0; i < N; ++i) {
+        vector[i * 3 + 0] = output[i * 3 + 0] * sqrt(w[i * 3 + 0]);
+        vector[i * 3 + 1] = output[i * 3 + 1] * sqrt(w[i * 3 + 1]);
+        vector[i * 3 + 2] = output[i * 3 + 2] * sqrt(w[i * 3 + 2]);
     }
-    double *rot_force = perpendicular_vector(dforce, eigenmode, disp_num);
-    for (i = 0; i < disp_num; ++i) {
-        rot_force[i * 3 + 0] /= 2 * input->dimer_dist;
-        rot_force[i * 3 + 1] /= 2 * input->dimer_dist;
-        rot_force[i * 3 + 2] /= 2 * input->dimer_dist;
+    free(output);
+}
+ 
+
+/* snc -> cartesian */
+static void inv_transform_x(double *vector, double *H, double *w, int N)
+{
+    int i;
+    for (i = 0; i < N; ++i) {
+        vector[i * 3 + 0] /= sqrt(w[i * 3 + 0]); 
+        vector[i * 3 + 1] /= sqrt(w[i * 3 + 1]); 
+        vector[i * 3 + 2] /= sqrt(w[i * 3 + 2]); 
     }
-    free(dforce);
-    return rot_force;
+    CBLAS_LAYOUT layout = CblasColMajor;
+    CBLAS_TRANSPOSE trans = CblasNoTrans;
+    MKL_INT n = 3 * N;
+    double alpha = 1.0;
+    double beta = 0.0;
+    double *output = (double *)malloc(sizeof(double) * 3 * N);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, vector, 1, beta, output, 1);
+    for (i = 0; i < N; ++i) {
+        vector[i * 3 + 0] = output[i * 3 + 0];
+        vector[i * 3 + 1] = output[i * 3 + 0];
+        vector[i * 3 + 2] = output[i * 3 + 0];
+    }
+    free(output);
+}
+ 
+
+/* cartesian -> snc */
+static void transform_f(double *vector, double *H, double *w, int N)
+{
+    int i;
+
+    CBLAS_LAYOUT layout = CblasColMajor;
+    CBLAS_TRANSPOSE trans = CblasNoTrans;
+    MKL_INT n = 3 * N;
+    double alpha = 1.0;
+    double beta = 0.0;
+    double *output = (double *)malloc(sizeof(double) * 3 * N);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, vector, 1, beta, output, 1);
+    for (i = 0; i < N; ++i) {
+        vector[i * 3 + 0] = output[i * 3 + 0] / sqrt(w[i * 3 + 0]);
+        vector[i * 3 + 1] = output[i * 3 + 1] / sqrt(w[i * 3 + 1]);
+        vector[i * 3 + 2] = output[i * 3 + 2] / sqrt(w[i * 3 + 2]);
+    }
+    free(output);
 }
 
 
 static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
-                   double *eigenmode, int count, int dimer_step, MPI_Comm comm)
+                   double *eigenmode, double *eigenvector, double *eigenvalue,
+                   int count, int dimer_step, MPI_Comm comm)
 {
     int i, j, rank, size;
     double magnitude, cmin;
@@ -331,7 +166,11 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    /* convert coordinate */
+    inv_transform_x(config0->pos, eigenvector, eigenvalue, disp_num);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
+    transform_x(config0->pos, eigenvector, eigenvalue, disp_num);
+    transform_f(force0, eigenvector, eigenvalue, disp_num);
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -343,7 +182,11 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             config1->pos[disp_list[j] * 3 + 2] += input->dimer_dist 
                                                 * eigenmode[j * 3 + 2];
         }
+        /* convert coordinate */
+        inv_transform_x(config1->pos, eigenvector, eigenvalue, disp_num);
         oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
+        transform_x(config1->pos, eigenvector, eigenvalue, disp_num);
+        transform_f(force1, eigenvector, eigenvalue, disp_num);
         free_config(config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -396,8 +239,12 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                                                       * input->dimer_dist;
         } 
         /* derivative of curvature */
+        /* convert coordinate */
+        inv_transform_x(trial_config1->pos, eigenvector, eigenvalue, disp_num);
         oneshot_disp(trial_config1, input, &energy1, force1,
                      disp_num, disp_list, comm);
+        transform_x(trial_config1->pos, eigenvector, eigenvalue, disp_num);
+        transform_f(force1, eigenvector, eigenvalue, disp_num);
         free_config(trial_config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -458,46 +305,8 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
-void get_cg_direction(double *direction, double *direction_old,
-                      double *cg_direction, int n)
-{
-    int i;
-    double old_norm = norm(direction_old, n);
-    double betaPR;
-    if (fabs(old_norm) > 1e-8) {
-        double *ddirection = (double *)malloc(sizeof(double) * n * 3);
-        for (i = 0; i < n; ++i) {
-            ddirection[i * 3 + 0] = direction[i * 3 + 0]
-                                  - direction_old[i * 3 + 0];
-            ddirection[i * 3 + 1] = direction[i * 3 + 1] 
-                                  - direction_old[i * 3 + 1];
-            ddirection[i * 3 + 2] = direction[i * 3 + 2] 
-                                  - direction_old[i * 3 + 2];
-        }
-        betaPR = dot(direction, ddirection, n) / old_norm; 
-        free(ddirection);
-    } else {
-        betaPR = 0.0;
-    }
-    if (betaPR < 0.0) {
-        betaPR = 0.0;
-    }
-    for (i = 0; i < n; ++i) {
-        cg_direction[i * 3 + 0] = direction[i * 3 + 0]
-                                + cg_direction[i * 3 + 0] * betaPR;
-        cg_direction[i * 3 + 1] = direction[i * 3 + 1] 
-                                + cg_direction[i * 3 + 1] * betaPR;
-        cg_direction[i * 3 + 2] = direction[i * 3 + 2] 
-                                + cg_direction[i * 3 + 2] * betaPR;
-        direction_old[i * 3 + 0] = direction[i * 3 + 0];
-        direction_old[i * 3 + 1] = direction[i * 3 + 1];
-        direction_old[i * 3 + 2] = direction[i * 3 + 2];
-    }
-}
-
-
-static void translate(Config *config0, Input *input,
-                      int disp_num, int *disp_list, double *eigenmode,
+static void translate(Config *config0, Input *input, int disp_num, int *disp_list,
+                      double *eigenmode, double *eigenvector, double *eigenvalue,
                       double *direction_old, double *cg_direction,
                       int dimer_step, MPI_Comm comm)
 {
@@ -507,7 +316,11 @@ static void translate(Config *config0, Input *input,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    /* convert coordinate */
+    inv_transform_x(config0->pos, eigenvector, eigenvalue, disp_num);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
+    transform_x(config0->pos, eigenvector, eigenvalue, disp_num);
+    transform_f(force0, eigenvector, eigenvalue, disp_num);
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
@@ -519,7 +332,11 @@ static void translate(Config *config0, Input *input,
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
+    /* convert coordinate */
+    inv_transform_x(config1->pos, eigenvector, eigenvalue, disp_num);
     oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
+    transform_x(config1->pos, eigenvector, eigenvalue, disp_num);
+    transform_f(force1, eigenvector, eigenvalue, disp_num);
     free_config(config1);
     for (i = 0; i < disp_num; ++i) {
         force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
@@ -571,8 +388,12 @@ static void translate(Config *config0, Input *input,
         double trial_energy0;
         double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
         double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
+        /* convert coordinate */
+        inv_transform_x(trial_config0->pos, eigenvector, eigenvalue, disp_num);
         oneshot_disp(trial_config0, input, &trial_energy0, trial_force0,
                      disp_num, disp_list, comm); 
+        transform_x(trial_config0->pos, eigenvector, eigenvalue, disp_num);
+        transform_f(trial_force0, eigenvector, eigenvalue, disp_num);
         double *f0tp = projected_force(trial_force0, eigenmode,
                                        curvature, disp_num);
         for (i = 0; i < disp_num; ++i) {
@@ -621,8 +442,9 @@ static void translate(Config *config0, Input *input,
 
 
 // TODO: orthogonalization
-int dimer(Config *initial, Config *saddle, Config *final, Input *input,
-          double *full_eigenmode, int count, int index, double *Ea, MPI_Comm comm)
+int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
+              double *full_eigenmode, int count, int index,
+              double *Ea, MPI_Comm comm)
 {
     int i, j, rank, size;
 
@@ -638,10 +460,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     int extract_num;
     int *update_list;
     int *extract_list;
+    printf("before gen_list\n");
     gen_list(initial, input, center, &update_num, &update_list,
              &extract_num, &extract_list, comm);
 
     /* cut far atoms */ 
+    printf("before cut_sphere\n");
     cut_sphere(initial, input, update_num, update_list);
 
     /* set dimer space */
@@ -668,11 +492,6 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     copy_config(config0, saddle);
     cut_sphere(config0, input, update_num, update_list);
 
-    /* oneshot for first force */
-    double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-
     /* eigenmode */
     double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
@@ -681,10 +500,20 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
     }
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
+    printf("normalize\n");
 
     /* cg optimization */
     double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
     double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+
+    printf("before hessian\n");
+
+    /* lower triangle matrix in col-major */
+    double *H = get_hessian(config0, input, disp_num, disp_list, comm); 
+    printf("before eigenn\n");
+    double *w = get_eigenvalue(H, disp_num);
+
+    printf("get eigenvalue done\n");
 
     /* run */
     if (local_rank == 0) {
@@ -705,13 +534,21 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         fclose(fp);
     }
 
+    /* convert coordinate */
+    transform_x(config0->pos, H, w, disp_num);
+    double energy0;
+    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
         rotate(config0, input, disp_num, disp_list,
-               eigenmode, count, dimer_step, comm);
-        translate(config0, input, disp_num, disp_list, eigenmode,
+               eigenmode, H, w, count, dimer_step, comm);
+        translate(config0, input, disp_num, disp_list, eigenmode, H, w,
                   direction_old, cg_direction, dimer_step, comm);
+        /* convert coordinate */
+        inv_transform_x(config0->pos, H, w, disp_num);
         oneshot_disp(config0, input, &energy0, force0,
                      disp_num, disp_list, comm);     
+        transform_x(config0->pos, H, w, disp_num);
+        transform_f(force0, H, w, disp_num);        
         fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
@@ -752,12 +589,16 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         free(eigenmode);
         free(update_list);
         free(extract_list);
+        free(H);
+        free(w);
         return 1;
     }
     /* relax initial structure and barrier energy */
     atom_relax(initial, input, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
+    /* convert coordinate */
+    inv_transform_x(config0->pos, H, w, disp_num);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
     double ts_energy = energy0;
     free(force0);
@@ -826,6 +667,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         free_config(config1);
         free_config(config2);
         free(update_list);
+        free(H);
+        free(w);
         return 1;
     } else {
         if (local_rank == 0) {
@@ -860,6 +703,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         free_config(config1);
         free_config(config2);
         free(update_list);
+        free(H);
+        free(w);
         return 0;
     }
 }

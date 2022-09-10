@@ -8,6 +8,8 @@
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
+#include "kappa_dimer.h"
+#include "snc_dimer.h"
 #include "input.h"
 #include "target.h"
 #include "utils.h"
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
     Config *config_old = (Config *)malloc(sizeof(Config));
     if (input->restart > 0) {
         char filename[64];
-        sprintf(filename, "%s/POSCAR", input->dataset_dir);
+        sprintf(filename, "%s/POSCAR", input->restart_dir);
         errno = read_config(config_old, input, filename);
         if (errno > 0) {
             printf("ERROR in INIT_CONFIG FILE!\n");
@@ -208,6 +210,8 @@ int main(int argc, char *argv[])
     int conv, unique;
     double Ea;
     double *eigenmode;
+
+    printf("before while\n");
     while (1) {
         /* check exit condition */
         int recycle_flag = 0;
@@ -232,6 +236,7 @@ int main(int argc, char *argv[])
             MPI_Win_unlock(0, exit_win);
         }
         MPI_Bcast(&local_exit, 1, MPI_INT, 0, local_comm);
+        printf("before exit\n");
         if (local_exit > 0) {
             break;
         }
@@ -258,19 +263,41 @@ int main(int argc, char *argv[])
         copy_config(saddle, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
+        printf("initial\n");
         if (recycle_flag > 0) {
             eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
             recycle_data(config, config_old, input, data,
                          saddle, eigenmode, local_comm);
-            conv = dimer(initial, saddle, final, input, eigenmode,
-                         local_count, data->index, &Ea, local_comm);
+            if (input->snc_dimer > 0) {
+                printf("snc start\n");
+                conv = snc_dimer(initial, saddle, final, input, eigenmode,
+                                 local_count, data->index, &Ea, local_comm);
+            } else if (input->kappa_dimer > 0) {
+                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+                                   local_count, data->index, &Ea, local_comm);
+            } else {
+                conv = dimer(initial, saddle, final, input, eigenmode,
+                             local_count, data->index, &Ea, local_comm);
+            }
         } else {
             /* generate not normalized eigenmode */
+            printf("before eigenmode\n");
             eigenmode = gen_eigenmode(input, config->tot_num, local_comm);
+            printf("eigenmode done\n");
             atom_index = target_list[rand() % target_num];
+            printf("atom index\n");
             MPI_Bcast(&atom_index, 1, MPI_INT, 0, local_comm);
-            conv = dimer(initial, saddle, final, input, eigenmode,
-                         local_count, atom_index, &Ea, local_comm);
+            if (input->snc_dimer > 0) {
+                printf("rank %d snc start\n", rank);
+                conv = snc_dimer(initial, saddle, final, input, eigenmode,
+                                 local_count, atom_index, &Ea, local_comm);
+            } else if (input->kappa_dimer > 0) {
+                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+                                   local_count, atom_index, &Ea, local_comm);
+            } else {
+                conv = dimer(initial, saddle, final, input, eigenmode,
+                             local_count, atom_index, &Ea, local_comm);
+            }
         }
         /* conv == 0 -> success */
         if (conv == 0) {
@@ -347,6 +374,8 @@ int main(int argc, char *argv[])
         free(eigenmode);
     }
 
+    printf("rank %d\n", rank);
+
     MPI_Barrier(MPI_COMM_WORLD);
     int recycle_num = 0;
     if (rank == 0) {
@@ -364,6 +393,9 @@ int main(int argc, char *argv[])
         MPI_Win_unlock(0, count_win);
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("After overestimated?\n");
+
     int total_reac_num;
     int total_dege_num;
     double total_rate_sum;
@@ -377,6 +409,8 @@ int main(int argc, char *argv[])
     }
     MPI_Bcast(&total_reac_num, 1, MPI_INT, 0, local_comm);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("After bcast?\n");
     if (rank == 0) {
         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
         MPI_Fetch_and_op(&zero, &local_conv, MPI_INT,
@@ -395,6 +429,8 @@ int main(int argc, char *argv[])
         fclose(fp);
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    printf("After statistics?\n");
     int *global_reac_num = (int *)malloc(sizeof(int) * group_size);
     int *global_dege_num = (int *)malloc(sizeof(int) * group_size);
     int *global_reac_list = (int *)malloc(sizeof(int) * total_reac_num);

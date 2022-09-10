@@ -109,7 +109,7 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
     FILE *fp;
     struct dirent **namelist;
 
-    int count = scandir(input->dataset_dir, &namelist, name_filter, NULL); 
+    int count = scandir(input->restart_dir, &namelist, name_filter, NULL); 
     if (count > 0) {
         for (i = 0; i < count; ++i) {
             /* load saddle */
@@ -117,7 +117,7 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
             strtok(namelist[i]->d_name, "_");
             ptr = strtok(NULL, ".");
             sprintf(filename, "%s/Saddle_%s.POSCAR",
-                    input->dataset_dir, ptr);
+                    input->restart_dir, ptr);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
             if (errno > 0) {
@@ -146,7 +146,7 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
             }
             double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
             sprintf(filename, "%s/%s.MODECAR",
-                    input->dataset_dir, ptr);
+                    input->restart_dir, ptr);
             fp = fopen(filename, "rb");
             fread(eigenmode, sizeof(double), n * 3, fp);
             fclose(fp);
