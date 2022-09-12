@@ -3,6 +3,7 @@ Dimer method combined with LAMMPS (Large Atomic/Molecular Massively Parallel Sim
 Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU/SIMPLE-NN_v2) are also possible.  
 
 ## Requirement
+- Intel oneAPI MKL
 - CMake >= 3.10
 - LAMMPS >= 23Jun2022
 
@@ -14,21 +15,15 @@ mkdir build; cd build
 cmake ../cmake -D BUILD_SHARED_LIBS=yes
 cmake --build . --target install
 ```
-2. Check compiler type in `CMakeLists.txt`
+2. Build Check compiler type in `CMakeLists.txt`
 ```bash
-cd Saddle_point_search/src
-```
-```text
-SET (CMAKE_C_COMPILER "mpiicc" CACHE PATH "")
+cd Saddle_point_search
+mkdir build; cd build
+cmake ../cmake
+cmake --build .
 ```
 If you don't have intel compiler, change "mpiicc" to "mpicc".
 
-
-3. Build and install
-``` bash
-cmake CMakeLists.txt
-make
-```
 
 ## INPUT
 ```text
@@ -37,13 +32,7 @@ NELEMENT    = 2
 ATOM_TYPE   = O Pt
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-CUTOFF      = 6.0
-
-# kMC parameter #
-TEMPERATURE = 353.0
-ATT_FREQ    = 1e12
-END_TIME    = 1e4
-END_STEP    = 1000000
+PAIR_CUTOFF = 6.0
 
 # dimer parameter #
 INIT_CONFIG = ./POSCAR
@@ -60,12 +49,22 @@ MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+KAPPA_DIMER = 0
+SNC_DIMER   = 1
+
+# system parameter #
+FREQUENCY   = 1e12
+TEMPERATURE = 353.0
 
 # random parameter #
 RANDOM_SEED = -1
 
-# output parameter #
+# directory parameter #
 OUTPUT_DIR  = ./OUTPUT
+
+# restart parameter #
+RESTART     = 0
+RESTART_DIR = ./gen_0
 
 # parallelism parameter #
 NCORE       = 8
@@ -77,11 +76,7 @@ NCORE       = 8
 |ATOM_TYPE|Atomic symbols of elements||
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
-|CUTOFF|Cutoff radius of potential file|Angstrom|
-|TEMPERATURE|System temperature|Kelvin|
-|ATT_FREQ|Attempt frequency of reaction|1/s|
-|END_TIME|Termination condition for kMC time|s|
-|END_STEP|Termination condition for kMC step||
+|PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
 |DIMER_DIST|Dimer distance from the center|Angstrom|
@@ -96,8 +91,14 @@ NCORE       = 8
 |TRIAL_STEP|Trial step size of translation|Angstrom|
 |INIT_RELAX|Initial structure optimization||
 |CONFIDENCE|Confidence level of event table||
+|KAPPA_DIMER|Dimer method in ref.1||
+|SNC_DIMER|Dimer method in ref.2||
+|TEMPERATURE|System temperature|Kelvin|
+|FREQUENCY|Attempt frequency of reaction|1/s|
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
+|RESTART|||
+|RESTART_DIR|||
 |NCORE|The number of cores for each dimer method||
 
 ## TARGET

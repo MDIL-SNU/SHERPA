@@ -36,7 +36,7 @@ OUTPUT_DIR  = ./gen_1
 
 # restart parameter #
 RESTART     = 0
-DATASET_DIR = ./gen_0
+RESTART_DIR = ./gen_0
 
 # parallelism parameter #
 NCORE       = 8
