@@ -5,7 +5,8 @@
 #include "input.h"
 
 
-void int_sort(int *, int);
+void int_sort_decrease(int *, int);
+void int_sort_increase(int *, int);
 extern void get_minimum_image(double *del, double *boxlo, double *boxhi,
                               double xy, double yz, double xz);
 int get_atom_num(char *);

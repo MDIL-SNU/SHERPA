@@ -85,63 +85,88 @@ static double *get_eigenvalue(double *H, int disp_num)
 
 
 /* cartesian -> snc */
-static void transform_x(double *pos, double *H, double *w,
-                        int disp_num, int *disp_list)
+static void transform_disp(double *vector, double *H, double *w,
+                           int disp_num, int *disp_list)
 {
     int i;
-    double *tmp_pos = (double *)malloc(sizeof(double) * 3 * disp_num);
+    double *x = (double *)malloc(sizeof(double) * 3 * disp_num);
     for (i = 0; i < disp_num; ++i) {
-        tmp_pos[i * 3 + 0] = pos[disp_list[i] * 3 + 0];
-        tmp_pos[i * 3 + 1] = pos[disp_list[i] * 3 + 1];
-        tmp_pos[i * 3 + 2] = pos[disp_list[i] * 3 + 2];
+        x[i * 3 + 0] = vector[disp_list[i] * 3 + 0];
+        x[i * 3 + 1] = vector[disp_list[i] * 3 + 1];
+        x[i * 3 + 2] = vector[disp_list[i] * 3 + 2];
     }
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_TRANSPOSE trans = CblasTrans;
     MKL_INT n = 3 * disp_num;
     double alpha = 1.0;
     double beta = 0.0;
-    double *output = (double *)malloc(sizeof(double) * 3 * disp_num);
-    cblas_dgemv(layout, trans, n, n, alpha, H, n, tmp_pos, 1, beta, output, 1);
+    double *y = (double *)malloc(sizeof(double) * 3 * disp_num);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, x, 1, beta, y, 1);
     for (i = 0; i < disp_num; ++i) {
-        pos[disp_list[i] * 3 + 0] = output[i * 3 + 0] * sqrt(w[i * 3 + 0]);
-        pos[disp_list[i] * 3 + 1] = output[i * 3 + 1] * sqrt(w[i * 3 + 1]);
-        pos[disp_list[i] * 3 + 2] = output[i * 3 + 2] * sqrt(w[i * 3 + 2]);
+        vector[disp_list[i] * 3 + 0] = y[i * 3 + 0] * sqrt(w[i * 3 + 0]);
+        vector[disp_list[i] * 3 + 1] = y[i * 3 + 1] * sqrt(w[i * 3 + 1]);
+        vector[disp_list[i] * 3 + 2] = y[i * 3 + 2] * sqrt(w[i * 3 + 2]);
     }
-    free(tmp_pos);
-    free(output);
+    free(x);
+    free(y);
 }
  
 
 /* snc -> cartesian */
-static void inv_transform_x(double *pos, double *H, double *w,
-                            int disp_num, int *disp_list)
+static void inv_transform_disp(double *vector, double *H, double *w,
+                               int disp_num, int *disp_list)
 {
     int i;
-    double *tmp_pos = (double *)malloc(sizeof(double) * 3 * disp_num);
+    double *x = (double *)malloc(sizeof(double) * 3 * disp_num);
     for (i = 0; i < disp_num; ++i) {
-        tmp_pos[i * 3 + 0] = pos[disp_list[i] * 3 + 0] / sqrt(w[i * 3 + 0]);
-        tmp_pos[i * 3 + 1] = pos[disp_list[i] * 3 + 1] / sqrt(w[i * 3 + 1]);
-        tmp_pos[i * 3 + 2] = pos[disp_list[i] * 3 + 2] / sqrt(w[i * 3 + 2]);
+        x[i * 3 + 0] = vector[disp_list[i] * 3 + 0] / sqrt(w[i * 3 + 0]);
+        x[i * 3 + 1] = vector[disp_list[i] * 3 + 1] / sqrt(w[i * 3 + 1]);
+        x[i * 3 + 2] = vector[disp_list[i] * 3 + 2] / sqrt(w[i * 3 + 2]);
     }
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_TRANSPOSE trans = CblasNoTrans;
     MKL_INT n = 3 * disp_num;
     double alpha = 1.0;
     double beta = 0.0;
-    double *output = (double *)malloc(sizeof(double) * 3 * disp_num);
-    cblas_dgemv(layout, trans, n, n, alpha, H, n, tmp_pos, 1, beta, output, 1);
+    double *y = (double *)malloc(sizeof(double) * 3 * disp_num);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, x, 1, beta, y, 1);
     for (i = 0; i < disp_num; ++i) {
-        pos[disp_list[i] * 3 + 0] = output[i * 3 + 0];
-        pos[disp_list[i] * 3 + 1] = output[i * 3 + 1];
-        pos[disp_list[i] * 3 + 2] = output[i * 3 + 2];
+        vector[disp_list[i] * 3 + 0] = y[i * 3 + 0];
+        vector[disp_list[i] * 3 + 1] = y[i * 3 + 1];
+        vector[disp_list[i] * 3 + 2] = y[i * 3 + 2];
     }
-    free(tmp_pos);
-    free(output);
+    free(x);
+    free(y);
+}
+ 
+
+/* snc -> cartesian */
+static void inv_transform(double *x, double *H, double *w, int disp_num)
+{
+    int i;
+    for (i = 0; i < disp_num; ++i) {
+        x[i * 3 + 0] /= sqrt(w[i * 3 + 0]);
+        x[i * 3 + 1] /= sqrt(w[i * 3 + 1]);
+        x[i * 3 + 2] /= sqrt(w[i * 3 + 2]);
+    }
+    CBLAS_LAYOUT layout = CblasColMajor;
+    CBLAS_TRANSPOSE trans = CblasNoTrans;
+    MKL_INT n = 3 * disp_num;
+    double alpha = 1.0;
+    double beta = 0.0;
+    double *y = (double *)malloc(sizeof(double) * 3 * disp_num);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, x, 1, beta, y, 1);
+    for (i = 0; i < disp_num; ++i) {
+        x[i * 3 + 0] = y[i * 3 + 0];
+        x[i * 3 + 1] = y[i * 3 + 1];
+        x[i * 3 + 2] = y[i * 3 + 2];
+    }
+    free(y);
 }
  
 
 /* cartesian -> snc */
-static void transform_f(double *force, double *H, double *w, int disp_num)
+static void transform(double *x, double *H, double *w, int disp_num)
 {
     int i;
     CBLAS_LAYOUT layout = CblasColMajor;
@@ -149,14 +174,14 @@ static void transform_f(double *force, double *H, double *w, int disp_num)
     MKL_INT n = 3 * disp_num;
     double alpha = 1.0;
     double beta = 0.0;
-    double *tmp_force = (double *)malloc(sizeof(double) * 3 * disp_num);
-    cblas_dgemv(layout, trans, n, n, alpha, H, n, force, 1, beta, tmp_force, 1);
+    double *y = (double *)malloc(sizeof(double) * 3 * disp_num);
+    cblas_dgemv(layout, trans, n, n, alpha, H, n, x, 1, beta, y, 1);
     for (i = 0; i < disp_num; ++i) {
-        force[i * 3 + 0] = tmp_force[i * 3 + 0] / sqrt(w[i * 3 + 0]);
-        force[i * 3 + 1] = tmp_force[i * 3 + 1] / sqrt(w[i * 3 + 1]);
-        force[i * 3 + 2] = tmp_force[i * 3 + 2] / sqrt(w[i * 3 + 2]);
+        x[i * 3 + 0] = y[i * 3 + 0] / sqrt(w[i * 3 + 0]);
+        x[i * 3 + 1] = y[i * 3 + 1] / sqrt(w[i * 3 + 1]);
+        x[i * 3 + 2] = y[i * 3 + 2] / sqrt(w[i * 3 + 2]);
     }
-    free(tmp_force);
+    free(y);
 }
 
 
@@ -176,10 +201,10 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     /* convert coordinate */
-    inv_transform_x(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    inv_transform_disp(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
-    transform_x(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
-    transform_f(force0, eigenvector, eigenvalue, disp_num);
+    transform_disp(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    transform(force0, eigenvector, eigenvalue, disp_num);
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -192,10 +217,10 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
                                                 * eigenmode[j * 3 + 2];
         }
         /* convert coordinate */
-        inv_transform_x(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        inv_transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
         oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
-        transform_x(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
-        transform_f(force1, eigenvector, eigenvalue, disp_num);
+        transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        transform(force1, eigenvector, eigenvalue, disp_num);
         free_config(config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -249,11 +274,11 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         } 
         /* derivative of curvature */
         /* convert coordinate */
-        inv_transform_x(trial_config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        inv_transform_disp(trial_config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
         oneshot_disp(trial_config1, input, &energy1, force1,
                      disp_num, disp_list, comm);
-        transform_x(trial_config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
-        transform_f(force1, eigenvector, eigenvalue, disp_num);
+        transform_disp(trial_config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        transform(force1, eigenvector, eigenvalue, disp_num);
         free_config(trial_config1);
         for (j = 0; j < disp_num; ++j) {
             force2[j * 3 + 0] = 2 * force0[j * 3 + 0] - force1[j * 3 + 0];
@@ -326,10 +351,10 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     /* convert coordinate */
-    inv_transform_x(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    inv_transform_disp(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
-    transform_x(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
-    transform_f(force0, eigenvector, eigenvalue, disp_num);
+    transform_disp(config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    transform(force0, eigenvector, eigenvalue, disp_num);
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
@@ -342,10 +367,10 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
     }
     /* curvature */
     /* convert coordinate */
-    inv_transform_x(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    inv_transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
     oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
-    transform_x(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
-    transform_f(force1, eigenvector, eigenvalue, disp_num);
+    transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
+    transform(force1, eigenvector, eigenvalue, disp_num);
     free_config(config1);
     for (i = 0; i < disp_num; ++i) {
         force2[i * 3 + 0] = 2 * force0[i * 3 + 0] - force1[i * 3 + 0];
@@ -398,11 +423,11 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
         double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
         double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
         /* convert coordinate */
-        inv_transform_x(trial_config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        inv_transform_disp(trial_config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
         oneshot_disp(trial_config0, input, &trial_energy0, trial_force0,
                      disp_num, disp_list, comm); 
-        transform_x(trial_config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
-        transform_f(trial_force0, eigenvector, eigenvalue, disp_num);
+        transform_disp(trial_config0->pos, eigenvector, eigenvalue, disp_num, disp_list);
+        transform(trial_force0, eigenvector, eigenvalue, disp_num);
         double *f0tp = projected_force(trial_force0, eigenmode,
                                        curvature, disp_num);
         for (i = 0; i < disp_num; ++i) {
@@ -536,7 +561,7 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     /* convert coordinate */
-    transform_x(config0->pos, H, w, disp_num, disp_list);
+    transform_disp(config0->pos, H, w, disp_num, disp_list);
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
@@ -545,7 +570,7 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
         translate(config0, input, disp_num, disp_list, eigenmode, H, w,
                   direction_old, cg_direction, dimer_step, comm);
         /* convert coordinate */
-        inv_transform_x(config0->pos, H, w, disp_num, disp_list);
+        inv_transform_disp(config0->pos, H, w, disp_num, disp_list);
         oneshot_disp(config0, input, &energy0, force0,
                      disp_num, disp_list, comm);     
         /* trajectory */
@@ -555,8 +580,7 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
                     input->output_dir, count);
             write_config(config0, filename, "a");
         }
-        transform_x(config0->pos, H, w, disp_num, disp_list);
-        //transform_f(force0, H, w, disp_num);        
+        transform_disp(config0->pos, H, w, disp_num, disp_list);
         fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
@@ -599,22 +623,22 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     /* convert coordinate */
-    inv_transform_x(config0->pos, H, w, disp_num, disp_list);
+    inv_transform_disp(config0->pos, H, w, disp_num, disp_list);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
     double ts_energy = energy0;
     free(force0);
     *Ea = ts_energy - i_energy;
 
     /* saddle update */
-    for (i = 0; i < config0->tot_num; ++i) {
+    for (i = 0; i < update_num; ++i) {
         saddle->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
         saddle->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
         saddle->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
     }
-    for (i = 0; i < disp_num; ++i) {
+    for (i = 0; i < extract_num; ++i) {
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+        full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
+        full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     if (local_rank == 0) {
         char filename[128];
@@ -630,37 +654,45 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* split */
     Config *config1 = (Config *)malloc(sizeof(Config));
-    copy_config(config1, config0);
     Config *config2 = (Config *)malloc(sizeof(Config));
-    copy_config(config2, config0);
+    inv_transform(eigenmode, H, w, disp_num);
+    tmp_eigenmode = normalize(eigenmode, disp_num);
+    for (i = 0; i < disp_num; ++i) {
+        eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
+        eigenmode[i * 3 + 1] = tmp_eigenmode[i * 3 + 1];
+        eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
+    }
+    free(tmp_eigenmode);
     int trial = 1;
-    do {
+    while (1) {
+        copy_config(config1, config0);
+        copy_config(config2, config0);
         for (j = 0; j < disp_num; ++j) {
             config1->pos[disp_list[j] * 3 + 0] = config0->pos[disp_list[j] * 3 + 0]
-                                               + 0.1 * sqrt(w[j * 3 + 0])
-                                               * trial * eigenmode[j * 3 + 0];
+                                               + 0.1 * trial * eigenmode[j * 3 + 0];
             config1->pos[disp_list[j] * 3 + 1] = config0->pos[disp_list[j] * 3 + 1]
-                                               + 0.1 * sqrt(w[j * 3 + 1])
-                                               * trial * eigenmode[j * 3 + 1];
+                                               + 0.1 * trial * eigenmode[j * 3 + 1];
             config1->pos[disp_list[j] * 3 + 2] = config0->pos[disp_list[j] * 3 + 2]
-                                               + 0.1 * sqrt(w[j * 3 + 2])
-                                               * trial * eigenmode[j * 3 + 2];
+                                               + 0.1 * trial * eigenmode[j * 3 + 2];
             config2->pos[disp_list[j] * 3 + 0] = config0->pos[disp_list[j] * 3 + 0]
-                                               - 0.1 * sqrt(w[j * 3 + 0])
-                                               * trial * eigenmode[j * 3 + 0];
+                                               - 0.1 * trial * eigenmode[j * 3 + 0];
             config2->pos[disp_list[j] * 3 + 1] = config0->pos[disp_list[j] * 3 + 1]
-                                               - 0.1 * sqrt(w[j * 3 + 1])
-                                               * trial * eigenmode[j * 3 + 1];
+                                               - 0.1 * trial * eigenmode[j * 3 + 1];
             config2->pos[disp_list[j] * 3 + 2] = config0->pos[disp_list[j] * 3 + 2]
-                                               - 0.1 * sqrt(w[j * 3 + 2])
-                                               * trial * eigenmode[j * 3 + 2];
+                                               - 0.1 * trial * eigenmode[j * 3 + 2];
         }
-        inv_transform_x(config1->pos, H, w, disp_num, disp_list);
-        inv_transform_x(config2->pos, H, w, disp_num, disp_list);
         atom_relax(config1, input, comm); 
         atom_relax(config2, input, comm); 
+        if (diff_config(config1, config2, 2 * input->max_step) == 1) {
+            break;
+        } else {
+            free_config(config1);
+            free_config(config2);
+            config1 = (Config *)malloc(sizeof(Config));
+            config2 = (Config *)malloc(sizeof(Config));
+        }
         trial++;
-    } while (diff_config(config1, config2, 2 * input->max_step) == 0);
+    }
     free(disp_list);
     free(extract_list);
     free(eigenmode);
@@ -696,13 +728,13 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
             fclose(fp);
         }
         if (diff1 == 0) {
-            for (i = 0; i < config0->tot_num; ++i) {
+            for (i = 0; i < update_num; ++i) {
                 final->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
                 final->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
                 final->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
             }
         } else {
-            for (i = 0; i < config0->tot_num; ++i) {
+            for (i = 0; i < update_num; ++i) {
                 final->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
                 final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
                 final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];

@@ -6,19 +6,19 @@
 #include "utils.h"
 
 
-double norm3(double *vec)
+static double norm(double *vec)
 {
     return sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
 }
 
 
-double dot3(double *vec1, double *vec2)
+static double dot(double *vec1, double *vec2)
 {
     return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
 
-void cross3(double *vec1, double *vec2, double *vec3)
+static void cross(double *vec1, double *vec2, double *vec3)
 {
     vec3[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
     vec3[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
@@ -26,7 +26,7 @@ void cross3(double *vec1, double *vec2, double *vec3)
 }
 
 
-double det(double (*mat)[3])
+static double det(double (*mat)[3])
 {
     int i;
     double cofactor[3];
@@ -58,30 +58,30 @@ void convert_basis(Config *config)
         C[i] = config->cell[2][i];
     }
 
-    A_norm = norm3(A);
+    A_norm = norm(A);
     Ahat[0] = A[0] / A_norm;
     Ahat[1] = A[1] / A_norm;
     Ahat[2] = A[2] / A_norm;
 
-    cross3(A, B, AxB);
-    AxB_norm = norm3(AxB);
+    cross(A, B, AxB);
+    AxB_norm = norm(AxB);
     AxBhat[0] = AxB[0] / AxB_norm;
     AxBhat[1] = AxB[1] / AxB_norm;
     AxBhat[2] = AxB[2] / AxB_norm;
 
-    cross3(Ahat, B, AhatxB);
-    cross3(AxBhat, Ahat, AxBhatxAhat);
+    cross(Ahat, B, AhatxB);
+    cross(AxBhat, Ahat, AxBhatxAhat);
 
     /* column vector (a b c) */
     config->cell[0][0] = A_norm;
-    config->cell[0][1] = dot3(B, Ahat);
-    config->cell[0][2] = dot3(C, Ahat);
+    config->cell[0][1] = dot(B, Ahat);
+    config->cell[0][2] = dot(C, Ahat);
     config->cell[1][0] = 0.0;
-    config->cell[1][1] = norm3(AhatxB);
-    config->cell[1][2] = dot3(C, AxBhatxAhat);
+    config->cell[1][1] = norm(AhatxB);
+    config->cell[1][2] = dot(C, AxBhatxAhat);
     config->cell[2][0] = 0.0;
     config->cell[2][1] = 0.0;
-    config->cell[2][2] = dot3(C, AxBhat);
+    config->cell[2][2] = dot(C, AxBhat);
 
     /* edge & tilting */
     config->boxlo[0] = 0.0;
@@ -96,9 +96,9 @@ void convert_basis(Config *config)
 
     /* transformation matrix */
     vol = det(config->cell);
-    cross3(B, C, frac[0]);
-    cross3(C, A, frac[1]);
-    cross3(A, B, frac[2]);
+    cross(B, C, frac[0]);
+    cross(C, A, frac[1]);
+    cross(A, B, frac[2]);
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {
@@ -410,7 +410,7 @@ int diff_config(Config *config1, Config *config2, double tol)
                           config2->pos[i * 3 + 2] - config1->pos[i * 3 + 2]};
         get_minimum_image(disp, config1->boxlo, config1->boxhi,
                           config1->xy, config1->yz, config1->xz);
-        if (norm3(disp) > tol) {
+        if (norm(disp) > tol) {
             return 1;
         }
     }

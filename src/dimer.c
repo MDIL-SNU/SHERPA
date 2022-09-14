@@ -165,7 +165,7 @@ void cut_sphere(Config *config, Input *input, int update_num, int *update_list)
         }
     }
     /* sort */
-    int_sort(cut_list, cut_num);
+    int_sort_decrease(cut_list, cut_num);
     for (i = 0; i < cut_num; ++i) {
         extract_atom(config, cut_list[i]);
     }
@@ -292,7 +292,8 @@ void gen_list(Config *config, Input *input, double *center,
     free(disp);
 
     /* sort */
-    int_sort(*extract_list, *extract_num);
+    int_sort_increase(*update_list, *update_num);
+    int_sort_increase(*extract_list, *extract_num);
 }
 
 

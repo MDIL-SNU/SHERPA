@@ -3,6 +3,8 @@ Dimer method combined with LAMMPS (Large Atomic/Molecular Massively Parallel Sim
 Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU/SIMPLE-NN_v2) are also possible.  
 
 ## Requirement
+- Intel C compiler
+- Intel MPI
 - Intel oneAPI MKL
 - CMake >= 3.10
 - LAMMPS >= 23Jun2022
@@ -22,7 +24,6 @@ mkdir build; cd build
 cmake ../cmake
 cmake --build .
 ```
-If you don't have intel compiler, change "mpiicc" to "mpicc".
 
 
 ## INPUT
@@ -70,7 +71,7 @@ RESTART_DIR = ./gen_0
 NCORE       = 8
 ```
 
-|Tag|Description|Units|
+|Tag|Description|Remark|
 |:---|:---|:---|
 |NELEMENT|The number of elements||
 |ATOM_TYPE|Atomic symbols of elements||
@@ -91,14 +92,14 @@ NCORE       = 8
 |TRIAL_STEP|Trial step size of translation|Angstrom|
 |INIT_RELAX|Initial structure optimization||
 |CONFIDENCE|Confidence level of event table||
-|KAPPA_DIMER|Dimer method in ref.1||
-|SNC_DIMER|Dimer method in ref.2||
+|KAPPA_DIMER|Basin constrained dimer method|Ref.[1](https://doi.org/10.1063/1.4898664)|
+|SNC_DIMER|Scaled normal coordinate dimer method|Ref.[2](https://doi.org/10.1016/j.commatsci.2021.110785)|
 |TEMPERATURE|System temperature|Kelvin|
 |FREQUENCY|Attempt frequency of reaction|1/s|
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
-|RESTART|||
-|RESTART_DIR|||
+|RESTART|Restart from previous SPS||
+|RESTART_DIR||Directory of previous SPS output|
 |NCORE|The number of cores for each dimer method||
 
 ## TARGET
