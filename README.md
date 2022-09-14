@@ -6,7 +6,7 @@ Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU
 - Intel C compiler
 - Intel MPI
 - Intel oneAPI MKL
-- CMake >= 3.10
+- CMake >= 3.13
 - LAMMPS >= 23Jun2022
 
 ## Installation
