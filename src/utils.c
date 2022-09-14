@@ -5,14 +5,33 @@
 #include "utils.h"
 
 
-/* large to small */
-void int_sort(int *int_list, int list_len)
+void int_sort_decrease(int *int_list, int list_len)
 {
     int i;
     while (1) {
         int done = 1;
         for (i = 1; i < list_len; ++i) {
             if (int_list[i - 1] < int_list[i]) {
+                int tmp_int = int_list[i - 1];
+                int_list[i - 1] = int_list[i];
+                int_list[i] = tmp_int;
+                done = 0;
+            }
+        }
+        if (done) {
+            break;
+        }
+    }
+}
+
+
+void int_sort_increase(int *int_list, int list_len)
+{
+    int i;
+    while (1) {
+        int done = 1;
+        for (i = 1; i < list_len; ++i) {
+            if (int_list[i - 1] > int_list[i]) {
                 int tmp_int = int_list[i - 1];
                 int_list[i - 1] = int_list[i];
                 int_list[i] = tmp_int;

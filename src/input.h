@@ -10,6 +10,8 @@ typedef struct _Input
     int ncore;
     int nredundant;
     int restart;
+    int kappa_dimer;
+    int snc_dimer;
 
     char *pair_style;
     char *pair_coeff;
@@ -17,7 +19,7 @@ typedef struct _Input
     char *target_list;
     char **atom_type;
     char *output_dir;
-    char *dataset_dir;
+    char *restart_dir;
 
     double pair_cutoff;
     double dimer_dist;

@@ -21,6 +21,8 @@ TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 INIT_MODE   = 0
 CONFIDENCE  = 0.9
+KAPPA_DIMER = 0
+SNC_DIMER   = 1
 
 # system parameter #
 FREQUENCY   = 1e12
@@ -34,7 +36,7 @@ OUTPUT_DIR  = ./gen_1
 
 # restart parameter #
 RESTART     = 0
-DATASET_DIR = ./gen_0
+RESTART_DIR = ./gen_0
 
 # parallelism parameter #
 NCORE       = 8

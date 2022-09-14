@@ -8,6 +8,8 @@
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
+#include "kappa_dimer.h"
+#include "snc_dimer.h"
 #include "input.h"
 #include "target.h"
 #include "utils.h"
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
     Config *config_old = (Config *)malloc(sizeof(Config));
     if (input->restart > 0) {
         char filename[64];
-        sprintf(filename, "%s/POSCAR", input->dataset_dir);
+        sprintf(filename, "%s/POSCAR", input->restart_dir);
         errno = read_config(config_old, input, filename);
         if (errno > 0) {
             printf("ERROR in INIT_CONFIG FILE!\n");
@@ -190,10 +192,10 @@ int main(int argc, char *argv[])
     int local_reac_num = 0;
     int local_dege_num = 0;
     double local_rate_sum = 0.0;
-    int *local_reac_list = (int *)malloc(sizeof(int) * target_num);
-    int *local_dege_list = (int *)malloc(sizeof(int) * target_num);
-    double *local_acti_list = (double *)malloc(sizeof(double) * target_num);
-    double *local_rate_list = (double *)malloc(sizeof(double) * target_num);
+    int *local_reac_list = (int *)malloc(sizeof(int) * list_size);
+    int *local_dege_list = (int *)malloc(sizeof(int) * list_size);
+    double *local_acti_list = (double *)malloc(sizeof(double) * list_size);
+    double *local_rate_list = (double *)malloc(sizeof(double) * list_size);
     /* all data in dataset are unique */
     /* do not have to count redundant search */
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
@@ -262,19 +264,34 @@ int main(int argc, char *argv[])
             eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
             recycle_data(config, config_old, input, data,
                          saddle, eigenmode, local_comm);
-            conv = dimer(initial, saddle, final, input, eigenmode,
-                         local_count, data->index, &Ea, local_comm);
+            if (input->snc_dimer > 0) {
+                conv = snc_dimer(initial, saddle, final, input, eigenmode,
+                                 local_count, data->index, &Ea, local_comm);
+            } else if (input->kappa_dimer > 0) {
+                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+                                   local_count, data->index, &Ea, local_comm);
+            } else {
+                conv = dimer(initial, saddle, final, input, eigenmode,
+                             local_count, data->index, &Ea, local_comm);
+            }
         } else {
             /* generate not normalized eigenmode */
             eigenmode = gen_eigenmode(input, config->tot_num, local_comm);
-            atom_index = target_list[rand() % target_num];
-            MPI_Bcast(&atom_index, 1, MPI_INT, 0, local_comm);
-            conv = dimer(initial, saddle, final, input, eigenmode,
-                         local_count, atom_index, &Ea, local_comm);
+            atom_index = target_list[local_count % target_num];
+            if (input->snc_dimer > 0) {
+                conv = snc_dimer(initial, saddle, final, input, eigenmode,
+                                 local_count, atom_index, &Ea, local_comm);
+            } else if (input->kappa_dimer > 0) {
+                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+                                   local_count, atom_index, &Ea, local_comm);
+            } else {
+                conv = dimer(initial, saddle, final, input, eigenmode,
+                             local_count, atom_index, &Ea, local_comm);
+            }
         }
-        /* conv == 0 -> success */
-        if (conv == 0) {
-            if (local_rank == 0) {
+        if (local_rank == 0) {
+            /* conv == 0 -> success */
+            if (conv == 0) {
                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, conv_win);
                 MPI_Fetch_and_op(&one, &local_conv, MPI_INT,
                                  0, (MPI_Aint)0, MPI_SUM, conv_win);
@@ -287,33 +304,31 @@ int main(int argc, char *argv[])
                 fclose(fp);
                 sprintf(filename, "Final_%d.POSCAR", local_count);
                 unique = check_unique(final, input, filename);
-            }
-            MPI_Bcast(&unique, 1, MPI_INT, 0, local_comm);
-            /* unique == 1 -> unique */
-            if (unique > 0) {
-                local_reac_list[local_reac_num] = local_count;
-                local_acti_list[local_reac_num] = Ea;
-                double kT = 8.61733034e-5 * input->temperature;
-                local_rate_list[local_reac_num] = input->frequency * exp(- Ea / kT);
-                local_rate_sum += local_rate_list[local_reac_num];
-                local_reac_num++;
-                if (local_reac_num > target_num) {
-                    target_num = target_num << 1;
-                    local_reac_list = (int *)realloc(local_reac_list,
-                                             sizeof(int) * target_num);
-                    local_acti_list = (double *)realloc(local_acti_list,
-                                                sizeof(double) * target_num);
-                    local_rate_list = (double *)realloc(local_rate_list,
-                                                sizeof(double) * target_num);
-                }
-                if ((local_rank == 0) && (recycle_flag > 0)) {
-                    MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
-                    MPI_Fetch_and_op(&one, &local_recycle, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_SUM, recycle_win);
-                    MPI_Win_unlock(0, recycle_win);
-                }
-            } else {
-                if (local_rank == 0) {
+                /* unique == 1 -> unique */
+                if (unique > 0) {
+                    local_reac_list[local_reac_num] = local_count;
+                    local_acti_list[local_reac_num] = Ea;
+                    double kT = 8.61733034e-5 * input->temperature;
+                    local_rate_list[local_reac_num] = input->frequency
+                                                    * exp(- Ea / kT);
+                    local_rate_sum += local_rate_list[local_reac_num];
+                    local_reac_num++;
+                    if (local_reac_num >= list_size) {
+                        list_size = list_size << 1;
+                        local_reac_list = (int *)realloc(local_reac_list,
+                                                 sizeof(int) * list_size);
+                        local_acti_list = (double *)realloc(local_acti_list,
+                                                    sizeof(double) * list_size);
+                        local_rate_list = (double *)realloc(local_rate_list,
+                                                    sizeof(double) * list_size);
+                    }
+                    if (recycle_flag > 0) {
+                        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
+                        MPI_Fetch_and_op(&one, &local_recycle, MPI_INT,
+                                         0, (MPI_Aint)0, MPI_SUM, recycle_win);
+                        MPI_Win_unlock(0, recycle_win);
+                    }
+                } else {
                     char old_filename[128];
                     sprintf(old_filename, "%s/Final_%d.POSCAR",
                             input->output_dir, local_count);
@@ -331,13 +346,13 @@ int main(int argc, char *argv[])
                                          0, (MPI_Aint)0, MPI_SUM, redundant_win);
                         MPI_Win_unlock(0, redundant_win);
                     }
-                }
-                local_dege_list[local_dege_num] = -unique;
-                local_dege_num++;
-                if (local_dege_num > target_num) {
-                    target_num = target_num << 1;
-                    local_dege_list = (int *)realloc(local_dege_list,
-                                             sizeof(int) * target_num);
+                    local_dege_list[local_dege_num] = -unique;
+                    local_dege_num++;
+                    if (local_dege_num >= list_size) {
+                        list_size = list_size << 1;
+                        local_dege_list = (int *)realloc(local_dege_list,
+                                                 sizeof(int) * list_size);
+                    }
                 }
             }
         }
@@ -346,8 +361,6 @@ int main(int argc, char *argv[])
         free_config(final);
         free(eigenmode);
     }
-
-    MPI_Barrier(MPI_COMM_WORLD);
     int recycle_num = 0;
     if (rank == 0) {
         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
@@ -363,7 +376,6 @@ int main(int argc, char *argv[])
                          0, (MPI_Aint)0, MPI_SUM, count_win);
         MPI_Win_unlock(0, count_win);
     }
-
     int total_reac_num;
     int total_dege_num;
     double total_rate_sum;
