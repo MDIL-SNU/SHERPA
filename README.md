@@ -99,7 +99,7 @@ NCORE       = 8
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
 |RESTART|Restart from previous SPS||
-|RESTART_DIR||Directory of previous SPS output|
+|RESTART_DIR|Directory of previous SPS output||
 |NCORE|The number of cores for each dimer method||
 
 ## TARGET

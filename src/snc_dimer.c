@@ -653,8 +653,6 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     /* split */
-    Config *config1 = (Config *)malloc(sizeof(Config));
-    Config *config2 = (Config *)malloc(sizeof(Config));
     inv_transform(eigenmode, H, w, disp_num);
     tmp_eigenmode = normalize(eigenmode, disp_num);
     for (i = 0; i < disp_num; ++i) {
@@ -663,6 +661,8 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
         eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
     }
     free(tmp_eigenmode);
+    Config *config1 = (Config *)malloc(sizeof(Config));
+    Config *config2 = (Config *)malloc(sizeof(Config));
     int trial = 1;
     while (1) {
         copy_config(config1, config0);

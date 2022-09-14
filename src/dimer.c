@@ -789,23 +789,37 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* split */
     Config *config1 = (Config *)malloc(sizeof(Config));
-    copy_config(config1, config0);
     Config *config2 = (Config *)malloc(sizeof(Config));
-    copy_config(config2, config0);
     int trial = 1;
-    do {
+    while (1) {
+        copy_config(config1, config0);
+        copy_config(config2, config0);
         for (j = 0; j < disp_num; ++j) {
-            config1->pos[disp_list[j] * 3 + 0] += 0.1 * trial * eigenmode[j * 3 + 0];
-            config1->pos[disp_list[j] * 3 + 1] += 0.1 * trial * eigenmode[j * 3 + 1];
-            config1->pos[disp_list[j] * 3 + 2] += 0.1 * trial * eigenmode[j * 3 + 2];
-            config2->pos[disp_list[j] * 3 + 0] -= 0.1 * trial * eigenmode[j * 3 + 0];
-            config2->pos[disp_list[j] * 3 + 1] -= 0.1 * trial * eigenmode[j * 3 + 1];
-            config2->pos[disp_list[j] * 3 + 2] -= 0.1 * trial * eigenmode[j * 3 + 2];
+            config1->pos[disp_list[j] * 3 + 0] = config0->pos[disp_list[j] * 3 + 0]
+                                               + 0.1 * trial * eigenmode[j * 3 + 0];
+            config1->pos[disp_list[j] * 3 + 1] = config0->pos[disp_list[j] * 3 + 1]
+                                               + 0.1 * trial * eigenmode[j * 3 + 1];
+            config1->pos[disp_list[j] * 3 + 2] = config0->pos[disp_list[j] * 3 + 2]
+                                               + 0.1 * trial * eigenmode[j * 3 + 2];
+            config2->pos[disp_list[j] * 3 + 0] = config0->pos[disp_list[j] * 3 + 0]
+                                               - 0.1 * trial * eigenmode[j * 3 + 0];
+            config2->pos[disp_list[j] * 3 + 1] = config0->pos[disp_list[j] * 3 + 1]
+                                               - 0.1 * trial * eigenmode[j * 3 + 1];
+            config2->pos[disp_list[j] * 3 + 2] = config0->pos[disp_list[j] * 3 + 2]
+                                               - 0.1 * trial * eigenmode[j * 3 + 2];
         }
         atom_relax(config1, input, comm); 
         atom_relax(config2, input, comm); 
+        if (diff_config(config1, config2, 2 * input->max_step) == 1) {
+            break;
+        } else {
+            free_config(config1);
+            free_config(config2);
+            config1 = (Config *)malloc(sizeof(Config));
+            config2 = (Config *)malloc(sizeof(Config));
+        }
         trial++;
-    } while (diff_config(config1, config2, 2 * input->max_step) == 0);
+    }
     free(disp_list);
     free(extract_list);
     free(eigenmode);
