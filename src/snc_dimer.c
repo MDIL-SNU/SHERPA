@@ -38,8 +38,7 @@ static double *get_hessian(Config *config, Input *input,
                            int disp_num, int *disp_list, MPI_Comm comm)
 {
     int i, j, k, l;
-    int N = config->tot_num;
-    double *H = (double *)calloc(N * N, sizeof(double));
+    double *H = (double *)calloc(3 * disp_num * 3 * disp_num, sizeof(double));
     double energy;
     double *force_1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force_2 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -538,7 +537,7 @@ int snc_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
 
     /* lower triangle matrix in col-major */
-    double *H = get_hessian(config0, input, disp_num, disp_list, comm); 
+    double *H = get_hessian(initial, input, disp_num, disp_list, comm); 
     double *w = get_eigenvalue(H, disp_num);
 
     /* run */

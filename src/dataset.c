@@ -55,12 +55,9 @@ void recycle_data(Config *config_new, Config *config_old, Input *input,
     }
 
     for (i = begin; i < end; ++i) {
-        del[0] = config_new->pos[i * 3 + 0]
-               - config_old->pos[data->index * 3 + 0];
-        del[1] = config_new->pos[i * 3 + 1]
-               - config_old->pos[data->index * 3 + 1];
-        del[2] = config_new->pos[i * 3 + 2]
-               - config_old->pos[data->index * 3 + 2];
+        del[0] = config_new->pos[i * 3 + 0] - config_old->pos[i * 3 + 0];
+        del[1] = config_new->pos[i * 3 + 1] - config_old->pos[i * 3 + 1];
+        del[2] = config_new->pos[i * 3 + 2] - config_old->pos[i * 3 + 2];
         get_minimum_image(del, saddle->boxlo, saddle->boxhi,
                           saddle->xy, saddle->yz, saddle->xz);
         double dist = sqrt(del[0] * del[0]
