@@ -21,7 +21,7 @@ cmake --build . --target install
 ```bash
 cd Saddle_point_search
 mkdir build; cd build
-cmake ../cmake
+cmake ../src
 cmake --build .
 ```
 
