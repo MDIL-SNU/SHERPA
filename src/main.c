@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
     /* dataset */
     Data *data;
     if (input->restart > 0) {
-        build_dataset(dataset, config, input);
+        build_dataset(dataset, input, config->tot_num, target_list, target_num);
     }
 
     int conv, unique;
@@ -253,6 +253,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
+
         /* initial/saddle/final configuration */
         Config *initial = (Config *)malloc(sizeof(Config));
         copy_config(initial, config);

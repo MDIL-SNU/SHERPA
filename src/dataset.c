@@ -98,7 +98,8 @@ void recycle_data(Config *config_new, Config *config_old, Input *input,
 }
 
 
-void build_dataset(Dataset *dataset, Config *config, Input *input)
+void build_dataset(Dataset *dataset, Input *input, int n,
+                   int *target_list, int target_num)
 {
     int i, j, errno;
     double del[3];
@@ -115,41 +116,23 @@ void build_dataset(Dataset *dataset, Config *config, Input *input)
             ptr = strtok(NULL, ".");
             sprintf(filename, "%s/Saddle_%s.POSCAR",
                     input->restart_dir, ptr);
-            Config *tmp_config = (Config *)malloc(sizeof(Config));
-            errno = read_config(tmp_config, input, filename);
+            MPI_Bcast(filename, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
+            Config *config = (Config *)malloc(sizeof(Config));
+            errno = read_config(config, input, filename);
             if (errno > 0) {
                 printf("Cannot find %s\n", filename);
             }
             /* load eigenmode */
-            int n = config->tot_num;
-            double max_dist = 0.0;
-            int index = 0;
-            for (j = 0; j < n; ++j) {
-                del[0] = config->pos[j * 3 + 0] - tmp_config->pos[j * 3 + 0];
-                del[1] = config->pos[j * 3 + 1] - tmp_config->pos[j * 3 + 1];
-                del[2] = config->pos[j * 3 + 2] - tmp_config->pos[j * 3 + 2];
-                if ((abs(del[0]) < max_dist) || (abs(del[1]) < max_dist) || (abs(del[2]) < max_dist)) {
-                    continue;
-                }
-                get_minimum_image(del, config->boxlo, config->boxhi,
-                                  config->xy, config->yz, config->xz);
-                double dist = sqrt(del[0] * del[0]
-                                 + del[1] * del[1] 
-                                 + del[2] * del[2]);
-                if (dist > max_dist) {
-                    index = j;
-                    max_dist = dist;
-                }                 
-            }
             double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
-            sprintf(filename, "%s/%s.MODECAR",
-                    input->restart_dir, ptr);
+            sprintf(filename, "%s/%s.MODECAR", input->restart_dir, ptr);
             fp = fopen(filename, "rb");
             fread(eigenmode, sizeof(double), n * 3, fp);
             fclose(fp);
+            /* index */
+            int index = target_list[atoi(ptr) % target_num];
             /* insert data */
-            insert_data(dataset, n, index, tmp_config->type, tmp_config->pos, eigenmode);
-            free(tmp_config);
+            insert_data(dataset, n, index, config->type, config->pos, eigenmode);
+            free(config);
             free(eigenmode);
         }
     }
