@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
                 FILE *fp = fopen(filename, "a");
                 fprintf(fp, " Barrier energy: %f eV\n", Ea);
                 fclose(fp);
-                sprintf(filename, "Final_%d.POSCAR", local_count);
+                sprintf(filename, "Final_%d_%d.POSCAR", local_count, atom_index);
                 unique = check_unique(final, input, filename);
                 /* unique == 1 -> unique */
                 if (unique > 0) {
@@ -331,11 +331,11 @@ int main(int argc, char *argv[])
                     }
                 } else {
                     char old_filename[128];
-                    sprintf(old_filename, "%s/Final_%d.POSCAR",
-                            input->output_dir, local_count);
+                    sprintf(old_filename, "%s/Final_%d_%d.POSCAR",
+                            input->output_dir, local_count, atom_index);
                     char new_filename[128];
-                    sprintf(new_filename, "%s/%d_Final_%d.POSCAR",
-                            input->output_dir, -unique, local_count);
+                    sprintf(new_filename, "%s/%d_Final_%d_%d.POSCAR",
+                            input->output_dir, -unique, local_count, atom_index);
                     rename(old_filename, new_filename);
 //                        char filename[128];
 //                        sprintf(filename, "%s/Final_%d.POSCAR",

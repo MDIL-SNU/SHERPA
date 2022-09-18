@@ -777,8 +777,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
     if (local_rank == 0) {
         char filename[128];
-        sprintf(filename, "%s/Saddle_%d.POSCAR",
-                input->output_dir, count);
+        sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
+                input->output_dir, count, index);
         write_config(saddle, filename, "w");
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
@@ -867,8 +867,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         }
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/Final_%d.POSCAR",
-                    input->output_dir, count);
+            sprintf(filename, "%s/Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
             write_config(final, filename, "w");
         }
         free_config(config0);

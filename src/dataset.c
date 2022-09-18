@@ -103,19 +103,20 @@ void build_dataset(Dataset *dataset, Input *input, int n,
 {
     int i, j, errno;
     double del[3];
-    char *ptr;
+    char *count, *index;
     FILE *fp;
     struct dirent **namelist;
 
-    int count = scandir(input->restart_dir, &namelist, name_filter, NULL); 
-    if (count > 0) {
-        for (i = 0; i < count; ++i) {
+    int ncount = scandir(input->restart_dir, &namelist, name_filter, NULL); 
+    if (ncount > 0) {
+        for (i = 0; i < ncount; ++i) {
             /* load saddle */
             char filename[128];
             strtok(namelist[i]->d_name, "_");
-            ptr = strtok(NULL, ".");
-            sprintf(filename, "%s/Saddle_%s.POSCAR",
-                    input->restart_dir, ptr);
+            count = strtok(NULL, "_");
+            index = strtok(NULL, ".");
+            sprintf(filename, "%s/Saddle_%s_%s.POSCAR",
+                    input->restart_dir, count, index);
             MPI_Bcast(filename, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
             Config *config = (Config *)malloc(sizeof(Config));
             errno = read_config(config, input, filename);
@@ -124,19 +125,18 @@ void build_dataset(Dataset *dataset, Input *input, int n,
             }
             /* load eigenmode */
             double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
-            sprintf(filename, "%s/%s.MODECAR", input->restart_dir, ptr);
+            sprintf(filename, "%s/%s.MODECAR", input->restart_dir, count);
             fp = fopen(filename, "rb");
             fread(eigenmode, sizeof(double), n * 3, fp);
             fclose(fp);
-            /* index */
-            int index = target_list[atoi(ptr) % target_num];
             /* insert data */
-            insert_data(dataset, n, index, config->type, config->pos, eigenmode);
+            insert_data(dataset, n, atoi(index),
+                        config->type, config->pos, eigenmode);
             free(config);
             free(eigenmode);
         }
     }
-    for (i = 0; i < count; ++i) {
+    for (i = 0; i < ncount; ++i) {
         free(namelist[i]);
     }
     free(namelist);

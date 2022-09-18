@@ -122,3 +122,4 @@ $numproc stands for the number of CPU cores in parallel computation.
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
 2. `NCORE` of 4-8 is recommended. 
 3. Set DISP_CUTOFF shorter than PAIR_CUTOFF.
+4. Final _ {count} _ {atomic index}.POSCAR

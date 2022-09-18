@@ -163,9 +163,9 @@ int check_unique(Config *config, Input *input, char *self)
     int i, j, errno, unique;
     struct dirent **namelist;
 
-    int count = scandir(input->output_dir, &namelist, name_filter, NULL);
-    if (count > 0) {
-        for (i = 0; i < count; ++i) {
+    int ncount = scandir(input->output_dir, &namelist, name_filter, NULL);
+    if (ncount > 0) {
+        for (i = 0; i < ncount; ++i) {
             if (strcmp(self, namelist[i]->d_name) == 0) {
                 continue;
             }
@@ -185,14 +185,14 @@ int check_unique(Config *config, Input *input, char *self)
             if (unique == 0) {
                 strtok(namelist[i]->d_name, "_");
                 int index = atoi(strtok(NULL, "."));
-                for (j = 0; j < count; ++j) {
+                for (j = 0; j < ncount; ++j) {
                     free(namelist[j]);
                 }
                 free(namelist);
                 return -index;
             }
         }
-        for (j = 0; j < count; ++j) {
+        for (j = 0; j < ncount; ++j) {
             free(namelist[j]);
         }
         free(namelist);
