@@ -22,6 +22,7 @@ print(random.choices(List, weights=[$rate])[0])
 EOF
 
     index=$(python ran.py)
+    filename=$(ls gen_$i/Final_${index}_*.POSCAR)
 
 cat << EOF > time.py
 import sys
@@ -35,10 +36,10 @@ EOF
     new_time=$(python time.py $old_time)
     echo $new_time >> time.dat
 
-    sed -i "s/INIT_CONFIG.*/INIT_CONFIG \= .\/gen_$i\/Final_$index.POSCAR/g" INPUT
-    sed -i "s/OUTPUT_DIR.*/OUTPUT_DIR  = .\/gen_$(($i+1))/g" INPUT
-    sed -i "s/RESTART .*/RESTART     = 1/g" INPUT
-    sed -i "s/RESTART_DIR.*/RESTART_DIR = .\/gen_$i/g" INPUT
+    sed -i "s|INIT_CONFIG.*|INIT_CONFIG = .\/$filename|" INPUT
+    sed -i "s|OUTPUT_DIR.*|OUTPUT_DIR  = .\/gen_$(($i+1))|" INPUT
+    sed -i "s|RESTART .*|RESTART     = 1|" INPUT
+    sed -i "s|RESTART_DIR.*|RESTART_DIR = .\/gen_$i|" INPUT
 
     cat gen_$i\/POSCAR >> XDATCAR
 
