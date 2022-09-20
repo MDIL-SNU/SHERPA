@@ -184,12 +184,12 @@ int check_unique(Config *config, Input *input, char *self)
             free_config(tmp_config);
             if (unique == 0) {
                 strtok(namelist[i]->d_name, "_");
-                int index = atoi(strtok(NULL, "."));
+                int count = atoi(strtok(NULL, "_"));
                 for (j = 0; j < ncount; ++j) {
                     free(namelist[j]);
                 }
                 free(namelist);
-                return -index;
+                return -count;
             }
         }
         for (j = 0; j < ncount; ++j) {

@@ -265,30 +265,21 @@ int main(int argc, char *argv[])
             eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
             recycle_data(config, config_old, input, data,
                          saddle, eigenmode, local_comm);
-            if (input->snc_dimer > 0) {
-                conv = snc_dimer(initial, saddle, final, input, eigenmode,
-                                 local_count, data->index, &Ea, local_comm);
-            } else if (input->kappa_dimer > 0) {
-                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
-                                   local_count, data->index, &Ea, local_comm);
-            } else {
-                conv = dimer(initial, saddle, final, input, eigenmode,
-                             local_count, data->index, &Ea, local_comm);
-            }
+            atom_index = data->index;
         } else {
             /* generate not normalized eigenmode */
             eigenmode = gen_eigenmode(input, config->tot_num, local_comm);
             atom_index = target_list[local_count % target_num];
-            if (input->snc_dimer > 0) {
-                conv = snc_dimer(initial, saddle, final, input, eigenmode,
-                                 local_count, atom_index, &Ea, local_comm);
-            } else if (input->kappa_dimer > 0) {
-                conv = kappa_dimer(initial, saddle, final, input, eigenmode,
-                                   local_count, atom_index, &Ea, local_comm);
-            } else {
-                conv = dimer(initial, saddle, final, input, eigenmode,
+        }
+        if (input->snc_dimer > 0) {
+            conv = snc_dimer(initial, saddle, final, input, eigenmode,
                              local_count, atom_index, &Ea, local_comm);
-            }
+        } else if (input->kappa_dimer > 0) {
+            conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+                               local_count, atom_index, &Ea, local_comm);
+        } else {
+            conv = dimer(initial, saddle, final, input, eigenmode,
+                         local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {
             /* conv == 0 -> success */
