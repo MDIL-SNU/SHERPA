@@ -6,5 +6,5 @@
 #include "input.h"
 
 
-int snc_dimer(Config *, Config *, Config *, Input *, double *, int, int, double *, MPI_Comm);
+int snc_dimer(Config *, Config *, Input *, Data *, int, int, double *, MPI_Comm);
 #endif

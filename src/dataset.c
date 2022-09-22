@@ -7,20 +7,13 @@
 #include "utils.h"
 
 
-void insert_data(Dataset *dataset, int n, int index,
-                 int *type, double *saddle, double *eigenmode)
+void insert_data(Dataset *dataset, int n, int index, double *eigenmode)
 {
     int i;
     Data *data = (Data *)malloc(sizeof(Data));
     data->index = index;
-    data->type = (int *)malloc(sizeof(int) * n);
-    data->saddle = (double *)malloc(sizeof(double) * n * 3);
     data->eigenmode = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        data->type[i] = type[i];
-        data->saddle[i * 3 + 0] = saddle[i * 3 + 0];
-        data->saddle[i * 3 + 1] = saddle[i * 3 + 1];
-        data->saddle[i * 3 + 2] = saddle[i * 3 + 2];
         data->eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
         data->eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
         data->eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
@@ -32,77 +25,12 @@ void insert_data(Dataset *dataset, int n, int index,
         data->next = dataset->head;
         dataset->head = data;
     }
-    dataset->numdata++;
 }
 
 
-void recycle_data(Config *config_new, Config *config_old, Input *input,
-                  Data *data, Config *saddle, double *eigenmode, MPI_Comm comm)
-{
-    int i, rank, size;
-    double del[3];
-
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int local_rank = rank % input->ncore;
-
-    int q = saddle->tot_num / input->ncore;
-    int r = saddle->tot_num % input->ncore;
-    int begin = local_rank * q + ((local_rank > r) ? r : local_rank);
-    int end = begin + q;
-    if (r > local_rank) {
-        end++;
-    }
-
-    for (i = begin; i < end; ++i) {
-        del[0] = config_new->pos[i * 3 + 0] - config_old->pos[i * 3 + 0];
-        del[1] = config_new->pos[i * 3 + 1] - config_old->pos[i * 3 + 1];
-        del[2] = config_new->pos[i * 3 + 2] - config_old->pos[i * 3 + 2];
-        get_minimum_image(del, saddle->boxlo, saddle->boxhi,
-                          saddle->xy, saddle->yz, saddle->xz);
-        double dist = sqrt(del[0] * del[0]
-                         + del[1] * del[1] 
-                         + del[2] * del[2]);
-        if (dist < 2 * input->max_step) {
-            saddle->pos[i * 3 + 0] = data->saddle[i * 3 + 0];
-            saddle->pos[i * 3 + 1] = data->saddle[i * 3 + 1];
-            saddle->pos[i * 3 + 2] = data->saddle[i * 3 + 2];
-            eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        } else {
-            saddle->pos[i * 3 + 0] = config_new->pos[i * 3 + 0];
-            saddle->pos[i * 3 + 1] = config_new->pos[i * 3 + 1];
-            saddle->pos[i * 3 + 2] = config_new->pos[i * 3 + 2];
-            eigenmode[i * 3 + 0] = 0.0;
-            eigenmode[i * 3 + 1] = 0.0;
-            eigenmode[i * 3 + 2] = 0.0;
-        }
-    }
-    int count = (end - begin) * 3;
-    int *counts = (int *)malloc(sizeof(int) * input->ncore);
-    MPI_Allgather(&count, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    int *disp = (int *)malloc(sizeof(int) * input->ncore);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   saddle->pos, counts, disp, MPI_DOUBLE, comm);
-    MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   eigenmode, counts, disp, MPI_DOUBLE, comm);
-    free(counts);
-    free(disp);
-}
-
-
-void build_dataset(Dataset *dataset, Input *input, int n,
-                   int *target_list, int target_num)
+void build_dataset(Dataset *dataset, Input *input, int n)
 {
     int i, j, errno;
-    double del[3];
     char *count, *index;
     FILE *fp;
     struct dirent **namelist;
@@ -110,29 +38,25 @@ void build_dataset(Dataset *dataset, Input *input, int n,
     int ncount = scandir(input->restart_dir, &namelist, name_filter, NULL); 
     if (ncount > 0) {
         for (i = 0; i < ncount; ++i) {
-            /* load saddle */
-            char filename[128];
+            /* load eigenmode */
             strtok(namelist[i]->d_name, "_");
             count = strtok(NULL, "_");
             index = strtok(NULL, ".");
-            sprintf(filename, "%s/Saddle_%s_%s.POSCAR",
-                    input->restart_dir, count, index);
-            MPI_Bcast(filename, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
-            Config *config = (Config *)malloc(sizeof(Config));
-            errno = read_config(config, input, filename);
-            if (errno > 0) {
-                printf("Cannot find %s\n", filename);
-            }
-            /* load eigenmode */
+            char filename[128];
             double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
-            sprintf(filename, "%s/%s.MODECAR", input->restart_dir, count);
-            fp = fopen(filename, "rb");
-            fread(eigenmode, sizeof(double), n * 3, fp);
+            sprintf(filename, "%s/%s.MODECAR",
+                    input->restart_dir, count);
+            fp = fopen(filename, "r");
+            char line[128];
+            for (i = 0; i < n; ++i) {
+                fgets(line, 128, fp);
+                eigenmode[i * 3 + 0] = atof(strtok(line, " \n"));
+                eigenmode[i * 3 + 1] = atof(strtok(NULL, " \n"));
+                eigenmode[i * 3 + 2] = atof(strtok(NULL, " \n"));
+            }
             fclose(fp);
             /* insert data */
-            insert_data(dataset, n, atoi(index),
-                        config->type, config->pos, eigenmode);
-            free(config);
+            insert_data(dataset, n, atoi(index), eigenmode);
             free(eigenmode);
         }
     }
@@ -149,8 +73,6 @@ void free_dataset(Dataset *dataset)
     if (ptr != NULL) {
         Data *next = ptr->next;
         while (1) {
-            free(ptr->type);
-            free(ptr->saddle);
             free(ptr->eigenmode);
             free(ptr);
             if (next == NULL) {

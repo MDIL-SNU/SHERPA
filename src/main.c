@@ -73,24 +73,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* read config_old */
-    Config *config_old = (Config *)malloc(sizeof(Config));
-    if (input->restart > 0) {
-        char filename[64];
-        sprintf(filename, "%s/POSCAR", input->restart_dir);
-        errno = read_config(config_old, input, filename);
-        if (errno > 0) {
-            printf("ERROR in INIT_CONFIG FILE!\n");
-            free_input(input);
-            free_config(config);
-            free(config_old);
-            MPI_Finalize();
-            return 1;
-        }
-    } else {
-        copy_config(config_old, config);
-    }
-
     /* read target */
     int target_num = 0;
     int list_size = 64;
@@ -100,7 +82,6 @@ int main(int argc, char *argv[])
         printf("ERROR in TARGET FILE!\n");
         free_input(input);
         free_config(config);
-        free_config(config_old);
         MPI_Finalize();
         return 1;
     }
@@ -132,7 +113,6 @@ int main(int argc, char *argv[])
         sprintf(filename, "%s/POSCAR", input->output_dir);
         write_config(config, filename, "w");
     }
-
     MPI_Barrier(MPI_COMM_WORLD);
 
     /* one-sided communication */
@@ -199,20 +179,17 @@ int main(int argc, char *argv[])
     /* all data in dataset are unique */
     /* do not have to count redundant search */
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
-    dataset->numdata = 0;
     dataset->head = NULL;
     /* dataset */
     Data *data;
     if (input->restart > 0) {
-        build_dataset(dataset, input, config->tot_num, target_list, target_num);
+        build_dataset(dataset, input, config->tot_num);
     }
 
     int conv, unique;
     double Ea;
-    double *eigenmode;
     while (1) {
         /* check exit condition */
-        int recycle_flag = 0;
         if (local_rank == 0) {
             MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
             MPI_Fetch_and_op(&one, &local_count, MPI_INT,
@@ -239,46 +216,36 @@ int main(int argc, char *argv[])
         }
         MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
         MPI_Bcast(&local_redundant, 1, MPI_INT, 0, local_comm);
-        
-        if (input->restart > 0) {
-            recycle_flag = 1;
-            data = dataset->head;
-            if (local_count > 0) {
-                for (i = 0; i < local_count; ++i) {
-                    data = data->next;
-                    if (data == NULL) {
-                        recycle_flag = 0;
-                        break;
-                    }
+
+        /* atom_index */
+        data = dataset->head;
+        if ((data != NULL) && (local_count > 0)) {
+            for (i = 0; i < local_count; ++i) {
+                data = data->next;
+                if (data == NULL) {
+                    break;
                 }
             }
+        }
+        if (data == NULL) {
+            atom_index = target_list[local_count % target_num];
+        } else {
+            atom_index = data->index;
         }
 
         /* initial/saddle/final configuration */
         Config *initial = (Config *)malloc(sizeof(Config));
         copy_config(initial, config);
-        Config *saddle = (Config *)malloc(sizeof(Config));
-        copy_config(saddle, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
-        if (recycle_flag > 0) {
-            eigenmode = (double *)malloc(sizeof(double) * config->tot_num * 3);
-            recycle_data(config, config_old, input, data,
-                         saddle, eigenmode, local_comm);
-            atom_index = data->index;
-        } else {
-            /* generate not normalized eigenmode */
-            eigenmode = gen_eigenmode(input, config->tot_num, local_comm);
-            atom_index = target_list[local_count % target_num];
-        }
         if (input->snc_dimer > 0) {
-            conv = snc_dimer(initial, saddle, final, input, eigenmode,
+            conv = snc_dimer(initial, final, input, data,
                              local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
-            conv = kappa_dimer(initial, saddle, final, input, eigenmode,
+            conv = kappa_dimer(initial, final, input, data,
                                local_count, atom_index, &Ea, local_comm);
         } else {
-            conv = dimer(initial, saddle, final, input, eigenmode,
+            conv = dimer(initial, final, input, data,
                          local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {
@@ -289,11 +256,6 @@ int main(int argc, char *argv[])
                                  0, (MPI_Aint)0, MPI_SUM, conv_win);
                 MPI_Win_unlock(0, conv_win);
                 char filename[128];
-                sprintf(filename, "%s/Dimer_%d.log",
-                        input->output_dir, local_count);
-                FILE *fp = fopen(filename, "a");
-                fprintf(fp, " Barrier energy: %f eV\n", Ea);
-                fclose(fp);
                 sprintf(filename, "Final_%d_%d.POSCAR", local_count, atom_index);
                 unique = check_unique(final, input, filename);
                 /* unique == 1 -> unique */
@@ -314,7 +276,7 @@ int main(int argc, char *argv[])
                         local_rate_list = (double *)realloc(local_rate_list,
                                                     sizeof(double) * list_size);
                     }
-                    if (recycle_flag > 0) {
+                    if (data != NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
                         MPI_Fetch_and_op(&one, &local_recycle, MPI_INT,
                                          0, (MPI_Aint)0, MPI_SUM, recycle_win);
@@ -332,7 +294,7 @@ int main(int argc, char *argv[])
 //                        sprintf(filename, "%s/Final_%d.POSCAR",
 //                                input->output_dir, local_count);
 //                        remove(filename);
-                    if (recycle_flag == 0) {
+                    if (data != NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
                                          0, (MPI_Aint)0, MPI_SUM, redundant_win);
@@ -349,9 +311,7 @@ int main(int argc, char *argv[])
             }
         }
         free_config(initial);
-        free_config(saddle);
         free_config(final);
-        free(eigenmode);
     }
     int recycle_num = 0;
     if (rank == 0) {
@@ -478,7 +438,6 @@ int main(int argc, char *argv[])
     free(global_dege_list);
 
     free_dataset(dataset);
-    free_config(config_old);
     free_config(config);
     free_input(input);
 
