@@ -8,10 +8,59 @@
 #include "utils.h"
 
 
-int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
-            double *eigenvalue, double *eigenmode, MPI_Comm comm)
+static double *get_hessian(Config *config, Input *input,
+                           int disp_num, int *disp_list, MPI_Comm comm)
 {
-    int i, j, k;
+    int i, j, k, l;
+    double *H = (double *)calloc(3 * disp_num * 3 * disp_num, sizeof(double));
+    double energy;
+    double *force_1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force_2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    for (i = 0; i < disp_num; ++i) {
+        for (j = 0; j < 3; ++j) {
+            config->pos[disp_list[i] * 3 + j] += 0.001;
+            oneshot_disp(config, input, &energy, force_1, disp_num, disp_list, comm);     
+            config->pos[disp_list[i] * 3 + j] -= 2 * 0.001;
+            oneshot_disp(config, input, &energy, force_2, disp_num, disp_list, comm);     
+            config->pos[disp_list[i] * 3 + j] += 0.001;
+            /* column-major lower triangle matrix */
+            for (k = i * 3 + j; k < 3 * disp_num; ++k) {
+                /* f = -dE/dx */
+                double dforce = force_2[k] - force_1[k];
+                H[i * 3 * disp_num * 3 + j * disp_num * 3 + k] = dforce / (2 * 0.001);
+            }
+        }
+    }
+    free(force_1);
+    free(force_2);
+    return H;
+}
+
+
+static double *get_eigenvalue(double *H, int disp_num)
+{
+    MKL_INT n = disp_num * 3;
+    MKL_INT info, lwork;
+    double wkopt;
+    double *w = (double *)malloc(sizeof(double) * disp_num * 3);
+    lwork = -1;
+    /* query and allocate the optimal workspace */
+    dsyev("V", "L", &n, H, &n, w, &wkopt, &lwork, &info);
+    lwork = (MKL_INT)wkopt;
+    double *work = (double *)malloc(lwork * sizeof(double));
+    /* solve */
+    /* w: eigenvalues in ascending order
+       H: the columns of H contain the orthonormal eigenvectors */
+    dsyev("V", "L", &n, H, &n, w, work, &lwork, &info);
+    free(work);
+    return w;
+}
+
+
+void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
+             double *eigenvalue, double *eigenmode, MPI_Comm comm)
+{
+    int i, j;
     int size = 32;
     double *alpha = (double *)malloc(sizeof(double) * size);
     double *beta = (double *)malloc(sizeof(double) * size);
@@ -23,17 +72,17 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
 
     /* distortion */
     for (i = 0; i < disp_num; ++i) {
-        config->pos[i * 3 + 0] += input->disp_dist * eigenmode[i * 3 + 0];
-        config->pos[i * 3 + 1] += input->disp_dist * eigenmode[i * 3 + 1];
-        config->pos[i * 3 + 2] += input->disp_dist * eigenmode[i * 3 + 2];
+        config->pos[disp_list[i] * 3 + 0] += input->disp_dist * eigenmode[i * 3 + 0];
+        config->pos[disp_list[i] * 3 + 1] += input->disp_dist * eigenmode[i * 3 + 1];
+        config->pos[disp_list[i] * 3 + 2] += input->disp_dist * eigenmode[i * 3 + 2];
     } 
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config, input, &energy1, force1, disp_num, disp_list, comm);
     for (i = 0; i < disp_num; ++i) {
-        config->pos[i * 3 + 0] -= input->disp_dist * eigenmode[i * 3 + 0];
-        config->pos[i * 3 + 1] -= input->disp_dist * eigenmode[i * 3 + 1];
-        config->pos[i * 3 + 2] -= input->disp_dist * eigenmode[i * 3 + 2];
+        config->pos[disp_list[i] * 3 + 0] -= input->disp_dist * eigenmode[i * 3 + 0];
+        config->pos[disp_list[i] * 3 + 1] -= input->disp_dist * eigenmode[i * 3 + 1];
+        config->pos[disp_list[i] * 3 + 2] -= input->disp_dist * eigenmode[i * 3 + 2];
     } 
 
     /* V is transpose of column matrix */
@@ -41,7 +90,7 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     double *Av = (double *)malloc(sizeof(double) * disp_num * 3);
     double *w = (double *)malloc(sizeof(double) * disp_num * 3);
     /* stap 1 */
-    k = 0;
+    alpha[0] = 0.0;
     for (i = 0; i < disp_num; ++i) {
         V[i * 3 + 0] = eigenmode[i * 3 + 0];
         V[i * 3 + 1] = eigenmode[i * 3 + 1];
@@ -61,10 +110,12 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
         w[i * 3 + 1] = Av[i * 3 + 1] - alpha[0] * V[i * 3 + 1];
         w[i * 3 + 2] = Av[i * 3 + 2] - alpha[0] * V[i * 3 + 2];
     }
+
     /* step 2 */
     double lambda_old = 0;
     double lambda_new;
     double criteria;
+    int k = 0;
     while (1) {
         k++;
         if (k >= size) {
@@ -78,24 +129,23 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
             V[k * disp_num * 3 + i * 3 + 0] = w[i * 3 + 0] / beta[k]; 
             V[k * disp_num * 3 + i * 3 + 1] = w[i * 3 + 1] / beta[k]; 
             V[k * disp_num * 3 + i * 3 + 2] = w[i * 3 + 2] / beta[k]; 
-        }
-        /* distortion */
-        for (i = 0; i < disp_num; ++i) {
-            config->pos[i * 3 + 0] += input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 0];
-            config->pos[i * 3 + 1] += input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 1];
-            config->pos[i * 3 + 2] += input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 2];
+            /* distortion */
+            config->pos[disp_list[i] * 3 + 0] += input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 0];
+            config->pos[disp_list[i] * 3 + 1] += input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 1];
+            config->pos[disp_list[i] * 3 + 2] += input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 2];
         } 
         oneshot_disp(config, input, &energy1, force1, disp_num, disp_list, comm);
+        alpha[k] = 0.0;
         for (i = 0; i < disp_num; ++i) {
-            config->pos[i * 3 + 0] -= input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 0];
-            config->pos[i * 3 + 1] -= input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 1];
-            config->pos[i * 3 + 2] -= input->disp_dist
-                                    * V[k * disp_num * 3 + i * 3 + 2];
+            config->pos[disp_list[i] * 3 + 0] -= input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 0];
+            config->pos[disp_list[i] * 3 + 1] -= input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 1];
+            config->pos[disp_list[i] * 3 + 2] -= input->disp_dist
+                                               * V[k * disp_num * 3 + i * 3 + 2];
             Av[i * 3 + 0] = (force0[i * 3 + 0] - force1[i * 3 + 0])
                           / input->disp_dist;
             Av[i * 3 + 1] = (force0[i * 3 + 1] - force1[i * 3 + 1])
@@ -117,23 +167,24 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
                          - alpha[k] * V[k * disp_num * 3 + i * 3 + 2]
                          - beta[k] * V[(k - 1) * disp_num * 3 + i * 3 + 2];
         }
-        double *tmp_alpha = (double *)malloc(sizeof(double) * size);
-        double *tmp_beta = (double *)malloc(sizeof(double) * size);
+        double *tmp_alpha = (double *)malloc(sizeof(double) * k);
+        double *tmp_beta = (double *)malloc(sizeof(double) * k);
         tmp_alpha[0] = alpha[0];
-        for (i = 1; i < size; ++i) {
+        for (i = 1; i < k; ++i) {
             tmp_alpha[i] = alpha[i];
             tmp_beta[i - 1] = beta[i];
         }
         eigenvector = (double *)malloc(sizeof(double) * k * k);
+        /* eigenvector consists of orthonormal columns */
         LAPACKE_dstev(LAPACK_ROW_MAJOR, 'V', k,
                       tmp_alpha, tmp_beta, eigenvector, k); 
         lambda_new = tmp_alpha[0];
-        criteria = (lambda_new - lambda_old) / lambda_new;
+        criteria = fabs((lambda_new - lambda_old) / lambda_new);
         lambda_old = lambda_new;
         free(tmp_alpha);
         free(tmp_beta);
 
-        if (criteria > input->lambda_conv) {
+        if (criteria < input->lambda_conv) {
             break;
         } else {
             free(eigenvector);
@@ -141,16 +192,32 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     }
 
     *eigenvalue = lambda_new;
-    double *output = (double *)malloc(sizeof(double) * disp_num * 3);
-    cblas_dgemv(CblasRowMajor, CblasTrans, k, disp_num * 3, 1.0, V, disp_num * 3,
-                eigenvector, 1, 0.0, output, 1);
-
-    for (i = 0; i < disp_num * 3; ++i) {
-        eigenmode[i * 3 + 0] = output[i * 3 + 0];
-        eigenmode[i * 3 + 1] = output[i * 3 + 1];
-        eigenmode[i * 3 + 2] = output[i * 3 + 2];
+    double *x = (double *)malloc(sizeof(double) * k);
+    for (i = 0; i < k; ++i) {
+        x[i] = eigenvector[k * i];
     }
-    
+    double *y = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *basis = (double *)malloc(sizeof(double) * disp_num * 3 * k);
+    for (i = 0; i < k; ++i) {
+        for (j = 0; j < disp_num; ++j) {
+            basis[(j * 3 + 0) * k + i] = V[i * disp_num * 3 + j * 3 + 0];
+            basis[(j * 3 + 1) * k + i] = V[i * disp_num * 3 + j * 3 + 1];
+            basis[(j * 3 + 2) * k + i] = V[i * disp_num * 3 + j * 3 + 2];
+        }
+    }
+    cblas_dgemv(CblasRowMajor, CblasNoTrans, disp_num * 3, k,
+                1.0, basis, k, x, 1, 0.0, y, 1);
+
+    /* y is already almost norm, but... */
+    double *norm_y = normalize(y, disp_num);
+    for (i = 0; i < disp_num; ++i) {
+        eigenmode[i * 3 + 0] = norm_y[i * 3 + 0];
+        eigenmode[i * 3 + 1] = norm_y[i * 3 + 1];
+        eigenmode[i * 3 + 2] = norm_y[i * 3 + 2];
+    }
+
+    free(eigenvector);
+    free(basis);
     free(force0);
     free(force1);
     free(alpha);
@@ -158,8 +225,9 @@ int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     free(V);
     free(Av);
     free(w);
-    free(output);
-    return k;
+    free(x);
+    free(y);
+    free(norm_y);
 }
 
 
@@ -178,26 +246,32 @@ void uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
         double alpha = f_norm / divisor;
         double dr = input->max_step < alpha ? input->max_step : alpha;
         for (i = 0; i < disp_num; ++i) {
-            config->pos[i * 3 + 0] += dr * eigenmode[i * 3 + 0];
-            config->pos[i * 3 + 1] += dr * eigenmode[i * 3 + 1];
-            config->pos[i * 3 + 2] += dr * eigenmode[i * 3 + 2];
+            config->pos[disp_list[i] * 3 + 0] += dr * eigenmode[i * 3 + 0];
+            config->pos[disp_list[i] * 3 + 1] += dr * eigenmode[i * 3 + 1];
+            config->pos[disp_list[i] * 3 + 2] += dr * eigenmode[i * 3 + 2];
         } 
         free(force);
         free(parallel_force);
     } else {
         for (i = 0; i < disp_num; ++i) {
-            config->pos[i * 3 + 0] += init_direction[i * 3 + 0];
-            config->pos[i * 3 + 1] += init_direction[i * 3 + 1];
-            config->pos[i * 3 + 2] += init_direction[i * 3 + 2];
+            config->pos[disp_list[i] * 3 + 0] += init_direction[i * 3 + 0];
+            config->pos[disp_list[i] * 3 + 1] += init_direction[i * 3 + 1];
+            config->pos[disp_list[i] * 3 + 2] += init_direction[i * 3 + 2];
         }
     }
 }
 
 
 void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
-                  double eigenvalue, double *eigenmode, MPI_Comm comm)
+                  double eigenvalue, double *eigenmode, int count, int art_step,
+                  MPI_Comm comm)
 {
-    int i;
+    int i, rank, size;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int local_rank = rank % input->ncore;
+
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -213,6 +287,19 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
         double *perp_force0 = perpendicular_vector(force0, eigenmode, disp_num);
 
+        if (local_rank == 0) {
+            char filename[128];
+            sprintf(filename, "%s/SPS_%d.log",
+                    input->output_dir, count);
+            FILE *fp = fopen(filename, "a");
+            fprintf(fp, " %8d   %8d   %16f   %10f\n",
+                    art_step, relax_step, energy0, eigenvalue);
+            fclose(fp);
+            sprintf(filename, "%s/SPS_%d.XDATCAR",
+                    input->output_dir, count);
+            write_config(config0, filename, "a");
+        }
+    
         if (eigenvalue < input->lambda_crit) {
             double *parallel_force0 = parallel_vector(force0, eigenmode, disp_num);
             if (norm(perp_force0, disp_num) < norm(parallel_force0, disp_num)) {
@@ -221,13 +308,13 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
                 break;
             }
         } else {
-            if (relax_step > input->max_num_rlx) {
+            if (relax_step >= input->max_num_rlx) {
                 free(perp_force0);
                 break;
             }
         }
 
-        if (relax_step == 0) {
+        if (relax_step == 1) {
             for (i = 0; i < disp_num; ++i) {
                 direction_old[i * 3 + 0] = perp_force0[i * 3 + 0];
                 direction_old[i * 3 + 1] = perp_force0[i * 3 + 1];
@@ -374,24 +461,48 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
         init_direction[i * 3 + 0] = input->stddev * eigenmode[i * 3 + 0];
         init_direction[i * 3 + 1] = input->stddev * eigenmode[i * 3 + 1];
         init_direction[i * 3 + 2] = input->stddev * eigenmode[i * 3 + 2];
-        config0->pos[i * 3 + 0] += init_direction[i * 3 + 0];
-        config0->pos[i * 3 + 1] += init_direction[i * 3 + 1];
-        config0->pos[i * 3 + 2] += init_direction[i * 3 + 2];
+        config0->pos[disp_list[i] * 3 + 0] += init_direction[i * 3 + 0];
+        config0->pos[disp_list[i] * 3 + 1] += init_direction[i * 3 + 1];
+        config0->pos[disp_list[i] * 3 + 2] += init_direction[i * 3 + 2];
+    }
+
+    if (local_rank == 0) {
+        char filename[128];
+        sprintf(filename, "%s/SPS_%d.log",
+                input->output_dir, count);
+        FILE *fp = fopen(filename, "w");
+        fputs("-----------------------------------------------------\n", fp);
+        fputs(" Art step   Opt step   Potential energy   Eigenvalue\n", fp);
+        fputs("-----------------------------------------------------\n", fp);
+        fclose(fp);
+        sprintf(filename, "%s/SPS_%d.XDATCAR",
+                input->output_dir, count);
+        write_config(config0, filename, "w");
     }
 
     int art_step;
     double eigenvalue;
     /* initial perturb */
-    for (art_step = 0; art_step < 1000; ++art_step) {
+    for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
-        int iter = lanczos(config0, input, disp_num, disp_list,
-                           &eigenvalue, eigenmode, comm);
+        lanczos(config0, input, disp_num, disp_list,
+                &eigenvalue, eigenmode, comm);
+
+        /* test */
+        double *H = get_hessian(config0, input, disp_num, disp_list, comm);
+        double *w = get_eigenvalue(H, disp_num);
+
+        printf("rank %d lanczos %f hessian %f\n", rank, eigenvalue, w[0]);
+        fflush(stdout);
+        free(H);
+        free(w);
+
         /* uphill push */
         uphill_push(config0, input, disp_num, disp_list, init_direction,
                     eigenvalue, eigenmode, comm);
         /* normal relax */
         normal_relax(config0, input, disp_num, disp_list,
-                     eigenvalue, eigenmode, comm);
+                     eigenvalue, eigenmode, count, art_step, comm);
 
         double energy;
         double *force = (double *)malloc(sizeof(double) * disp_num * 3);

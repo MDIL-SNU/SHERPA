@@ -35,33 +35,41 @@ PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 PAIR_CUTOFF = 6.0
 
-# dimer parameter #
+# general parameter #
 INIT_CONFIG = ./POSCAR
-TARGET      = ./TARGET
-DIMER_DIST  = 0.0001
+TARGET_LIST = ./TARGET
+DISP_DIST   = 0.001
+ACTI_CUTOFF = 5.1
 F_TOL       = 0.01
-F_ROT_MIN   = 0.1
-F_ROT_MAX   = 1.0
-MAX_NUM_ROT = 100
-TRIAL_ANGLE = 45
-DISP_CUTOFF = 5.1
 STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+
+# dimer parameter #
 KAPPA_DIMER = 0
-SNC_DIMER   = 1
+SNC_DIMER   = 0
+F_ROT_MIN   = 0.1 
+F_ROT_MAX   = 1.0
+MAX_NUM_ROT = 4
+TRIAL_ANGLE = 45
+
+# art_nouveau parameter #
+ART_NOUVEAU = 1
+LAMBDA_CRIT = -0.5
+LAMBDA_CONV = 0.01
+MAX_NUM_RLX = 4
 
 # system parameter #
 FREQUENCY   = 1e12
-TEMPERATURE = 353.0
+TEMPERATURE = 353
 
 # random parameter #
 RANDOM_SEED = -1
 
 # directory parameter #
-OUTPUT_DIR  = ./OUTPUT
+OUTPUT_DIR  = ./gen_1
 
 # restart parameter #
 RESTART     = 0
@@ -70,6 +78,9 @@ RESTART_DIR = ./gen_0
 # parallelism parameter #
 NCORE       = 8
 ```
+
+TODO: modify
+
 
 |Tag|Description|Remark|
 |:---|:---|:---|

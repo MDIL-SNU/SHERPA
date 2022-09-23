@@ -75,7 +75,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
                 char filename[128];
-                sprintf(filename, "%s/Dimer_%d.log",
+                sprintf(filename, "%s/SPS_%d.log",
                         input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
                 fprintf(fp, " %8d   %8d   %16f   ---------   ---------   %9f\n",
@@ -157,7 +157,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(tmp_force);
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/Dimer_%d.log",
+            sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fprintf(fp, " %8d   %8d   %16f   %9f   %9f   %9f\n",
@@ -514,9 +514,9 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
 
     /* perturbate starting config */
     for (i = 0; i < disp_num; ++i) {
-        config0->pos[i * 3 + 0] += input->stddev * eigenmode[i * 3 + 0];
-        config0->pos[i * 3 + 1] += input->stddev * eigenmode[i * 3 + 1];
-        config0->pos[i * 3 + 2] += input->stddev * eigenmode[i * 3 + 2];
+        config0->pos[disp_list[i] * 3 + 0] += input->stddev * eigenmode[i * 3 + 0];
+        config0->pos[disp_list[i] * 3 + 1] += input->stddev * eigenmode[i * 3 + 1];
+        config0->pos[disp_list[i] * 3 + 2] += input->stddev * eigenmode[i * 3 + 2];
     }
 
     /* cg optimization */
@@ -526,7 +526,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     /* run */
     if (local_rank == 0) {
         char filename[128];
-        sprintf(filename, "%s/Dimer_%d.XDATCAR",
+        sprintf(filename, "%s/SPS_%d.XDATCAR",
                 input->output_dir, count);
         write_config(config0, filename, "w");
     }
@@ -535,7 +535,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     int dimer_step;
     if (local_rank == 0) {
         char filename[128];
-        sprintf(filename, "%s/Dimer_%d.log",
+        sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
         fputs("----------------------------------------------------------------------------\n", fp);
@@ -573,7 +573,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
         /* trajectory */
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/Dimer_%d.XDATCAR",
+            sprintf(filename, "%s/SPS_%d.XDATCAR",
                     input->output_dir, count);
             write_config(config0, filename, "a");
         }
@@ -588,7 +588,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     if (converge == 0) {
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/Dimer_%d.log",
+            sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
@@ -646,7 +646,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
 
     if ((local_rank == 0) && (conv == 0)) {
         char filename[128];
-        sprintf(filename, "%s/Dimer_%d.log",
+        sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");
         fprintf(fp, " Barrier energy: %f eV\n", *Ea);
