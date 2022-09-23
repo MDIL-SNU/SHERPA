@@ -15,6 +15,7 @@ FIND_PACKAGE ( MKL CONFIG REQUIRED )
 SET ( CMAKE_VERBOSE_MAKEFILE true )
 SET ( SRC_FILES 
         main.c 
+        art_nouveau.c
         calculator.c
         config.c
         dataset.c

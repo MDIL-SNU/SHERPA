@@ -135,14 +135,6 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
-    if (errno) {
-        return 1;
-    }
-    errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
-    if (errno) {
-        return 1;
-    }
     errno = input_char_arr(&(input->atom_type), "ATOM_TYPE", input->nelem, filename);
     if (errno) {
         return 1;
@@ -167,11 +159,43 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->dimer_dist), "DIMER_DIST", filename);
+    errno = input_double(&(input->disp_dist), "DISP_DIST", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
     if (errno) {
         return 1;
     }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->stddev), "STDDEV", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->max_step), "MAX_STEP", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->trial_step), "TRIAL_STEP", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->confidence), "CONFIDENCE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->snc_dimer), "SNC_DIMER", filename);
     if (errno) {
         return 1;
     }
@@ -191,31 +215,23 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
+    errno = input_int(&(input->art_nouveau), "ART_NOUVEAU", filename);
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->stddev), "STDDEV", filename);
+    errno = input_double(&(input->lambda_crit), "LAMBDA_CRIT", filename);
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->max_step), "MAX_STEP", filename);
+    errno = input_double(&(input->lambda_conv), "LAMBDA_CONV", filename);
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->trial_step), "TRIAL_STEP", filename);
+    errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->confidence), "CONFIDENCE", filename);
-    if (errno) {
-        return 1;
-    }
-    errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
-    if (errno) {
-        return 1;
-    }
-    errno = input_int(&(input->snc_dimer), "SNC_DIMER", filename);
+    errno = input_double(&(input->frequency), "FREQUENCY", filename);
     if (errno) {
         return 1;
     }
@@ -223,7 +239,7 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->frequency), "FREQUENCY", filename);
+    errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
     if (errno) {
         return 1;
     }
@@ -248,7 +264,7 @@ int read_input(Input *input, char *filename)
     }
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
-    if ((input->kappa_dimer > 0) && (input->snc_dimer > 0)) {
+    if (input->kappa_dimer + input->snc_dimer + input->art_nouveau > 1) {
         return 1;
     }
     return 0;
@@ -274,24 +290,32 @@ void write_input(Input *input)
     fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
     fputs("\n", fp);
 
-    fputs("# dimer parameter #\n", fp);
+    fputs("# general parameter #\n", fp);
     fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
-    fprintf(fp, "DIMER_DIST\t= %f\n", input->dimer_dist);
+    fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
+    fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
-    fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
-    fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
-    fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
-    fprintf(fp, "TRIAL_ANGLE\t= %f\n", input->trial_angle * 180 / 3.141592);
-    fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "STDDEV\t\t= %f\n", input->stddev);
     fprintf(fp, "MAX_STEP\t= %f\n", input->max_step);
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+
+    fputs("# dimer parameter #\n", fp);
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
     fprintf(fp, "SNC_DIMER\t= %d\n", input->snc_dimer);
+    fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
+    fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
+    fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
+    fprintf(fp, "TRIAL_ANGLE\t= %f\n", input->trial_angle * 180 / 3.141592);
     fputs("\n", fp);
+
+    fputs("# art_nouveau parameter #\n", fp);
+    fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
+    fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
+    fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
+    fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
 
     fputs("# system parameter #\n", fp);
     fprintf(fp, "FREQUENCY\t= %f\n", input->frequency);

@@ -4,36 +4,47 @@
 typedef struct _Input
 {
     int nelem;
-    int init_relax;
-    int max_num_rot;
-    int random_seed;
-    int ncore;
-    int nredundant;
-    int restart;
-    int kappa_dimer;
-    int snc_dimer;
-
+    char **atom_type;
     char *pair_style;
     char *pair_coeff;
+    double pair_cutoff;
+
     char *init_config;
     char *target_list;
-    char **atom_type;
-    char *output_dir;
-    char *restart_dir;
-
-    double pair_cutoff;
-    double dimer_dist;
+    double disp_dist;
+    double acti_cutoff;
     double f_tol;
-    double f_rot_min;
-    double f_rot_max;
-    double trial_angle;
-    double disp_cutoff;
     double stddev;
     double max_step;
     double trial_step;
+    int init_relax;
     double confidence;
-    double temperature;
+
+    double f_rot_min;
+    double f_rot_max;
+    int max_num_rot;
+    double trial_angle;
+    int kappa_dimer;
+    int snc_dimer;
+
+    int art_nouveau;
+    double lambda_crit;
+    double lambda_conv;
+    int max_num_rlx;
+
     double frequency;
+    double temperature;
+
+    int random_seed;
+
+    char *output_dir;
+
+    int restart;
+    char *restart_dir;
+
+    int ncore;
+
+    int nredundant;
 } Input;
 
 int input_int(int *, char *, char *);
