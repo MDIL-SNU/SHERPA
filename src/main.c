@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
 //                        sprintf(filename, "%s/Final_%d.POSCAR",
 //                                input->output_dir, local_count);
 //                        remove(filename);
-                    if (data != NULL) {
+                    if (data == NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
                                          0, (MPI_Aint)0, MPI_SUM, redundant_win);
