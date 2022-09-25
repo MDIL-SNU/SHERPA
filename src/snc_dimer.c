@@ -548,8 +548,8 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* cg optimization */
-    double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
-    double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *direction_old = (double *)calloc(disp_num * 3, sizeof(double));
+    double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     /* lower triangle matrix in col-major */
     double *H = get_hessian(initial, input, disp_num, disp_list, comm); 

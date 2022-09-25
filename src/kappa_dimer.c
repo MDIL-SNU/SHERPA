@@ -362,16 +362,6 @@ static void translate(Config *config0, Input *input,
     /* projected force */
     double *f0p = projected_force(force0, eigenmode, kappa, disp_num);
     /* cg_direction */
-    if (dimer_step == 1) {
-        for (i = 0; i < disp_num; ++i) {
-            direction_old[i * 3 + 0] = f0p[i * 3 + 0];
-            direction_old[i * 3 + 1] = f0p[i * 3 + 1];
-            direction_old[i * 3 + 2] = f0p[i * 3 + 2];
-            cg_direction[i * 3 + 0] = f0p[i * 3 + 0];
-            cg_direction[i * 3 + 1] = f0p[i * 3 + 1];
-            cg_direction[i * 3 + 2] = f0p[i * 3 + 2];
-        }
-    }
     get_cg_direction(f0p, direction_old, cg_direction, disp_num);
     double *direction = normalize(cg_direction, disp_num);
     /* step */
@@ -520,8 +510,8 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* cg optimization */
-    double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
-    double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *direction_old = (double *)calloc(disp_num * 3, sizeof(double));
+    double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     /* run */
     if (local_rank == 0) {

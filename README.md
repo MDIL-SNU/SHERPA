@@ -79,9 +79,6 @@ RESTART_DIR = ./gen_0
 NCORE       = 8
 ```
 
-TODO: modify
-
-
 |Tag|Description|Remark|
 |:---|:---|:---|
 |NELEMENT|The number of elements||
@@ -91,22 +88,26 @@ TODO: modify
 |PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
-|DIMER_DIST|Dimer distance from the center|Angstrom|
+|DISP_DIST|Finite difference step (=dimer distance)|Angstrom|
+|ACTI_CUTOFF|Cutoff radius of active volume|Angstrom|
 |F_TOL|Force tolerance for dimer method|eV/Angstrom|
-|F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
-|F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
-|MAX_NUM_ROT|The maximum number of rotation||
-|TRIAL_ANGLE|Trial rotation angle|radian|
-|DISP_CUTOFF|Radius of displacement sphere|Angstrom|
 |STDDEV|Standard deviation of gaussian displacement||
-|MAX_STEP|Maximum step size of translation|Angstrom|
-|TRIAL_STEP|Trial step size of translation|Angstrom|
+|MAX_STEP|Maximum step size of optimization|Angstrom|
+|TRIAL_STEP|Trial step size of optimization|Angstrom|
 |INIT_RELAX|Initial structure optimization||
-|CONFIDENCE|Confidence level of event table||
+|CONFIDENCE|Confidence level of saddle point search||
 |KAPPA_DIMER|Basin constrained dimer method|Ref.[1](https://doi.org/10.1063/1.4898664)|
 |SNC_DIMER|Scaled normal coordinate dimer method|Ref.[2](https://doi.org/10.1016/j.commatsci.2021.110785)|
-|TEMPERATURE|System temperature|Kelvin|
+|F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
+|F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
+|MAX_NUM_ROT|Maximum number of rotation||
+|TRIAL_ANGLE|Trial rotation angle|radian|
+|ART_NOUVEAU|Activation and relaxation technique|Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)|
+|LAMBDA_CRIT|Criteria value of inflection region|eV/Angstrom^2|
+|LAMBDA_CONV|Convergence criteria value for Lanczos method|eV/Angstrom^2|
+|MAX_NUM_RLX|Maximum number of relaxation||
 |FREQUENCY|Attempt frequency of reaction|1/s|
+|TEMPERATURE|System temperature|Kelvin|
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
 |RESTART|Restart from previous SPS||

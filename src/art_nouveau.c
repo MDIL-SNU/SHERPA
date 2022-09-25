@@ -242,7 +242,7 @@ void uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
         oneshot_disp(config, input, &energy, force, disp_num, disp_list, comm);
         double *parallel_force = parallel_vector(force, eigenmode, disp_num);
         double f_norm = norm(parallel_force, disp_num);
-        double divisor = abs(eigenvalue) > 0.5 ? abs(eigenvalue) : 0.5;
+        double divisor = fabs(eigenvalue) > 0.5 ? fabs(eigenvalue) : 0.5;
         double alpha = f_norm / divisor;
         double dr = input->max_step < alpha ? input->max_step : alpha;
         for (i = 0; i < disp_num; ++i) {
@@ -279,8 +279,8 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
 
     /* cg optimization */
-    double *direction_old = (double *)malloc(sizeof(double) * disp_num * 3);
-    double *cg_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *direction_old = (double *)calloc(disp_num * 3, sizeof(double));
+    double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     int relax_step = 0;
     while (1) {
@@ -314,16 +314,7 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
             }
         }
 
-        if (relax_step == 1) {
-            for (i = 0; i < disp_num; ++i) {
-                direction_old[i * 3 + 0] = perp_force0[i * 3 + 0];
-                direction_old[i * 3 + 1] = perp_force0[i * 3 + 1];
-                direction_old[i * 3 + 2] = perp_force0[i * 3 + 2];
-                cg_direction[i * 3 + 0] = perp_force0[i * 3 + 0];
-                cg_direction[i * 3 + 1] = perp_force0[i * 3 + 1];
-                cg_direction[i * 3 + 2] = perp_force0[i * 3 + 2];
-            }
-        }
+        /* cg direction */
         get_cg_direction(perp_force0, direction_old, cg_direction, disp_num);
         double *direction = normalize(cg_direction, disp_num);
 

@@ -290,9 +290,10 @@ void get_cg_direction(double *direction, double *direction_old,
                       double *cg_direction, int n)
 {
     int i;
-    double old_norm = norm(direction_old, n);
-    double betaPR;
-    if (fabs(old_norm) > 1e-8) {
+    double a1 = dot(direction, direction_old, n);
+    double a2 = norm(direction_old, n);
+    double gamma;
+    if ((a1 < 0.5 * a2) && (a2 > 0.0)) {
         double *ddirection = (double *)malloc(sizeof(double) * n * 3);
         for (i = 0; i < n; ++i) {
             ddirection[i * 3 + 0] = direction[i * 3 + 0]
@@ -302,21 +303,18 @@ void get_cg_direction(double *direction, double *direction_old,
             ddirection[i * 3 + 2] = direction[i * 3 + 2] 
                                   - direction_old[i * 3 + 2];
         }
-        betaPR = dot(direction, ddirection, n) / old_norm; 
+        gamma = dot(direction, ddirection, n) / a2; 
         free(ddirection);
     } else {
-        betaPR = 0.0;
-    }
-    if (betaPR < 0.0) {
-        betaPR = 0.0;
+        gamma = 0.0;
     }
     for (i = 0; i < n; ++i) {
         cg_direction[i * 3 + 0] = direction[i * 3 + 0]
-                                + cg_direction[i * 3 + 0] * betaPR;
+                                + cg_direction[i * 3 + 0] * gamma;
         cg_direction[i * 3 + 1] = direction[i * 3 + 1] 
-                                + cg_direction[i * 3 + 1] * betaPR;
+                                + cg_direction[i * 3 + 1] * gamma;
         cg_direction[i * 3 + 2] = direction[i * 3 + 2] 
-                                + cg_direction[i * 3 + 2] * betaPR;
+                                + cg_direction[i * 3 + 2] * gamma;
         direction_old[i * 3 + 0] = direction[i * 3 + 0];
         direction_old[i * 3 + 1] = direction[i * 3 + 1];
         direction_old[i * 3 + 2] = direction[i * 3 + 2];
