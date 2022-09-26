@@ -496,7 +496,7 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/Dimer_%d.log",
+            sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);
@@ -509,7 +509,7 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     } else {
         if (local_rank == 0) {
             char  filename[128];
-            sprintf(filename, "%s/Dimer_%d.log",
+            sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs("----------------------------------------------------------------------------\n", fp);

@@ -446,12 +446,6 @@ int dimer(Config *initial, Config *final, Input *input, Data *data,
     double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     /* run */
-    if (local_rank == 0) {
-        char filename[128];
-        sprintf(filename, "%s/SPS_%d.XDATCAR",
-                input->output_dir, count);
-        write_config(config0, filename, "w");
-    }
     double fmax;
     int converge = 0;
     int dimer_step;
@@ -464,6 +458,9 @@ int dimer(Config *initial, Config *final, Input *input, Data *data,
         fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
         fputs("----------------------------------------------------------------------------\n", fp);
         fclose(fp);
+        sprintf(filename, "%s/SPS_%d.XDATCAR",
+                input->output_dir, count);
+        write_config(config0, filename, "w");
     }
 
     double energy0;
