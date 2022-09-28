@@ -30,6 +30,7 @@ ART_NOUVEAU = 1
 LAMBDA_CRIT = -0.5
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
+ART_DELAY   = 3
 
 # system parameter #
 FREQUENCY   = 1e12

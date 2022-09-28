@@ -31,6 +31,7 @@ typedef struct _Input
     double lambda_crit;
     double lambda_conv;
     int max_num_rlx;
+    int art_delay;
 
     double frequency;
     double temperature;

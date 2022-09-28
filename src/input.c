@@ -231,6 +231,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_int(&(input->art_delay), "ART_DELAY", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_double(&(input->frequency), "FREQUENCY", filename);
     if (errno) {
         return 1;
@@ -316,6 +320,7 @@ void write_input(Input *input)
     fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
+    fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
 
     fputs("# system parameter #\n", fp);
     fprintf(fp, "FREQUENCY\t= %f\n", input->frequency);

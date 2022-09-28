@@ -174,55 +174,63 @@ void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
 }
 
 
-void uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
-                 double *init_direction, double eigenvalue, double *eigenmode,
-                 MPI_Comm comm)
+double *uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
+                    double eigenvalue, double *eigenmode,
+                    double *init_direction, MPI_Comm comm)
 {
     int i;
     double energy;
     double *force = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config, input, &energy, force, disp_num, disp_list, comm);
+    double *push_vector = (double *)malloc(sizeof(double) * disp_num * 3);
     if (eigenvalue < input->lambda_crit) {
         double *parallel_force = parallel_vector(force, eigenmode, disp_num);
         double f_norm = norm(parallel_force, disp_num);
         double divisor = fabs(eigenvalue) > 0.5 ? fabs(eigenvalue) : 0.5;
         double alpha = f_norm / divisor;
         double dr = input->max_step < alpha ? input->max_step : alpha;
+        free(parallel_force);
         if (dot(force, eigenmode, disp_num) > 0) {
             for (i = 0; i < disp_num; ++i) {
-                config->pos[disp_list[i] * 3 + 0] -= dr * eigenmode[i * 3 + 0];
-                config->pos[disp_list[i] * 3 + 1] -= dr * eigenmode[i * 3 + 1];
-                config->pos[disp_list[i] * 3 + 2] -= dr * eigenmode[i * 3 + 2];
-            } 
+                push_vector[i * 3 + 0] = -dr * eigenmode[i * 3 + 0];
+                push_vector[i * 3 + 1] = -dr * eigenmode[i * 3 + 1];
+                push_vector[i * 3 + 2] = -dr * eigenmode[i * 3 + 2];
+            }
         } else {
             for (i = 0; i < disp_num; ++i) {
-                config->pos[disp_list[i] * 3 + 0] += dr * eigenmode[i * 3 + 0];
-                config->pos[disp_list[i] * 3 + 1] += dr * eigenmode[i * 3 + 1];
-                config->pos[disp_list[i] * 3 + 2] += dr * eigenmode[i * 3 + 2];
-            } 
+                push_vector[i * 3 + 0] = dr * eigenmode[i * 3 + 0];
+                push_vector[i * 3 + 1] = dr * eigenmode[i * 3 + 1];
+                push_vector[i * 3 + 2] = dr * eigenmode[i * 3 + 2];
+            }
         }
-        free(parallel_force);
     } else {
         for (i = 0; i < disp_num; ++i) {
-            config->pos[disp_list[i] * 3 + 0] += init_direction[i * 3 + 0];
-            config->pos[disp_list[i] * 3 + 1] += init_direction[i * 3 + 1];
-            config->pos[disp_list[i] * 3 + 2] += init_direction[i * 3 + 2];
+            push_vector[i * 3 + 0] = input->stddev * init_direction[i * 3 + 0];
+            push_vector[i * 3 + 1] = input->stddev * init_direction[i * 3 + 1];
+            push_vector[i * 3 + 2] = input->stddev * init_direction[i * 3 + 2];
         }
     }
+    for (i = 0; i < disp_num; ++i) {
+        config->pos[disp_list[i] * 3 + 0] += push_vector[i * 3 + 0];
+        config->pos[disp_list[i] * 3 + 1] += push_vector[i * 3 + 1];
+        config->pos[disp_list[i] * 3 + 2] += push_vector[i * 3 + 2];
+    }
+    double *push_direction = normalize(push_vector, disp_num);
+    free(push_vector);
     free(force);
+    return push_direction;
 }
 
 
-void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
-                  double eigenvalue, double *eigenmode, int count, int art_step,
-                  MPI_Comm comm)
+void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
+                double eigenvalue, double *push_direction, int count, int art_step,
+                MPI_Comm comm)
 {
     int i, rank, size;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
-
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -233,18 +241,24 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
     double *direction_old = (double *)calloc(disp_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
-    int relax_step = 0;
-    while (1) {
+    int relax_step;
+    int end_step = eigenvalue < input->lambda_crit ? 1000 : input->max_num_rlx;
+    for (relax_step = 0; relax_step < end_step; ++relax_step) {
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-        double *perp_force0 = perpendicular_vector(force0, eigenmode, disp_num);
+        double *perp_force0 = perpendicular_vector(force0, push_direction, disp_num);
 
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fprintf(fp, " %8d   %8d   %16f   %10f\n",
-                    art_step, relax_step, energy0, eigenvalue);
+            if (art_step > input->art_delay) {
+                fprintf(fp, " %8d   %8d   %16f   %10f\n",
+                        art_step, relax_step, energy0, eigenvalue);
+            } else {
+                fprintf(fp, " %8d   %8d   %16f   ----------\n",
+                        art_step, relax_step, energy0);
+            }
             fclose(fp);
             sprintf(filename, "%s/SPS_%d.XDATCAR",
                     input->output_dir, count);
@@ -252,15 +266,10 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
         }
     
         if (eigenvalue < input->lambda_crit) {
-            double *parallel_force0 = parallel_vector(force0, eigenmode, disp_num);
+            double *parallel_force0 = parallel_vector(force0, push_direction, disp_num);
             if (norm(perp_force0, disp_num) < norm(parallel_force0, disp_num)) {
                 free(perp_force0);
                 free(parallel_force0);
-                break;
-            }
-        } else {
-            if (relax_step >= input->max_num_rlx) {
-                free(perp_force0);
                 break;
             }
         }
@@ -281,7 +290,7 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
                                                 * input->trial_step;
         }
         oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm); 
-        double *perp_force1 = perpendicular_vector(force1, eigenmode, disp_num);
+        double *perp_force1 = perpendicular_vector(force1, push_direction, disp_num);
 
         double *tmp_force = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
@@ -315,7 +324,6 @@ void normal_relax(Config *config0, Input *input, int disp_num, int *disp_list,
             config0->pos[disp_list[i] * 3 + 1] += step[i * 3 + 1];
             config0->pos[disp_list[i] * 3 + 2] += step[i * 3 + 2];
         }
-        relax_step++;
         free(perp_force0);
         free(perp_force1);
         free_config(config1);
@@ -400,18 +408,18 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     /* perturbate starting config */
     double *init_direction = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
-        init_direction[i * 3 + 0] = input->stddev * eigenmode[i * 3 + 0];
-        init_direction[i * 3 + 1] = input->stddev * eigenmode[i * 3 + 1];
-        init_direction[i * 3 + 2] = input->stddev * eigenmode[i * 3 + 2];
-        config0->pos[disp_list[i] * 3 + 0] += init_direction[i * 3 + 0];
-        config0->pos[disp_list[i] * 3 + 1] += init_direction[i * 3 + 1];
-        config0->pos[disp_list[i] * 3 + 2] += init_direction[i * 3 + 2];
+        init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
+        init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
+        init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+        config0->pos[disp_list[i] * 3 + 0] += input->stddev * init_direction[i * 3 + 0];
+        config0->pos[disp_list[i] * 3 + 1] += input->stddev * init_direction[i * 3 + 1];
+        config0->pos[disp_list[i] * 3 + 2] += input->stddev * init_direction[i * 3 + 2];
     }
 
     double fmax;
     int art_step;
     int converge = 0;
-    double eigenvalue;
+    double eigenvalue = 0;
     if (local_rank == 0) {
         char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
@@ -430,14 +438,18 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
-        lanczos(config0, input, disp_num, disp_list,
-                &eigenvalue, eigenmode, comm);
+        if (art_step > input->art_delay) {
+            lanczos(config0, input, disp_num, disp_list,
+                    &eigenvalue, eigenmode, comm);
+        }
         /* uphill push */
-        uphill_push(config0, input, disp_num, disp_list, init_direction,
-                    eigenvalue, eigenmode, comm);
+        double *push_direction = uphill_push(config0, input, disp_num, disp_list,
+                                             eigenvalue, eigenmode,
+                                             init_direction, comm);
         /* normal relax */
-        normal_relax(config0, input, disp_num, disp_list,
-                     eigenvalue, eigenmode, count, art_step, comm);
+        perp_relax(config0, input, disp_num, disp_list,
+                   eigenvalue, push_direction, count, art_step, comm);
+        free(push_direction);
 
         /* force criteria */
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);

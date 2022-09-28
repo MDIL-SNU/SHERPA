@@ -60,6 +60,7 @@ ART_NOUVEAU = 1
 LAMBDA_CRIT = -0.5
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
+ART_DELAY   = 3
 
 # system parameter #
 FREQUENCY   = 1e12
@@ -106,6 +107,7 @@ NCORE       = 8
 |LAMBDA_CRIT|Criteria value of inflection region|eV/Angstrom^2|
 |LAMBDA_CONV|Convergence criteria value for Lanczos method|eV/Angstrom^2|
 |MAX_NUM_RLX|Maximum number of relaxation||
+|ART_DELAY|Initial step without Lanczos method||
 |FREQUENCY|Attempt frequency of reaction|1/s|
 |TEMPERATURE|System temperature|Kelvin|
 |RANDOM_SEED|Seed for random number||
