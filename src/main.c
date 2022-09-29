@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "art_nouveau.h"
 #include "calculator.h"
 #include "config.h"
 #include "dataset.h"
@@ -238,7 +239,10 @@ int main(int argc, char *argv[])
         copy_config(initial, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
-        if (input->snc_dimer > 0) {
+        if (input->art_nouveau > 0) {
+            conv = art_nouveau(initial, final, input, data,
+                               local_count, atom_index, &Ea, local_comm);
+        } else if (input->snc_dimer > 0) {
             conv = snc_dimer(initial, final, input, data,
                              local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
@@ -290,10 +294,6 @@ int main(int argc, char *argv[])
                     sprintf(new_filename, "%s/%d_Final_%d_%d.POSCAR",
                             input->output_dir, -unique, local_count, atom_index);
                     rename(old_filename, new_filename);
-//                        char filename[128];
-//                        sprintf(filename, "%s/Final_%d.POSCAR",
-//                                input->output_dir, local_count);
-//                        remove(filename);
                     if (data == NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,

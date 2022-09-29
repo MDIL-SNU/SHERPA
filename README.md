@@ -35,33 +35,42 @@ PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 PAIR_CUTOFF = 6.0
 
-# dimer parameter #
+# general parameter #
 INIT_CONFIG = ./POSCAR
-TARGET      = ./TARGET
-DIMER_DIST  = 0.0001
+TARGET_LIST = ./TARGET
+DISP_DIST   = 0.001
+ACTI_CUTOFF = 5.1
 F_TOL       = 0.01
-F_ROT_MIN   = 0.1
-F_ROT_MAX   = 1.0
-MAX_NUM_ROT = 100
-TRIAL_ANGLE = 45
-DISP_CUTOFF = 5.1
 STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+
+# dimer parameter #
 KAPPA_DIMER = 0
-SNC_DIMER   = 1
+SNC_DIMER   = 0
+F_ROT_MIN   = 0.1 
+F_ROT_MAX   = 1.0
+MAX_NUM_ROT = 4
+TRIAL_ANGLE = 45
+
+# art_nouveau parameter #
+ART_NOUVEAU = 1
+LAMBDA_CRIT = -0.5
+LAMBDA_CONV = 0.01
+MAX_NUM_RLX = 4
+ART_DELAY   = 3
 
 # system parameter #
 FREQUENCY   = 1e12
-TEMPERATURE = 353.0
+TEMPERATURE = 353
 
 # random parameter #
 RANDOM_SEED = -1
 
 # directory parameter #
-OUTPUT_DIR  = ./OUTPUT
+OUTPUT_DIR  = ./gen_1
 
 # restart parameter #
 RESTART     = 0
@@ -80,22 +89,27 @@ NCORE       = 8
 |PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
-|DIMER_DIST|Dimer distance from the center|Angstrom|
+|DISP_DIST|Finite difference step (=dimer distance)|Angstrom|
+|ACTI_CUTOFF|Cutoff radius of active volume|Angstrom|
 |F_TOL|Force tolerance for dimer method|eV/Angstrom|
-|F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
-|F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
-|MAX_NUM_ROT|The maximum number of rotation||
-|TRIAL_ANGLE|Trial rotation angle|radian|
-|DISP_CUTOFF|Radius of displacement sphere|Angstrom|
 |STDDEV|Standard deviation of gaussian displacement||
-|MAX_STEP|Maximum step size of translation|Angstrom|
-|TRIAL_STEP|Trial step size of translation|Angstrom|
+|MAX_STEP|Maximum step size of optimization|Angstrom|
+|TRIAL_STEP|Trial step size of optimization|Angstrom|
 |INIT_RELAX|Initial structure optimization||
-|CONFIDENCE|Confidence level of event table||
+|CONFIDENCE|Confidence level of saddle point search||
 |KAPPA_DIMER|Basin constrained dimer method|Ref.[1](https://doi.org/10.1063/1.4898664)|
 |SNC_DIMER|Scaled normal coordinate dimer method|Ref.[2](https://doi.org/10.1016/j.commatsci.2021.110785)|
-|TEMPERATURE|System temperature|Kelvin|
+|F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
+|F_ROT_MAX|Maximum force criteria for rotation|eV/Angstrom|
+|MAX_NUM_ROT|Maximum number of rotation||
+|TRIAL_ANGLE|Trial rotation angle|radian|
+|ART_NOUVEAU|Activation and relaxation technique|Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)|
+|LAMBDA_CRIT|Criteria value of inflection region|eV/Angstrom^2|
+|LAMBDA_CONV|Convergence criteria value for Lanczos method|eV/Angstrom^2|
+|MAX_NUM_RLX|Maximum number of relaxation||
+|ART_DELAY|Initial step without Lanczos method||
 |FREQUENCY|Attempt frequency of reaction|1/s|
+|TEMPERATURE|System temperature|Kelvin|
 |RANDOM_SEED|Seed for random number||
 |OUTPUT_DIR|Directory for output files||
 |RESTART|Restart from previous SPS||
