@@ -1,9 +1,9 @@
 #ifndef __DIMER_H__
 #define __DIMER_H__
-#include <mpi.h>
 #include "config.h"
 #include "dataset.h"
 #include "input.h"
+#include "my_mpi.h"
 
 
 void rotate_vector(double *, double *, double **, double **, int, double);

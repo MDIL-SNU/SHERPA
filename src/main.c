@@ -1,17 +1,22 @@
 #include <math.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include "art_nouveau.h"
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
+#include "input.h"
 #include "kappa_dimer.h"
 #include "snc_dimer.h"
-#include "input.h"
+#include "my_mpi.h"
 #include "target.h"
 #include "utils.h"
 
@@ -401,7 +406,6 @@ int main(int argc, char *argv[])
         free(disp);
     }
 
-    //double energy = oneshot(config, input, MPI_COMM_WORLD);
     /* log */
     if (rank == 0) {
         int *dege_num = (int *)calloc(total_reac_num, sizeof(int));

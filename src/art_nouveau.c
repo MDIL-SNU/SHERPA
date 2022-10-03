@@ -3,7 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "art_nouveau.h"
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
 #include "config.h"
 #include "utils.h"
 

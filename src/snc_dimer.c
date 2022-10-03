@@ -1,9 +1,13 @@
 #include <math.h>
-#include <mpi.h>
 #include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
 #include "config.h"
 #include "snc_dimer.h"
 #include "utils.h"
@@ -474,6 +478,7 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
 
 
 // TODO: orthogonalization
+// TODO: delete data
 int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
               int count, int index, double *Ea, MPI_Comm comm)
 {

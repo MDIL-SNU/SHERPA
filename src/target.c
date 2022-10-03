@@ -1,8 +1,8 @@
 #include <math.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "my_mpi.h"
 #include "target.h"
 #include "utils.h"
 

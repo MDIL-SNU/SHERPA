@@ -1,8 +1,7 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "calculator.h"
+#include "lmp_calculator.h"
 #define LAMMPS_LIB_MPI
 #include "library.h"
 #include "utils.h"
@@ -35,7 +34,8 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv, MPI_Co
     lammps_create_atoms(lmp, config->tot_num, config->id,
                         config->type, config->pos, NULL, NULL, 0);
     for (i = 0; i < input->nelem; ++i) {
-        sprintf(cmd, "mass %d %f", i + 1, get_mass(get_atom_num(input->atom_type[i])));
+        sprintf(cmd, "mass %d %f", i + 1,
+                get_mass(get_atom_num(input->atom_type[i])));
         lammps_command(lmp, cmd);
     }
     return lmp;
@@ -67,6 +67,7 @@ double oneshot(Config *config, Input *input, MPI_Comm comm)
 }
 
 
+// TODO: consistency with oneshot
 void oneshot_disp(Config *config, Input *input, double *energy, double *force,
                   int disp_num, int *disp_list, MPI_Comm comm)
 {

@@ -1,9 +1,9 @@
 #ifndef __ART_NOUVEAU__
 #define __ART_NOUVEAU__
-#include <mpi.h>
 #include "config.h"
 #include "dataset.h"
 #include "input.h"
+#include "my_mpi.h"
 
 
 void lanczos(Config *, Input *, int, int *, double *, double *, MPI_Comm);

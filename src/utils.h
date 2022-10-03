@@ -1,9 +1,9 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 #include <dirent.h>
-#include <mpi.h>
 #include "config.h"
 #include "input.h"
+#include "my_mpi.h"
 
 
 void int_sort_decrease(int *, int);

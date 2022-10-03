@@ -2,7 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
 #include "utils.h"
 
 
@@ -540,6 +545,3 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
         return 0;
     }
 }
-
-
-

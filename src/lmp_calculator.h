@@ -1,8 +1,8 @@
-#ifndef __CALCULATOR_H__
-#define __CALCULATOR_H__
-#include <mpi.h>
+#ifndef __LMP_CALCULATOR_H__
+#define __LMP_CALCULATOR_H__
 #include "config.h"
 #include "input.h"
+#include "my_mpi.h"
 
 void *lmp_init(Config *, Input *, int, char **, MPI_Comm);
 double oneshot(Config *, Input *, MPI_Comm);
