@@ -16,7 +16,8 @@ SET ( COMMON_SRC_FILES
         input.c
         my_mpi.c
         target.c
-        utils.c )
+        alg_utils.c
+        sps_utils.c )
 ADD_COMPILE_OPTIONS ( -O3 -g -Wall )
 SET ( CMAKE_C_COMPILER "mpiicc" )
 LINK_LIBRARIES ( m )

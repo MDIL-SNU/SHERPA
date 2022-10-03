@@ -2,36 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "alg_utils.h"
+#include "sps_utils.h"
 #include "config.h"
-#include "utils.h"
-
-
-void cross(double *vec1, double *vec2, double *vec3)
-{
-    vec3[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
-    vec3[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
-    vec3[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
-}
-
-
-double det(double (*mat)[3])
-{
-    int i;
-    double cofactor[3];
-    cofactor[0] = mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1];
-    cofactor[1] = mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2];
-    cofactor[2] = mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0];
-
-    double det = 0.0;
-    for (i = 0; i < 3; i++) {
-        det += cofactor[i] * mat[0][i];
-    }
-    return det;
-}
 
 
 /* convert into lmp basis */
-void convert_basis(Config *config)
+static void convert_basis(Config *config)
 {
     int i, j;
     double A_norm, AxB_norm, vol, tmp_value, tmp_pos[3];
@@ -126,13 +103,13 @@ void convert_basis(Config *config)
 
 
 /* remove one atom from config */
-void extract_atom(Config *config, int idx)
+void extract_atom(Config *config, int index)
 {
     int i, j, ntype, tot_num;
     int acc_num = 0;
     for (i = 0; i < config->ntype; ++i) {
         acc_num += config->each_num[i];
-        if (acc_num > idx) {
+        if (acc_num > index) {
             config->each_num[i]--;
             if (config->each_num[i] == 0) {
                 for (j = i; j < config->ntype - 1; ++j) {
@@ -148,7 +125,7 @@ void extract_atom(Config *config, int idx)
         }
     }
 
-    for (i = idx; i < config->tot_num - 1; ++i) {
+    for (i = index; i < config->tot_num - 1; ++i) {
         config->fix[i] = config->fix[i + 1];
         config->type[i] = config->type[i + 1];
         config->pos[i * 3 + 0] = config->pos[(i + 1) * 3 + 0];

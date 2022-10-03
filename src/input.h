@@ -48,11 +48,11 @@ typedef struct _Input
     int nredundant;
 } Input;
 
-int input_int(int *, char *, char *);
-int input_double(double *, char *, char *);
-int input_char(char **, char *, char *);
-int input_char_arr(char ***, char *, int, char *);
-int read_input(Input *, char *);
-void write_input(Input *);
-void free_input(Input *);
+int input_int(int *var, char *tag, char *filename);
+int input_double(double *var, char *tag, char *filename);
+int input_char(char **var, char *tag, char *filename);
+int input_char_arr(char ***var, char *tag, int n, char *filename);
+int read_input(Input *input, char *filename);
+void write_input(Input *input);
+void free_input(Input *input);
 #endif

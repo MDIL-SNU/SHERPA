@@ -7,9 +7,10 @@
 #ifdef VASP
 #include "vasp_calculator.h"
 #endif
+#include "alg_utils.h"
 #include "config.h"
 #include "kappa_dimer.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
 static double *projected_force(double *force0, double *eigenmode,
@@ -439,9 +440,9 @@ static void translate(Config *config0, Input *input,
 }
 
 
-// TODO: orthogonalization
-int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
-                int count, int index, double *Ea, MPI_Comm comm)
+int kappa_dimer(Config *initial, Config *final, Input *input,
+                double *full_eigenmode, int count, int index, double *Ea,
+                MPI_Comm comm)
 {
     int i, j, rank, size;
 
@@ -457,9 +458,9 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     int extract_num;
     int *update_list;
     int *extract_list;
-    gen_list(initial, input, center, &update_num, &update_list,
-             &extract_num, &extract_list, comm);
-    cut_sphere(initial, input, update_num, update_list);
+    set_active_volume(initial, input, center, &update_num, &update_list,
+                      &extract_num, &extract_list, comm);
+    trim_atoms(initial, update_num, update_list);
 
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
@@ -485,16 +486,8 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* eigenmode */
-    double *full_eigenmode;
-    if (data == NULL) {
+    if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
-    } else {
-        full_eigenmode = (double *)malloc(sizeof(double) * final->tot_num * 3);
-        for (i = 0; i < final->tot_num; ++i) {
-            full_eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            full_eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            full_eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        }
     }
 
     /* normalize */
@@ -594,7 +587,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input, Data *data,
         return 1;
     }
     /* relax initial structure and barrier energy */
-    atom_relax(initial, input, comm);
+    atom_relax(initial, input, &energy0, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);

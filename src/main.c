@@ -10,6 +10,7 @@
 #ifdef VASP
 #include "vasp_calculator.h"
 #endif
+#include "alg_utils.h"
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
@@ -17,8 +18,8 @@
 #include "kappa_dimer.h"
 #include "snc_dimer.h"
 #include "my_mpi.h"
+#include "sps_utils.h"
 #include "target.h"
-#include "utils.h"
 
 
 int main(int argc, char *argv[])
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
     int target_num = 0;
     int list_size = 64;
     int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = read_target(config, input, &target_list, &target_num, &list_size);
+    errno = read_target(config, input, &target_num, &target_list, &list_size);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
         free_input(input);
@@ -92,12 +93,13 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (rank == 0) {
-        write_target(input, target_list, target_num);
+        write_target(input, target_num, target_list);
     }
 
     /* initial relax */
     if (input->init_relax > 0) {
-        atom_relax(config, input, MPI_COMM_WORLD);
+        double energy;
+        atom_relax(config, input, &energy, MPI_COMM_WORLD);
     }
 
     /* log */
@@ -194,6 +196,7 @@ int main(int argc, char *argv[])
 
     int conv, unique;
     double Ea;
+    double *eigenmode;
     while (1) {
         /* check exit condition */
         if (local_rank == 0) {
@@ -235,8 +238,10 @@ int main(int argc, char *argv[])
         }
         if (data == NULL) {
             atom_index = target_list[local_count % target_num];
+            eigenmode = NULL;
         } else {
             atom_index = data->index;
+            eigenmode = data->eigenmode;
         }
 
         /* initial/saddle/final configuration */
@@ -245,16 +250,16 @@ int main(int argc, char *argv[])
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
         if (input->art_nouveau > 0) {
-            conv = art_nouveau(initial, final, input, data,
+            conv = art_nouveau(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else if (input->snc_dimer > 0) {
-            conv = snc_dimer(initial, final, input, data,
+            conv = snc_dimer(initial, final, input, eigenmode,
                              local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
-            conv = kappa_dimer(initial, final, input, data,
+            conv = kappa_dimer(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {
-            conv = dimer(initial, final, input, data,
+            conv = dimer(initial, final, input, eigenmode,
                          local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {

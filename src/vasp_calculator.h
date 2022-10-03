@@ -4,7 +4,7 @@
 #include "input.h"
 #include "my_mpi.h"
 
-double oneshot(Config *, Input *, MPI_Comm);
+void oneshot(Config *, Input *, double *, MPI_Comm);
 void oneshot_disp(Config *, Input *, double *, double *, int, int *, MPI_Comm);
-double atom_relax(Config *, Input *, MPI_Comm);
+void atom_relax(Config *, Input *, double *, MPI_Comm);
 #endif

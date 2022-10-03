@@ -9,12 +9,13 @@
 #ifdef VASP
 #include "vasp_calculator.h"
 #endif
+#include "alg_utils.h"
 #include "config.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
-void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
-             double *eigenvalue, double *eigenmode, MPI_Comm comm)
+static void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
+                    double *eigenvalue, double *eigenmode, MPI_Comm comm)
 {
     int i, j;
     int size = 32;
@@ -179,9 +180,10 @@ void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
 }
 
 
-double *uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
-                    double eigenvalue, double *eigenmode,
-                    double *init_direction, MPI_Comm comm)
+static double *uphill_push(Config *config, Input *input,
+                           int disp_num, int *disp_list,
+                           double eigenvalue, double *eigenmode,
+                           double *init_direction, MPI_Comm comm)
 {
     int i;
     double energy;
@@ -227,9 +229,10 @@ double *uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
 }
 
 
-void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
-                double eigenvalue, double *push_direction, int count, int art_step,
-                MPI_Comm comm)
+static void perp_relax(Config *config0, Input *input,
+                       int disp_num, int *disp_list,
+                       double eigenvalue, double *push_direction,
+                       int count, int art_step, MPI_Comm comm)
 {
     int i, rank, size;
 
@@ -343,8 +346,9 @@ void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
-int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
-                int count, int index, double *Ea, MPI_Comm comm)
+int art_nouveau(Config *initial, Config *final, Input *input,
+                double *full_eigenmode, int count, int index, double *Ea,
+                MPI_Comm comm)
 {
     int i, j, rank, size;
 
@@ -360,9 +364,9 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     int extract_num;
     int *update_list;
     int *extract_list;
-    gen_list(initial, input, center, &update_num, &update_list,
-             &extract_num, &extract_list, comm);
-    cut_sphere(initial, input, update_num, update_list);
+    set_active_volume(initial, input, center, &update_num, &update_list,
+                      &extract_num, &extract_list, comm);
+    trim_atoms(initial, update_num, update_list);
 
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
@@ -388,16 +392,8 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* eigenmode */
-    double *full_eigenmode;
-    if (data == NULL) {
+    if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
-    } else {
-        full_eigenmode = (double *)malloc(sizeof(double) * final->tot_num * 3);
-        for (i = 0; i < final->tot_num; ++i) {
-            full_eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            full_eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            full_eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        }
     }
 
     /* normalize */
@@ -495,7 +491,7 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* relax initial structure and barrier energy */
-    atom_relax(initial, input, comm);
+    atom_relax(initial, input, &energy0, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);

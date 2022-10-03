@@ -16,7 +16,7 @@ typedef struct _Dataset
     struct _Data *head;
 } Dataset;
 
-void insert_data(Dataset *, int, int, double *);
-void build_dataset(Dataset *, Input *, int);
-void free_dataset(Dataset *);
+void insert_data(Dataset *dataset, int n, int index, double *eigenmode);
+void build_dataset(Dataset *dataset, Input *input, int n);
+void free_dataset(Dataset *dataset);
 #endif
