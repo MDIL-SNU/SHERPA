@@ -1,14 +1,10 @@
-# potential parameter #
+# general parameter #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
-PAIR_STYLE  = nn
-PAIR_COEFF  = * * potential_saved O Pt
-PAIR_CUTOFF = 6.0
-
-# general parameter #
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 DISP_DIST   = 0.001
+PAIR_CUTOFF = 6.0
 ACTI_CUTOFF = 5.1
 F_TOL       = 0.01
 STDDEV      = 0.1
@@ -16,6 +12,15 @@ MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+
+# LAMMPS parameter #
+PAIR_STYLE  = nn
+PAIR_COEFF  = * * potential_saved O Pt
+NCORE       = 8
+
+# VASP parameter #
+VASP_CMD    = mpirun -np 32 vasp_std
+ISTART      = 1
 
 # dimer parameter #
 KAPPA_DIMER = 0
@@ -45,6 +50,3 @@ OUTPUT_DIR  = ./gen_1
 # restart parameter #
 RESTART     = 0
 RESTART_DIR = ./gen_0
-
-# parallelism parameter #
-NCORE       = 8

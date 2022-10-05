@@ -292,7 +292,7 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 }
 
 
-/* update_list < 2 * cutoff
+/* update_list < 2 * pair_cutoff
    extract_list < acti_cutoff */
 void set_active_volume(Config *config, Input *input, double *center,
                        int *update_num, int **update_list,
@@ -430,7 +430,6 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: disconnected\n", fp);
             fclose(fp);
         }
@@ -443,7 +442,6 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: connected\n", fp);
             fclose(fp);
         }

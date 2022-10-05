@@ -4,12 +4,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "art_nouveau.h"
-#ifdef LMP
-#include "lmp_calculator.h"
-#endif
-#ifdef VASP
-#include "vasp_calculator.h"
-#endif
 #include "alg_utils.h"
 #include "config.h"
 #include "dataset.h"
@@ -20,6 +14,22 @@
 #include "my_mpi.h"
 #include "sps_utils.h"
 #include "target.h"
+
+
+#ifdef LMP
+#include "lmp_calculator.h"
+void init_win(int *ptr, MPI_Win *win, int val)
+{
+    *ptr = 0;
+}
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+void init_win(int *ptr, MPI_Win *win, int val)
+{
+    *win = val;
+}
+#endif
 
 
 int main(int argc, char *argv[])
@@ -123,7 +133,6 @@ int main(int argc, char *argv[])
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
-    /* one-sided communication */
     int group_size = size / input->ncore;
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
@@ -138,6 +147,7 @@ int main(int argc, char *argv[])
     MPI_Comm group_comm;
     MPI_Comm_split(MPI_COMM_WORLD, head, rank, &group_comm);
 
+    /* one-sided communication */
     MPI_Win count_win;
     int *global_count;
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
@@ -163,20 +173,20 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_exit, &exit_win);
 
-    int local_count;
-    *global_count = 0;
-    int local_recycle;
-    *global_recycle = 0;
-    int local_conv;
-    *global_conv = 0;
-    int local_redundant;
-    *global_redundant = 0;
-    int local_exit;
-    *global_exit = 0;
+    init_win(global_count, &count_win, -1);
+    init_win(global_recycle, &recycle_win, 0);
+    init_win(global_conv, &conv_win, 0);
+    init_win(global_redundant, &redundant_win, 0);
+    init_win(global_exit, &exit_win, 0);
 
     int zero = 0;
     int one = 1;
     int mone = -1;
+    int local_count;
+    int local_recycle;
+    int local_conv;
+    int local_redundant;
+    int local_exit;
     int local_reac_num = 0;
     int local_dege_num = 0;
     double local_rate_sum = 0.0;
@@ -360,6 +370,8 @@ int main(int argc, char *argv[])
         MPI_Fetch_and_op(&zero, &local_count, MPI_INT,
                          0, (MPI_Aint)0, MPI_SUM, count_win);
         MPI_Win_unlock(0, count_win);
+    }
+    if (rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Statistics.log", input->output_dir);
         FILE *fp = fopen(filename, "a");
@@ -421,7 +433,6 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
         char filename[128];
         sprintf(filename, "%s/Event.log", input->output_dir);
         FILE *fp;

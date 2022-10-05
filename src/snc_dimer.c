@@ -194,6 +194,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 {
     int i, j, rank, size;
     double magnitude, cmin;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -234,7 +235,6 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
-                char filename[128];
                 sprintf(filename, "%s/SPS_%d.log",
                         input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
@@ -320,7 +320,6 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(new_eigenmode);
         free(tmp_force);
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
@@ -349,6 +348,7 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
 {
     int i;
     double magnitude;
+    char filename[128];
     double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -369,7 +369,6 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
-    /* convert coordinate */
     inv_transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
     oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
     transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
@@ -483,6 +482,7 @@ int snc_dimer(Config *initial, Config *final, Input *input,
               MPI_Comm comm)
 {
     int i, j, rank, size;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -557,7 +557,6 @@ int snc_dimer(Config *initial, Config *final, Input *input,
     int converge = 0;
     int dimer_step;
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
@@ -609,13 +608,18 @@ int snc_dimer(Config *initial, Config *final, Input *input,
     free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
+    if (local_rank == 0) {
+        sprintf(filename, "%s/SPS_%d.log",
+                input->output_dir, count);
+        FILE *fp = fopen(filename, "a");
+        fputs("----------------------------------------------------------------------------\n", fp);
+        fclose(fp);
+    }
     if (converge == 0) {
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
@@ -651,13 +655,12 @@ int snc_dimer(Config *initial, Config *final, Input *input,
         full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                 input->output_dir, count, index);
         write_config(final, filename, "w");
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
-        FILE *fp = fopen(filename, "wb");     
+        FILE *fp = fopen(filename, "w");
         for (i = 0; i < final->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],
@@ -682,7 +685,6 @@ int snc_dimer(Config *initial, Config *final, Input *input,
                              disp_num, disp_list, comm);
 
     if ((local_rank == 0) && (conv == 0)) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");

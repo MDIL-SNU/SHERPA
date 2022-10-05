@@ -28,17 +28,13 @@ cmake --build .
 
 ## INPUT
 ```text
-# potential parameter #
+# general parameter #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
-PAIR_STYLE  = nn
-PAIR_COEFF  = * * potential_saved O Pt
-PAIR_CUTOFF = 6.0
-
-# general parameter #
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 DISP_DIST   = 0.001
+PAIR_CUTOFF = 6.0
 ACTI_CUTOFF = 5.1
 F_TOL       = 0.01
 STDDEV      = 0.1
@@ -46,6 +42,15 @@ MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+
+# LAMMPS parameter #
+PAIR_STYLE  = nn
+PAIR_COEFF  = * * potential_saved O Pt
+NCORE       = 8
+
+# VASP parameter #
+VASP_CMD    = mpirun -np 32 vasp_std
+ISTART      = 1
 
 # dimer parameter #
 KAPPA_DIMER = 0
@@ -75,21 +80,16 @@ OUTPUT_DIR  = ./gen_1
 # restart parameter #
 RESTART     = 0
 RESTART_DIR = ./gen_0
-
-# parallelism parameter #
-NCORE       = 8
 ```
 
 |Tag|Description|Remark|
 |:---|:---|:---|
 |NELEMENT|The number of elements||
 |ATOM_TYPE|Atomic symbols of elements||
-|PAIR_STYLE|Pair style for LAMMPS input||
-|PAIR_COEFF|Pair coeff for LAMMPS input||
-|PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
 |DISP_DIST|Finite difference step (=dimer distance)|Angstrom|
+|PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |ACTI_CUTOFF|Cutoff radius of active volume|Angstrom|
 |F_TOL|Force tolerance for dimer method|eV/Angstrom|
 |STDDEV|Standard deviation of gaussian displacement||
@@ -97,6 +97,11 @@ NCORE       = 8
 |TRIAL_STEP|Trial step size of optimization|Angstrom|
 |INIT_RELAX|Initial structure optimization||
 |CONFIDENCE|Confidence level of saddle point search||
+|PAIR_STYLE|Pair style for LAMMPS input||
+|PAIR_COEFF|Pair coeff for LAMMPS input||
+|NCORE|The number of cores for each LAMMPS instance||
+|VASP_CMD|Command for running VASP||
+|ISTART|ISTAT tag in INCAR||
 |KAPPA_DIMER|Basin constrained dimer method|Ref.[1](https://doi.org/10.1063/1.4898664)|
 |SNC_DIMER|Scaled normal coordinate dimer method|Ref.[2](https://doi.org/10.1016/j.commatsci.2021.110785)|
 |F_ROT_MIN|Minimum force criteria for rotation|eV/Angstrom|
@@ -114,7 +119,6 @@ NCORE       = 8
 |OUTPUT_DIR|Directory for output files||
 |RESTART|Restart from previous SPS||
 |RESTART_DIR|Directory of previous SPS output||
-|NCORE|The number of cores for each dimer method||
 
 ## TARGET
 ```text
@@ -127,13 +131,21 @@ I 0 1 2 3
 * R: Random (not supported yet)
 
 ## Command
+If you run SPS with LAMMPS, please use command following:
 ```bash
-mpirun -np $numproc ./SPS
+mpirun -np $numproc ./SPS_LMP
 ```
 $numproc stands for the number of CPU cores in parallel computation.
+
+
+Otherwise, execute code without parallel command following:
+```bash
+./SPS_VASP
+```
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
 2. `NCORE` of 4-8 is recommended. 
 3. Set DISP_CUTOFF shorter than PAIR_CUTOFF.
-4. Final _ {count} _ {atomic index}.POSCAR
+4. The filename of final structure follows Final _ `count` _ `atomic index`.POSCAR
+5. For VASP calculation, INCAR, KPOINTS, and POTCAR should be prepared in working directory.

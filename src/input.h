@@ -5,13 +5,10 @@ typedef struct _Input
 {
     int nelem;
     char **atom_type;
-    char *pair_style;
-    char *pair_coeff;
-    double pair_cutoff;
-
     char *init_config;
     char *target_list;
     double disp_dist;
+    double pair_cutoff;
     double acti_cutoff;
     double f_tol;
     double stddev;
@@ -20,12 +17,19 @@ typedef struct _Input
     int init_relax;
     double confidence;
 
+    char *pair_style;
+    char *pair_coeff;
+    int ncore;
+
+    char *vasp_cmd;
+    int istart;
+
+    int kappa_dimer;
+    int snc_dimer;
     double f_rot_min;
     double f_rot_max;
     int max_num_rot;
     double trial_angle;
-    int kappa_dimer;
-    int snc_dimer;
 
     int art_nouveau;
     double lambda_crit;
@@ -42,8 +46,6 @@ typedef struct _Input
 
     int restart;
     char *restart_dir;
-
-    int ncore;
 
     int nredundant;
 } Input;

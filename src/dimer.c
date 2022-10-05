@@ -42,6 +42,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 {
     int i, j, rank, size;
     double magnitude, cmin;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -185,6 +186,7 @@ static void translate(Config *config0, Input *input,
 {
     int i;
     double magnitude;
+    char filename[128];
     double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -296,6 +298,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
           int count, int index, double *Ea, MPI_Comm comm)
 {
     int i, j, rank, size;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -366,7 +369,6 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
     int converge = 0;
     int dimer_step;
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
@@ -400,7 +402,6 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
         }
         /* trajectory */
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.XDATCAR",
                     input->output_dir, count);
             write_config(config0, filename, "a");
@@ -413,13 +414,18 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
     free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
+    if (local_rank == 0) {
+        sprintf(filename, "%s/SPS_%d.log",
+                input->output_dir, count);
+        FILE *fp = fopen(filename, "a");
+        fputs("----------------------------------------------------------------------------\n", fp);
+        fclose(fp);
+    }
     if (converge == 0) {
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
@@ -453,13 +459,12 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
     }
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                 input->output_dir, count, index);
         write_config(final, filename, "w");
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
-        FILE *fp = fopen(filename, "wb");     
+        FILE *fp = fopen(filename, "w");
         for (i = 0; i < final->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],
@@ -475,7 +480,6 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
                              disp_num, disp_list, comm);
 
     if ((local_rank == 0) && (conv == 0)) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");

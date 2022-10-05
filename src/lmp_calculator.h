@@ -4,6 +4,7 @@
 #include "input.h"
 #include "my_mpi.h"
 
+
 void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv,
                MPI_Comm comm);
 void oneshot(Config *config, Input *input, double *energy, double *force,

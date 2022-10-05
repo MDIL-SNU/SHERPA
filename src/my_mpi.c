@@ -3,110 +3,72 @@
 #endif
 #ifdef VASP
 #include "my_mpi.h"
+#include "string.h"
 
 
-int MPI_Copy_int(int *data1, int *data2, int n)
-{
-    int i, ierror;
-    for (i = 0; i < n; ++i) {
-        data2[i] = data1[i];
-    }
-    ierror = MPI_SUCCESS;
-    return ierror;
-}
-
-
-int MPI_Copy_double(double *data1, double *data2, int n)
-{
-    int i, ierror;
-    for (i = 0; i < n; ++i) {
-        data2[i] = data1[i];
-    }
-    ierror = MPI_SUCCESS;
-    return ierror;
-}
-
-
-int MPI_Reduce_int(int *data1, int *data2, int n, MPI_Op op)
-{
-    int i, ierror;
-    if (op == MPI_SUM) {
-        for (i = 0; i < n; ++i) {
-            data2[i] = data1[i];
-        }
-        ierror = MPI_SUCCESS;
-    } else {
-        ierror = MPI_FAILURE;
-    }
-    return ierror;
-}
-
-
-int MPI_Reduce_double(double *data1, double *data2, int n, MPI_Op op)
-{
-    int i, ierror;
-    if (op == MPI_SUM) {
-        for (i = 0; i < n; ++i) {
-            data2[i] = data1[i];
-        }
-        ierror = MPI_SUCCESS;
-    } else {
-        ierror = MPI_FAILURE;
-    }
-    return ierror;
-}
-
-
-int MPI_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
+int MPI_Allgather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                   void *recvbuf, int recvcount, MPI_Datatype recvtype,
                   MPI_Comm comm)
 {
     int ierror;
-    if (sendtype == MPI_INT) {
-        if (sendbuf != NULL) {
-            ierror = MPI_Copy_int((int *)sendbuf, (int *)recvbuf, sendcount);
-        }
-    } else if (sendtype == MPI_DOUBLE) {
-        if (sendbuf != NULL) {
-            ierror = MPI_Copy_double((double *)sendbuf, (double *)recvbuf, sendcount);
-        }
+    if (sendbuf == MPI_IN_PLACE) {
+        ierror = MPI_SUCCESS;
+        return ierror;
     } else {
-        ierror = MPI_FAILURE;
+        if (sendtype == MPI_INT) {
+            memcpy(recvbuf, sendbuf, sizeof(int) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else if (sendtype == MPI_DOUBLE) {
+            memcpy(recvbuf, sendbuf, sizeof(double) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     }
     return ierror;
 }
 
 
-int MPI_Allgatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
+int MPI_Allgatherv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                    void *recvbuf, int *recvcount, int *displs,
                    MPI_Datatype recvtype, MPI_Comm comm)
 {
     int ierror;
-    if (sendtype == MPI_INT) {
-        if (sendbuf != NULL) {
-            ierror = MPI_Copy_int((int *)sendbuf, (int *)recvbuf, sendcount);
-        }
-    } else if (sendtype == MPI_DOUBLE) {
-        if (sendbuf != NULL) {
-            ierror = MPI_Copy_double((double *)sendbuf, (double *)recvbuf, sendcount);
-        }
+    if (sendbuf == MPI_IN_PLACE) {
+        ierror = MPI_SUCCESS;
+        return ierror;
     } else {
-        ierror = MPI_FAILURE;
+        if (sendtype == MPI_INT) {
+            memcpy(recvbuf, sendbuf, sizeof(int) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else if (sendtype == MPI_DOUBLE) {
+            memcpy(recvbuf, sendbuf, sizeof(double) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     }
     return ierror;
 }
 
 
-int MPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
+int MPI_Allreduce(void *sendbuf, void *recvbuf, int count,
                   MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
 {
     int ierror;
-    if (datatype == MPI_INT) {
-        ierror = MPI_Reduce_int((int *)sendbuf, (int *)recvbuf, count, op);
-    } else if (datatype == MPI_DOUBLE) {
-        ierror = MPI_Reduce_double((double *)sendbuf, (double *)recvbuf, count, op);
+    if (sendbuf == MPI_IN_PLACE) {
+        ierror = MPI_SUCCESS;
+        return ierror;
     } else {
-        ierror = MPI_FAILURE;
+        if (datatype == MPI_INT) {
+            memcpy(recvbuf, sendbuf, sizeof(int) * count);
+            ierror = MPI_SUCCESS;
+        } else if (datatype == MPI_DOUBLE) {
+            memcpy(recvbuf, sendbuf, sizeof(double) * count);
+            ierror = MPI_SUCCESS;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     }
     return ierror;
 }
@@ -170,33 +132,47 @@ int MPI_Finalize(void)
 }
 
 
-int MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
-               void *recvbuf, const int recvcount,
-               MPI_Datatype datatype, int root, MPI_Comm comm)
+int MPI_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
+               void *recvbuf, int recvcount,
+               MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
     int ierror;
-    if (datatype == MPI_INT) {
-        ierror = MPI_Copy_int((int *)sendbuf, (int *)recvbuf, sendcount);
-    } else if (datatype == MPI_DOUBLE) {
-        ierror = MPI_Copy_double((double *)sendbuf, (double *)recvbuf, sendcount);
+    if (sendbuf == MPI_IN_PLACE) {
+        ierror = MPI_SUCCESS;
+        return ierror;
     } else {
-        ierror = MPI_FAILURE;
+        if (sendtype == MPI_INT) {
+            memcpy(recvbuf, sendbuf, sizeof(int) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else if (sendtype == MPI_DOUBLE) {
+            memcpy(recvbuf, sendbuf, sizeof(double) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     }
     return ierror;
 }
 
 
-int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
-                void *recvbuf, const int *recvcount, const int *displs,
+int MPI_Gatherv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
+                void *recvbuf, int *recvcount, int *displs,
                 MPI_Datatype recvtype, int root, MPI_Comm comm)
 {
     int ierror;
-    if (sendtype == MPI_INT) {
-        ierror = MPI_Copy_int((int *)sendbuf, (int *)recvbuf, sendcount);
-    } else if (sendtype == MPI_DOUBLE) {
-        ierror = MPI_Copy_double((double *)sendbuf, (double *)recvbuf, sendcount);
+    if (sendbuf == MPI_IN_PLACE) {
+        ierror = MPI_SUCCESS;
+        return ierror;
     } else {
-        ierror = MPI_FAILURE;
+        if (sendtype == MPI_INT) {
+            memcpy(recvbuf, sendbuf, sizeof(int) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else if (sendtype == MPI_DOUBLE) {
+            memcpy(recvbuf, sendbuf, sizeof(double) * sendcount);
+            ierror = MPI_SUCCESS;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     }
     return ierror;
 }
@@ -210,7 +186,7 @@ int MPI_Init(int *argc, char **argv[])
 }
 
 
-int MPI_Fetch_and_op(const void *origin_addr, void *result_addr,
+int MPI_Fetch_and_op(void *origin_addr, void *result_addr,
                      MPI_Datatype datatype, int target_rank,
                      MPI_Aint target_disp, MPI_Op op, MPI_Win win)
 {
@@ -218,11 +194,9 @@ int MPI_Fetch_and_op(const void *origin_addr, void *result_addr,
     if (op == MPI_SUM) {
         ierror = MPI_SUCCESS;
         if (datatype == MPI_INT) {
-            int sum = *((int *)result_addr) + *((int *)origin_addr);
-            result_addr = &sum;
+            *(int *)result_addr = win + *(int *)origin_addr;
         } else if (datatype == MPI_DOUBLE) {
-            double sum = *((double *)result_addr) + *((double *)origin_addr);
-            result_addr = &sum;
+            *(double *)result_addr = win + *(double *)origin_addr;
         } else {
             ierror = MPI_FAILURE;
         }
