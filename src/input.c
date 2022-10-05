@@ -81,7 +81,7 @@ int input_char(char **var, char *tag, char *filename)
         } else if (strncmp(ptr, tag, strlen(tag)) == 0) {
             strtok(line, " \n\t");
             strtok(NULL, " \n\t");
-            *var = (char *)malloc(sizeof(char) * 32);
+            *var = (char *)malloc(sizeof(char) * 128);
             strcpy(*var, strtok(NULL, "\n"));
             fclose(fp);
             return 0;
@@ -139,14 +139,6 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
-    if (errno) {
-        return 1;
-    }
-    errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
-    if (errno) {
-        return 1;
-    }
     errno = input_double(&(input->pair_cutoff), "PAIR_CUTOFF", filename);
     if (errno) {
         return 1;
@@ -188,6 +180,26 @@ int read_input(Input *input, char *filename)
         return 1;
     }
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->ncore), "NCORE", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_char(&(input->vasp_cmd), "VASP_CMD", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_int(&(input->istart), "ISTART", filename);
     if (errno) {
         return 1;
     }
@@ -259,13 +271,12 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_int(&(input->ncore), "NCORE", filename);
-    if (errno) {
-        return 1;
-    }
     if (input->random_seed == -1) {
         input->random_seed = (unsigned int)time(NULL);
     }
+    #ifdef VASP
+    input->ncore = 1;
+    #endif
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->snc_dimer + input->art_nouveau > 1) {
@@ -282,22 +293,17 @@ void write_input(Input *input)
     sprintf(filename, "%s/INPUT", input->output_dir);
     FILE *fp = fopen(filename, "w");
 
-    fputs("# potential parameter #\n", fp);
+    fputs("# general parameter #\n", fp);
     fprintf(fp, "NELEMENT\t= %d\n", input->nelem);
     fputs("ATOM_TYPE\t=", fp);
     for (i = 0; i < input->nelem; ++i) {
         fprintf(fp, " %s", input->atom_type[i]);
     }
     fputs("\n", fp);
-    fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
-    fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
-    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
-    fputs("\n", fp);
-
-    fputs("# general parameter #\n", fp);
     fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
+    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "STDDEV\t\t= %f\n", input->stddev);
@@ -305,6 +311,16 @@ void write_input(Input *input)
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+
+    fputs("# LAMMPS parameter #\n", fp);
+    fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
+    fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
+    fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
+    fputs("\n", fp);
+
+    fputs("# VASP parameter #\n", fp);
+    fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
+    fprintf(fp, "ISTART\t\t= %d\n", input->istart);
 
     fputs("# dimer parameter #\n", fp);
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
@@ -339,9 +355,6 @@ void write_input(Input *input)
     fprintf(fp, "RESTART\t\t= %d\n", input->restart);
     fprintf(fp, "RESTART_DIR\t= %s\n", input->restart_dir);
     fputs("\n", fp);
-
-    fputs("# parallelism parameter #\n", fp);
-    fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
     fclose(fp);
 }
 
@@ -352,10 +365,11 @@ void free_input(Input *input)
         free(input->atom_type[i]);
     }
     free(input->atom_type);
-    free(input->pair_style);
-    free(input->pair_coeff);
     free(input->init_config);
     free(input->target_list);
+    free(input->pair_style);
+    free(input->pair_coeff);
+    free(input->vasp_cmd);
     free(input->output_dir);
     free(input->restart_dir);
     free(input);

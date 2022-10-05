@@ -1,19 +1,35 @@
 #include <math.h>
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include "art_nouveau.h"
-#include "calculator.h"
+#include "alg_utils.h"
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
+#include "input.h"
 #include "kappa_dimer.h"
 #include "snc_dimer.h"
-#include "input.h"
+#include "my_mpi.h"
+#include "sps_utils.h"
 #include "target.h"
-#include "utils.h"
+
+
+#ifdef LMP
+#include "lmp_calculator.h"
+void init_win(int *ptr, MPI_Win *win, int val)
+{
+    *ptr = 0;
+}
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+void init_win(int *ptr, MPI_Win *win, int val)
+{
+    *win = val;
+}
+#endif
 
 
 int main(int argc, char *argv[])
@@ -78,7 +94,7 @@ int main(int argc, char *argv[])
     int target_num = 0;
     int list_size = 64;
     int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = read_target(config, input, &target_list, &target_num, &list_size);
+    errno = read_target(config, input, &target_num, &target_list, &list_size);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
         free_input(input);
@@ -87,12 +103,13 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (rank == 0) {
-        write_target(input, target_list, target_num);
+        write_target(input, target_num, target_list);
     }
 
     /* initial relax */
     if (input->init_relax > 0) {
-        atom_relax(config, input, MPI_COMM_WORLD);
+        double energy;
+        atom_relax(config, input, &energy, MPI_COMM_WORLD);
     }
 
     /* log */
@@ -116,7 +133,6 @@ int main(int argc, char *argv[])
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
-    /* one-sided communication */
     int group_size = size / input->ncore;
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
@@ -131,6 +147,7 @@ int main(int argc, char *argv[])
     MPI_Comm group_comm;
     MPI_Comm_split(MPI_COMM_WORLD, head, rank, &group_comm);
 
+    /* one-sided communication */
     MPI_Win count_win;
     int *global_count;
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
@@ -156,20 +173,20 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_exit, &exit_win);
 
-    int local_count;
-    *global_count = 0;
-    int local_recycle;
-    *global_recycle = 0;
-    int local_conv;
-    *global_conv = 0;
-    int local_redundant;
-    *global_redundant = 0;
-    int local_exit;
-    *global_exit = 0;
+    init_win(global_count, &count_win, -1);
+    init_win(global_recycle, &recycle_win, 0);
+    init_win(global_conv, &conv_win, 0);
+    init_win(global_redundant, &redundant_win, 0);
+    init_win(global_exit, &exit_win, 0);
 
     int zero = 0;
     int one = 1;
     int mone = -1;
+    int local_count;
+    int local_recycle;
+    int local_conv;
+    int local_redundant;
+    int local_exit;
     int local_reac_num = 0;
     int local_dege_num = 0;
     double local_rate_sum = 0.0;
@@ -189,6 +206,7 @@ int main(int argc, char *argv[])
 
     int conv, unique;
     double Ea;
+    double *eigenmode;
     while (1) {
         /* check exit condition */
         if (local_rank == 0) {
@@ -230,8 +248,10 @@ int main(int argc, char *argv[])
         }
         if (data == NULL) {
             atom_index = target_list[local_count % target_num];
+            eigenmode = NULL;
         } else {
             atom_index = data->index;
+            eigenmode = data->eigenmode;
         }
 
         /* initial/saddle/final configuration */
@@ -240,16 +260,16 @@ int main(int argc, char *argv[])
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
         if (input->art_nouveau > 0) {
-            conv = art_nouveau(initial, final, input, data,
+            conv = art_nouveau(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else if (input->snc_dimer > 0) {
-            conv = snc_dimer(initial, final, input, data,
+            conv = snc_dimer(initial, final, input, eigenmode,
                              local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
-            conv = kappa_dimer(initial, final, input, data,
+            conv = kappa_dimer(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {
-            conv = dimer(initial, final, input, data,
+            conv = dimer(initial, final, input, eigenmode,
                          local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {
@@ -350,6 +370,8 @@ int main(int argc, char *argv[])
         MPI_Fetch_and_op(&zero, &local_count, MPI_INT,
                          0, (MPI_Aint)0, MPI_SUM, count_win);
         MPI_Win_unlock(0, count_win);
+    }
+    if (rank == 0) {
         char filename[128];
         sprintf(filename, "%s/Statistics.log", input->output_dir);
         FILE *fp = fopen(filename, "a");
@@ -401,7 +423,6 @@ int main(int argc, char *argv[])
         free(disp);
     }
 
-    //double energy = oneshot(config, input, MPI_COMM_WORLD);
     /* log */
     if (rank == 0) {
         int *dege_num = (int *)calloc(total_reac_num, sizeof(int));
@@ -412,7 +433,6 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
         char filename[128];
         sprintf(filename, "%s/Event.log", input->output_dir);
         FILE *fp;

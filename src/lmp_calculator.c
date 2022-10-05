@@ -1,14 +1,14 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "calculator.h"
+#include "lmp_calculator.h"
 #define LAMMPS_LIB_MPI
 #include "library.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
-void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv, MPI_Comm comm)
+void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv,
+               MPI_Comm comm)
 {
     /* create LAMMPS instance */
     int i;
@@ -35,14 +35,16 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv, MPI_Co
     lammps_create_atoms(lmp, config->tot_num, config->id,
                         config->type, config->pos, NULL, NULL, 0);
     for (i = 0; i < input->nelem; ++i) {
-        sprintf(cmd, "mass %d %f", i + 1, get_mass(get_atom_num(input->atom_type[i])));
+        sprintf(cmd, "mass %d %f", i + 1,
+                get_mass(get_atom_num(input->atom_type[i])));
         lammps_command(lmp, cmd);
     }
     return lmp;
 }
 
 
-double oneshot(Config *config, Input *input, MPI_Comm comm)
+void oneshot(Config *config, Input *input, double *energy, double *force,
+             MPI_Comm comm)
 {
     char cmd[1024];
     void *lmp = NULL;
@@ -60,10 +62,10 @@ double oneshot(Config *config, Input *input, MPI_Comm comm)
     lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
     /* oneshot */
     lammps_command(lmp, "run 0");
-    double energy = lammps_get_thermo(lmp, "pe");
+    *energy = lammps_get_thermo(lmp, "pe");
+    lammps_gather_atoms(lmp, "f", 1, 3, force);
     /* delete LAMMPS instance */
     lammps_close(lmp);
-    return energy;
 }
 
 
@@ -101,7 +103,7 @@ void oneshot_disp(Config *config, Input *input, double *energy, double *force,
 }
 
 
-double atom_relax(Config *config, Input *input, MPI_Comm comm)
+void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
 {
     int i;
     char tmp_cmd[64], cmd[1024];
@@ -140,11 +142,9 @@ double atom_relax(Config *config, Input *input, MPI_Comm comm)
     /* minimize */
     sprintf(cmd, "minimize 0 %f 10000 100000", input->f_tol);
     lammps_command(lmp, cmd);
-    double pe = lammps_get_thermo(lmp, "pe");
+    *energy = lammps_get_thermo(lmp, "pe");
     /* update positions */
     lammps_gather_atoms(lmp, "x", 1, 3, config->pos);
     /* delete LAMMPS instance */
     lammps_close(lmp);
-
-    return pe;
 }

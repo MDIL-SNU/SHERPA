@@ -3,13 +3,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "art_nouveau.h"
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
+#include "alg_utils.h"
 #include "config.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
-void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
-             double *eigenvalue, double *eigenmode, MPI_Comm comm)
+static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
+                   double *eigenvalue, double *eigenmode, MPI_Comm comm)
 {
     int i, j;
     int size = 32;
@@ -171,12 +177,15 @@ void lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     free(V);
     free(HL);
     free(y);
+
+    return k;
 }
 
 
-double *uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
-                    double eigenvalue, double *eigenmode,
-                    double *init_direction, MPI_Comm comm)
+static double *uphill_push(Config *config, Input *input,
+                           int disp_num, int *disp_list,
+                           double eigenvalue, double *eigenmode,
+                           double *init_direction, MPI_Comm comm)
 {
     int i;
     double energy;
@@ -222,11 +231,13 @@ double *uphill_push(Config *config, Input *input, int disp_num, int *disp_list,
 }
 
 
-void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
-                double eigenvalue, double *push_direction, int count, int art_step,
-                MPI_Comm comm)
+static void perp_relax(Config *config0, Input *input,
+                       int disp_num, int *disp_list,
+                       double eigenvalue, double *push_direction,
+                       int count, int art_step, int lanczos_step, MPI_Comm comm)
 {
     int i, rank, size;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -248,16 +259,15 @@ void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
         double *perp_force0 = perpendicular_vector(force0, push_direction, disp_num);
 
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             if (art_step > input->art_delay) {
-                fprintf(fp, " %8d   %8d   %16f   %10f\n",
-                        art_step, relax_step, energy0, eigenvalue);
+                fprintf(fp, " %8d   %8d   %12d   %16f   %10f\n",
+                        art_step, relax_step, lanczos_step, energy0, eigenvalue);
             } else {
-                fprintf(fp, " %8d   %8d   %16f   ----------\n",
-                        art_step, relax_step, energy0);
+                fprintf(fp, " %8d   %8d   %12d   %16f   ----------\n",
+                        art_step, relax_step, lanczos_step, energy0);
             }
             fclose(fp);
             sprintf(filename, "%s/SPS_%d.XDATCAR",
@@ -338,10 +348,12 @@ void perp_relax(Config *config0, Input *input, int disp_num, int *disp_list,
 }
 
 
-int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
-                int count, int index, double *Ea, MPI_Comm comm)
+int art_nouveau(Config *initial, Config *final, Input *input,
+                double *full_eigenmode, int count, int index, double *Ea,
+                MPI_Comm comm)
 {
     int i, j, rank, size;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -355,9 +367,9 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     int extract_num;
     int *update_list;
     int *extract_list;
-    gen_list(initial, input, center, &update_num, &update_list,
-             &extract_num, &extract_list, comm);
-    cut_sphere(initial, input, update_num, update_list);
+    set_active_volume(initial, input, center, &update_num, &update_list,
+                      &extract_num, &extract_list, comm);
+    trim_atoms(initial, update_num, update_list);
 
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
@@ -383,16 +395,8 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* eigenmode */
-    double *full_eigenmode;
-    if (data == NULL) {
+    if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
-    } else {
-        full_eigenmode = (double *)malloc(sizeof(double) * final->tot_num * 3);
-        for (i = 0; i < final->tot_num; ++i) {
-            full_eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            full_eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            full_eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        }
     }
 
     /* normalize */
@@ -418,16 +422,16 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
 
     double fmax;
     int art_step;
+    int lanczos_step = 0;
     int converge = 0;
     double eigenvalue = 0;
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
-        fputs("-----------------------------------------------------\n", fp);
-        fputs(" Art step   Opt step   Potential energy   Eigenvalue\n", fp);
-        fputs("-----------------------------------------------------\n", fp);
+        fputs("--------------------------------------------------------------------\n", fp);
+        fputs(" Art step   Opt step   Lanczos step   Potential energy   Eigenvalue\n", fp);
+        fputs("--------------------------------------------------------------------\n", fp);
         fclose(fp);
         sprintf(filename, "%s/SPS_%d.XDATCAR",
                 input->output_dir, count);
@@ -439,8 +443,8 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
         if (art_step > input->art_delay) {
-            lanczos(config0, input, disp_num, disp_list,
-                    &eigenvalue, eigenmode, comm);
+            lanczos_step = lanczos(config0, input, disp_num, disp_list,
+                                   &eigenvalue, eigenmode, comm);
         }
         /* uphill push */
         double *push_direction = uphill_push(config0, input, disp_num, disp_list,
@@ -448,7 +452,7 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
                                              init_direction, comm);
         /* normal relax */
         perp_relax(config0, input, disp_num, disp_list,
-                   eigenvalue, push_direction, count, art_step, comm);
+                   eigenvalue, push_direction, count, art_step, lanczos_step, comm);
         free(push_direction);
 
         /* force criteria */
@@ -469,13 +473,18 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
         }
     }
     free(init_direction);
+    if (local_rank == 0) {
+        sprintf(filename, "%s/SPS_%d.log",
+                input->output_dir, count);
+        FILE *fp = fopen(filename, "a");
+        fputs("--------------------------------------------------------------------\n", fp);
+        fclose(fp);
+    }
     if (converge == 0) {
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("-----------------------------------------------------\n", fp);
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
@@ -490,7 +499,7 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* relax initial structure and barrier energy */
-    atom_relax(initial, input, comm);
+    atom_relax(initial, input, &energy0, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
@@ -510,13 +519,12 @@ int art_nouveau(Config *initial, Config *final, Input *input, Data *data,
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
     }
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                 input->output_dir, count, index);
         write_config(final, filename, "w");
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
-        FILE *fp = fopen(filename, "wb");     
+        FILE *fp = fopen(filename, "w");
         for (i = 0; i < final->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],

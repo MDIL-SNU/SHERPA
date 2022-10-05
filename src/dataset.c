@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dataset.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
 void insert_data(Dataset *dataset, int n, int index, double *eigenmode)
@@ -73,7 +73,8 @@ void free_dataset(Dataset *dataset)
     if (ptr != NULL) {
         Data *next = ptr->next;
         while (1) {
-            free(ptr->eigenmode);
+            /* already deleted in sps */
+            //free(ptr->eigenmode);
             free(ptr);
             if (next == NULL) {
                 break;

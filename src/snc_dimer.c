@@ -1,12 +1,17 @@
 #include <math.h>
-#include <mpi.h>
 #include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "calculator.h"
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
+#include "alg_utils.h"
 #include "config.h"
 #include "snc_dimer.h"
-#include "utils.h"
+#include "sps_utils.h"
 
 
 static double *projected_force(double *force0, double *eigenmode,
@@ -189,6 +194,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
 {
     int i, j, rank, size;
     double magnitude, cmin;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -229,7 +235,6 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         /* no rotation */
         if (norm(f_rot_A, disp_num) < input->f_rot_min) {
             if (local_rank == 0) {
-                char filename[128];
                 sprintf(filename, "%s/SPS_%d.log",
                         input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
@@ -315,7 +320,6 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         free(new_eigenmode);
         free(tmp_force);
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
@@ -344,6 +348,7 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
 {
     int i;
     double magnitude;
+    char filename[128];
     double energy0, energy1;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -364,7 +369,6 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
-    /* convert coordinate */
     inv_transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
     oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
     transform_disp(config1->pos, eigenvector, eigenvalue, disp_num, disp_list);
@@ -473,11 +477,12 @@ static void translate(Config *config0, Input *input, int disp_num, int *disp_lis
 }
 
 
-// TODO: orthogonalization
-int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
-              int count, int index, double *Ea, MPI_Comm comm)
+int snc_dimer(Config *initial, Config *final, Input *input,
+              double *full_eigenmode, int count, int index, double *Ea,
+              MPI_Comm comm)
 {
     int i, j, rank, size;
+    char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -491,9 +496,9 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
     int extract_num;
     int *update_list;
     int *extract_list;
-    gen_list(initial, input, center, &update_num, &update_list,
-             &extract_num, &extract_list, comm);
-    cut_sphere(initial, input, update_num, update_list);
+    set_active_volume(initial, input, center, &update_num, &update_list,
+                      &extract_num, &extract_list, comm);
+    trim_atoms(initial, update_num, update_list);
 
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
@@ -519,16 +524,8 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
     }
 
     /* eigenmode */
-    double *full_eigenmode;
-    if (data == NULL) {
+    if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
-    } else {
-        full_eigenmode = (double *)malloc(sizeof(double) * final->tot_num * 3);
-        for (i = 0; i < final->tot_num; ++i) {
-            full_eigenmode[i * 3 + 0] = data->eigenmode[i * 3 + 0];
-            full_eigenmode[i * 3 + 1] = data->eigenmode[i * 3 + 1];
-            full_eigenmode[i * 3 + 2] = data->eigenmode[i * 3 + 2];
-        }
     }
 
     /* normalize */
@@ -560,7 +557,6 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
     int converge = 0;
     int dimer_step;
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
@@ -612,13 +608,18 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
     free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
+    if (local_rank == 0) {
+        sprintf(filename, "%s/SPS_%d.log",
+                input->output_dir, count);
+        FILE *fp = fopen(filename, "a");
+        fputs("----------------------------------------------------------------------------\n", fp);
+        fclose(fp);
+    }
     if (converge == 0) {
         if (local_rank == 0) {
-            char filename[128];
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
@@ -632,7 +633,7 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
         return 1;
     }
     /* relax initial structure and barrier energy */
-    atom_relax(initial, input, comm);
+    atom_relax(initial, input, &energy0, comm);
     oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
     double i_energy = energy0;
     /* convert coordinate */
@@ -654,13 +655,12 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
         full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     if (local_rank == 0) {
-        char filename[128];
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                 input->output_dir, count, index);
         write_config(final, filename, "w");
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
-        FILE *fp = fopen(filename, "wb");     
+        FILE *fp = fopen(filename, "w");
         for (i = 0; i < final->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],
@@ -685,7 +685,6 @@ int snc_dimer(Config *initial, Config *final, Input *input, Data *data,
                              disp_num, disp_list, comm);
 
     if ((local_rank == 0) && (conv == 0)) {
-        char filename[128];
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");

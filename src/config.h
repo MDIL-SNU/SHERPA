@@ -22,10 +22,10 @@ typedef struct _Config
     double *pos;          /* [N * 3] dimension of positions */
 } Config;
 
-int read_config(Config *, Input *, char *);
-void extract_atom(Config *, int);
-void write_config(Config *, char *, char *);
-void copy_config(Config *, Config *);
-int diff_config(Config *, Config *, double);
-void free_config(Config *);
+void extract_atom(Config *config, int index);
+int read_config(Config *config, Input *input, char *filename);
+void write_config(Config *config, char *filename, char *mode);
+void copy_config(Config *config2, Config *config1);
+int diff_config(Config *config1, Config *config2, double tol);
+void free_config(Config *config);
 #endif

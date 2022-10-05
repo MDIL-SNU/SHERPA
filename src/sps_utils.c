@@ -2,48 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "calculator.h"
-#include "utils.h"
-
-
-void int_sort_decrease(int *int_list, int list_len)
-{
-    int i;
-    while (1) {
-        int done = 1;
-        for (i = 1; i < list_len; ++i) {
-            if (int_list[i - 1] < int_list[i]) {
-                int tmp_int = int_list[i - 1];
-                int_list[i - 1] = int_list[i];
-                int_list[i] = tmp_int;
-                done = 0;
-            }
-        }
-        if (done) {
-            break;
-        }
-    }
-}
-
-
-void int_sort_increase(int *int_list, int list_len)
-{
-    int i;
-    while (1) {
-        int done = 1;
-        for (i = 1; i < list_len; ++i) {
-            if (int_list[i - 1] > int_list[i]) {
-                int tmp_int = int_list[i - 1];
-                int_list[i - 1] = int_list[i];
-                int_list[i] = tmp_int;
-                done = 0;
-            }
-        }
-        if (done) {
-            break;
-        }
-    }
-}
+#ifdef LMP
+#include "lmp_calculator.h"
+#endif
+#ifdef VASP
+#include "vasp_calculator.h"
+#endif
+#include "alg_utils.h"
+#include "sps_utils.h"
 
 
 inline void get_minimum_image(double *del, double *boxlo, double *boxhi,
@@ -204,85 +170,24 @@ int check_unique(Config *config, Input *input, char *self)
 }
 
 
-double normal_random(double mean, double std)
-{
-    double u, v, s;
-    do {
-        u = ((double)rand() / RAND_MAX) * 2 - 1;
-        v = ((double)rand() / RAND_MAX) * 2 - 1;
-        s = u * u + v * v;
-    } while (s >= 1.0 || s == 0.0);
-    s = sqrt(-2 * log(s) / s);
-    return mean + std * u * s;
-}
-
-
-double norm(double *vec, int n)
+double *get_rot_force(Input *input, double *force1, double *force2,
+                      double *eigenmode, int n)
 {
     int i;
-    double output = 0.0;
+    double *dforce = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
-        output += vec[i * 3 + 0] * vec[i * 3 + 0];
-        output += vec[i * 3 + 1] * vec[i * 3 + 1];
-        output += vec[i * 3 + 2] * vec[i * 3 + 2];
+        dforce[i * 3 + 0] = force1[i * 3 + 0] - force2[i * 3 + 0];
+        dforce[i * 3 + 1] = force1[i * 3 + 1] - force2[i * 3 + 1];
+        dforce[i * 3 + 2] = force1[i * 3 + 2] - force2[i * 3 + 2];
     }
-    return sqrt(output);
-}
-
-
-double *normalize(double *vec, int n)
-{
-    int i;
-    double *output = (double *)malloc(sizeof(double) * n * 3); 
-    double magnitude = norm(vec, n);
+    double *rot_force = perpendicular_vector(dforce, eigenmode, n);
     for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = vec[i * 3 + 0] / magnitude;
-        output[i * 3 + 1] = vec[i * 3 + 1] / magnitude;
-        output[i * 3 + 2] = vec[i * 3 + 2] / magnitude;
+        rot_force[i * 3 + 0] /= 2 * input->disp_dist;
+        rot_force[i * 3 + 1] /= 2 * input->disp_dist;
+        rot_force[i * 3 + 2] /= 2 * input->disp_dist;
     }
-    return output;
-}
-
-
-double dot(double *vec1, double *vec2, int n)
-{
-    int i;
-    double output = 0.0;
-    for (i = 0; i < n; ++i) {
-        output += vec1[i * 3 + 0] * vec2[i * 3 + 0];
-        output += vec1[i * 3 + 1] * vec2[i * 3 + 1];
-        output += vec1[i * 3 + 2] * vec2[i * 3 + 2];
-    }
-    return output;
-}
-
-
-double *parallel_vector(double *vector, double *unit, int n)
-{
-    int i; 
-    double magnitude = dot(vector, unit, n);
-    double *output = (double *)malloc(sizeof(double) * n * 3);
-    for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = magnitude * unit[i * 3 + 0];
-        output[i * 3 + 1] = magnitude * unit[i * 3 + 1];
-        output[i * 3 + 2] = magnitude * unit[i * 3 + 2];
-    } 
-    return output;
-}
-
-
-double *perpendicular_vector(double *vector, double *unit, int n)
-{
-    int i;
-    double *tmp_vector = parallel_vector(vector, unit, n);
-    double *output = (double *)malloc(sizeof(double) * n * 3);
-    for (i = 0; i < n; ++i) {
-        output[i * 3 + 0] = vector[i * 3 + 0] - tmp_vector[i * 3 + 0];
-        output[i * 3 + 1] = vector[i * 3 + 1] - tmp_vector[i * 3 + 1];
-        output[i * 3 + 2] = vector[i * 3 + 2] - tmp_vector[i * 3 + 2];
-    } 
-    free(tmp_vector);
-    return output;
+    free(dforce);
+    return rot_force;
 }
 
 
@@ -319,6 +224,31 @@ void get_cg_direction(double *direction, double *direction_old,
         direction_old[i * 3 + 1] = direction[i * 3 + 1];
         direction_old[i * 3 + 2] = direction[i * 3 + 2];
     }
+}
+
+
+void trim_atoms(Config *config, int update_num, int *update_list)
+{
+    int i;
+    int *update_flag = (int *)calloc(config->tot_num, sizeof(int));
+    for (i = 0; i < update_num; ++i) {
+        update_flag[update_list[i]] = 1;
+    }
+    int cut_num = 0;
+    int *cut_list = (int *)malloc(sizeof(int) * (config->tot_num - update_num));
+    for (i = config->tot_num - 1; i >= 0; --i) {
+        if (update_flag[i] == 0) {
+            cut_list[cut_num] = i;
+            cut_num++;
+        }
+    }
+    /* sort */
+    int_sort_decrease(cut_num, cut_list);
+    for (i = 0; i < cut_num; ++i) {
+        extract_atom(config, cut_list[i]);
+    }
+    free(update_flag);
+    free(cut_list);
 }
 
 
@@ -362,11 +292,11 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 }
 
 
-/* update_list < 2 * cutoff
+/* update_list < 2 * pair_cutoff
    extract_list < acti_cutoff */
-void gen_list(Config *config, Input *input, double *center,
-              int *update_num, int **update_list,
-              int *extract_num, int **extract_list, MPI_Comm comm)
+void set_active_volume(Config *config, Input *input, double *center,
+                       int *update_num, int **update_list,
+                       int *extract_num, int **extract_list, MPI_Comm comm)
 {
     int i, rank, size;
     double del[3];
@@ -440,8 +370,8 @@ void gen_list(Config *config, Input *input, double *center,
     free(disp);
 
     /* sort */
-    int_sort_increase(*update_list, *update_num);
-    int_sort_increase(*extract_list, *extract_num);
+    int_sort_increase(*update_num, *update_list);
+    int_sort_increase(*extract_num, *extract_list);
 }
 
 
@@ -460,6 +390,7 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     Config *config1 = (Config *)malloc(sizeof(Config));
     Config *config2 = (Config *)malloc(sizeof(Config));
     int trial = 1;
+    double energy;
     while (1) {
         copy_config(config1, config0);
         copy_config(config2, config0);
@@ -477,8 +408,8 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             config2->pos[disp_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2]
                                                - 0.1 * trial * eigenmode[i * 3 + 2];
         }
-        atom_relax(config1, input, comm); 
-        atom_relax(config2, input, comm); 
+        atom_relax(config1, input, &energy, comm); 
+        atom_relax(config2, input, &energy, comm); 
         if (diff_config(config1, config2, 2 * input->max_step) == 1) {
             break;
         } else {
@@ -499,7 +430,6 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: disconnected\n", fp);
             fclose(fp);
         }
@@ -512,7 +442,6 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs("----------------------------------------------------------------------------\n", fp);
             fputs(" Saddle state: connected\n", fp);
             fclose(fp);
         }
@@ -540,6 +469,3 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
         return 0;
     }
 }
-
-
-
