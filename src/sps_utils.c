@@ -292,11 +292,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 }
 
 
-/* update_list < 2 * pair_cutoff
-   extract_list < acti_cutoff */
 void set_active_volume(Config *config, Input *input, double *center,
-                       int *update_num, int **update_list,
-                       int *extract_num, int **extract_list, MPI_Comm comm)
+                       int *outer_num, int **outer_list,
+                       int *inner_num, int **inner_list, MPI_Comm comm)
 {
     int i, rank, size;
     double del[3];
@@ -312,10 +310,10 @@ void set_active_volume(Config *config, Input *input, double *center,
     if (r > local_rank) {
         end++;
     }
-    int tmp_update_num = 0;
-    int *tmp_update_list = (int *)malloc(sizeof(int) * config->tot_num);
-    int tmp_extract_num = 0;
-    int *tmp_extract_list = (int *)malloc(sizeof(int) * config->tot_num);
+    int tmp_outer_num = 0;
+    int tmp_inner_num = 0;
+    int *tmp_outer_list = (int *)malloc(sizeof(int) * config->tot_num);
+    int *tmp_inner_list = (int *)malloc(sizeof(int) * config->tot_num);
     for (i = begin; i < end; ++i) {
         del[0] = config->pos[i * 3 + 0] - center[0];
         del[1] = config->pos[i * 3 + 1] - center[1];
@@ -326,52 +324,52 @@ void set_active_volume(Config *config, Input *input, double *center,
                          + del[1] * del[1]
                          + del[2] * del[2]);
         if (dist < 2 * input->pair_cutoff) {
-            tmp_update_list[tmp_update_num] = i;
-            tmp_update_num++; 
-            if (dist < input->acti_cutoff) {
-                tmp_extract_list[tmp_extract_num] = i;
-                tmp_extract_num++;
-            }
+            tmp_outer_list[tmp_outer_num] = i;
+            tmp_outer_num++; 
+        }
+        if ((dist < input->acti_cutoff) && (config->fix[i]  == 0)) {
+            tmp_inner_list[tmp_inner_num] = i;
+            tmp_inner_num++;
         }
     }
-    MPI_Allreduce(&tmp_update_num, update_num, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&tmp_extract_num, extract_num, 1, MPI_INT, MPI_SUM, comm);
-    *update_list = (int *)malloc(sizeof(int) * (*update_num));
-    *extract_list = (int *)malloc(sizeof(int) * (*extract_num));
+    MPI_Allreduce(&tmp_outer_num, outer_num, 1, MPI_INT, MPI_SUM, comm);
+    MPI_Allreduce(&tmp_inner_num, inner_num, 1, MPI_INT, MPI_SUM, comm);
+    *outer_list = (int *)malloc(sizeof(int) * (*outer_num));
+    *inner_list = (int *)malloc(sizeof(int) * (*inner_num));
 
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
     int *disp = (int *)malloc(sizeof(int) * input->ncore);
 
-    /* update list */
-    MPI_Allgather(&tmp_update_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    /* outer list */
+    MPI_Allgather(&tmp_outer_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
     disp[0] = 0;
     if (input->ncore > 1) {
         for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
-    MPI_Allgatherv(tmp_update_list, tmp_update_num, MPI_INT,
-                   *update_list, counts, disp, MPI_INT, comm);
+    MPI_Allgatherv(tmp_outer_list, tmp_outer_num, MPI_INT,
+                   *outer_list, counts, disp, MPI_INT, comm);
 
-    /* extract list */
-    MPI_Allgather(&tmp_extract_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    /* inner list */
+    MPI_Allgather(&tmp_inner_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
     disp[0] = 0;
     if (input->ncore > 1) {
         for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
-    MPI_Allgatherv(tmp_extract_list, tmp_extract_num, MPI_INT,
-                   *extract_list, counts, disp, MPI_INT, comm);
+    MPI_Allgatherv(tmp_inner_list, tmp_inner_num, MPI_INT,
+                   *inner_list, counts, disp, MPI_INT, comm);
 
-    free(tmp_update_list);
-    free(tmp_extract_list);
+    free(tmp_outer_list);
+    free(tmp_inner_list);
     free(counts);
     free(disp);
 
     /* sort */
-    int_sort_increase(*update_num, *update_list);
-    int_sort_increase(*extract_num, *extract_list);
+    int_sort_increase(*outer_num, *outer_list);
+    int_sort_increase(*inner_num, *inner_list);
 }
 
 

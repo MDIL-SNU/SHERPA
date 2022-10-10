@@ -42,6 +42,8 @@ int read_target(Config *config, Input *input,
                 (*target_list)[*target_num] = atoi(strtok(NULL, " \n\t"));
                 (*target_num)++;
             }
+        } else if (strncmp(ptr, "T", 1) == 0) {
+            // gen_type();
         } else if (strncmp(ptr, "A", 1) == 0) {
             //gen_all();
         } else if (strncmp(ptr, "R", 1) == 0) {

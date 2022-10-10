@@ -319,25 +319,13 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
     copy_config(config0, initial);
-
-    /* set dimer space */
-    double del[3];
-    int disp_num = 0;
-    int *disp_list = (int *)malloc(sizeof(int) * config0->tot_num);
-    for (i = 0; i < config0->tot_num; ++i) {
-        del[0] = config0->pos[i * 3 + 0] - center[0];
-        del[1] = config0->pos[i * 3 + 1] - center[1];
-        del[2] = config0->pos[i * 3 + 2] - center[2];
-        get_minimum_image(del, config0->boxlo, config0->boxhi,
-                          config0->xy, config0->yz, config0->xz);
-        double dist = sqrt(del[0] * del[0]
-                         + del[1] * del[1] 
-                         + del[2] * del[2]);
-        if (dist < input->acti_cutoff) {
-            disp_list[disp_num] = i;
-            disp_num++;
-        }
-    }
+    int tmp_num;
+    int disp_num;
+    int *tmp_list;
+    int *disp_list;
+    set_active_volume(config0, input, center, &tmp_num, &tmp_list,
+                      &disp_num, &disp_list, comm);
+    free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {

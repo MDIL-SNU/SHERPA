@@ -34,7 +34,6 @@ ATOM_TYPE   = O Pt
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 DISP_DIST   = 0.001
-PAIR_CUTOFF = 6.0
 ACTI_CUTOFF = 5.1
 F_TOL       = 0.01
 STDDEV      = 0.1
@@ -46,6 +45,7 @@ CONFIDENCE  = 0.9
 # LAMMPS parameter #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
+PAIR_CUTOFF = 6.0
 NCORE       = 8
 
 # VASP parameter #
@@ -145,7 +145,7 @@ Otherwise, execute code without parallel command following:
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format. Selective dynamics are also supported.
-2. `NCORE` of 4-8 is recommended. 
-3. Set DISP_CUTOFF shorter than PAIR_CUTOFF.
+2. Selective dynamics have priority over `ACTI_CUTOFF`.
+3. `NCORE` of 4-8 is recommended with LMP. 
 4. The filename of final structure follows Final _ `count` _ `atomic index`.POSCAR
 5. For VASP calculation, INCAR, KPOINTS, and POTCAR should be prepared in working directory.

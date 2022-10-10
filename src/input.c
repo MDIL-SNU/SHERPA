@@ -139,10 +139,6 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
-    errno = input_double(&(input->pair_cutoff), "PAIR_CUTOFF", filename);
-    if (errno) {
-        return 1;
-    }
     errno = input_char(&(input->init_config), "INIT_CONFIG", filename);
     if (errno) {
         return 1;
@@ -188,6 +184,10 @@ int read_input(Input *input, char *filename)
         return 1;
     }
     errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
+    if (errno) {
+        return 1;
+    }
+    errno = input_double(&(input->pair_cutoff), "PAIR_CUTOFF", filename);
     if (errno) {
         return 1;
     }
@@ -276,6 +276,7 @@ int read_input(Input *input, char *filename)
     }
     #ifdef VASP
     input->ncore = 1;
+    input->pair_cutoff = 100.0;
     #endif
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
@@ -303,7 +304,6 @@ void write_input(Input *input)
     fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
-    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "STDDEV\t\t= %f\n", input->stddev);
@@ -315,6 +315,7 @@ void write_input(Input *input)
     fputs("# LAMMPS parameter #\n", fp);
     fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
     fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
+    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
     fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
     fputs("\n", fp);
 
