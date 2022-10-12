@@ -62,10 +62,11 @@ TRIAL_ANGLE = 45
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
-LAMBDA_CRIT = -0.5
+LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
 ART_DELAY   = 3
+ART_MIXING  = 3
 
 # system parameter #
 FREQUENCY   = 1e12
@@ -89,7 +90,6 @@ RESTART_DIR = ./gen_0
 |INIT_CONFIG|Initial configuration file||
 |TARGET_LIST|File containing target information||
 |DISP_DIST|Finite difference step (=dimer distance)|Angstrom|
-|PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |ACTI_CUTOFF|Cutoff radius of active volume|Angstrom|
 |F_TOL|Force tolerance for dimer method|eV/Angstrom|
 |STDDEV|Standard deviation of gaussian displacement||
@@ -99,6 +99,7 @@ RESTART_DIR = ./gen_0
 |CONFIDENCE|Confidence level of saddle point search||
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
+|PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|
 |NCORE|The number of cores for each LAMMPS instance||
 |VASP_CMD|Command for running VASP||
 |ISTART|ISTAT tag in INCAR||
@@ -113,6 +114,7 @@ RESTART_DIR = ./gen_0
 |LAMBDA_CONV|Convergence criteria value for Lanczos method|eV/Angstrom^2|
 |MAX_NUM_RLX|Maximum number of relaxation||
 |ART_DELAY|Initial step without Lanczos method||
+|ART_MIXING|Mixing step above inflection line||
 |FREQUENCY|Attempt frequency of reaction|1/s|
 |TEMPERATURE|System temperature|Kelvin|
 |RANDOM_SEED|Seed for random number||
@@ -121,6 +123,7 @@ RESTART_DIR = ./gen_0
 |RESTART_DIR|Directory of previous SPS output||
 
 ## TARGET
+It contains the target atom indices to be the center of active volume.
 ```text
 I 0 1 2 3
 ```

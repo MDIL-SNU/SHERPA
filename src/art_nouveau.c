@@ -185,7 +185,7 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
 static double *uphill_push(Config *config, Input *input,
                            int disp_num, int *disp_list,
                            double eigenvalue, double *eigenmode,
-                           double *init_direction, MPI_Comm comm)
+                           double *init_direction, int negative, MPI_Comm comm)
 {
     int i;
     double energy;
@@ -195,21 +195,30 @@ static double *uphill_push(Config *config, Input *input,
     if (eigenvalue < input->lambda_crit) {
         double *parallel_force = parallel_vector(force, eigenmode, disp_num);
         double f_norm = norm(parallel_force, disp_num);
-        double divisor = fabs(eigenvalue) > 0.5 ? fabs(eigenvalue) : 0.5;
+        double divisor = fabs(eigenvalue) > fabs(input->lambda_crit) ?
+                         fabs(eigenvalue) : fabs(input->lambda_crit);
         double alpha = f_norm / divisor;
         double dr = input->max_step < alpha ? input->max_step : alpha;
+        double ratio = negative > input->art_mixing ?
+                       1.0 : (double)negative / input->art_mixing;
         free(parallel_force);
         if (dot(force, eigenmode, disp_num) > 0) {
             for (i = 0; i < disp_num; ++i) {
-                push_vector[i * 3 + 0] = -dr * eigenmode[i * 3 + 0];
-                push_vector[i * 3 + 1] = -dr * eigenmode[i * 3 + 1];
-                push_vector[i * 3 + 2] = -dr * eigenmode[i * 3 + 2];
+                push_vector[i * 3 + 0] = -ratio * dr * eigenmode[i * 3 + 0] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 0];
+                push_vector[i * 3 + 1] = -ratio * dr * eigenmode[i * 3 + 1] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 1];
+                push_vector[i * 3 + 2] = -ratio * dr * eigenmode[i * 3 + 2] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 2];
             }
         } else {
             for (i = 0; i < disp_num; ++i) {
-                push_vector[i * 3 + 0] = dr * eigenmode[i * 3 + 0];
-                push_vector[i * 3 + 1] = dr * eigenmode[i * 3 + 1];
-                push_vector[i * 3 + 2] = dr * eigenmode[i * 3 + 2];
+                push_vector[i * 3 + 0] = ratio * dr * eigenmode[i * 3 + 0] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 0];
+                push_vector[i * 3 + 1] = ratio * dr * eigenmode[i * 3 + 1] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 1];
+                push_vector[i * 3 + 2] = ratio * dr * eigenmode[i * 3 + 2] +
+                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 2];
             }
         }
     } else {
@@ -412,7 +421,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     int art_step;
     int lanczos_step = 0;
     int converge = 0;
-    double eigenvalue = 0;
+    double eigenvalue = 1;
     if (local_rank == 0) {
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
@@ -428,16 +437,23 @@ int art_nouveau(Config *initial, Config *final, Input *input,
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    int negative = 0;
     for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
         if (art_step > input->art_delay) {
             lanczos_step = lanczos(config0, input, disp_num, disp_list,
                                    &eigenvalue, eigenmode, comm);
         }
+        /* mixing */
+        if (eigenvalue < 0) {
+            negative++;
+        } else {
+            negative = 0;
+        }
         /* uphill push */
         double *push_direction = uphill_push(config0, input, disp_num, disp_list,
                                              eigenvalue, eigenmode,
-                                             init_direction, comm);
+                                             init_direction, negative, comm);
         /* normal relax */
         perp_relax(config0, input, disp_num, disp_list,
                    eigenvalue, push_direction, count, art_step, lanczos_step, comm);

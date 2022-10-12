@@ -36,6 +36,7 @@ typedef struct _Input
     double lambda_conv;
     int max_num_rlx;
     int art_delay;
+    int art_mixing;
 
     double frequency;
     double temperature;

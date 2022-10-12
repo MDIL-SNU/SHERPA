@@ -247,6 +247,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         return 1;
     }
+    errno = input_int(&(input->art_mixing), "ART_MIXING", filename);
+    if (errno) {
+        return 1;
+    }
     errno = input_double(&(input->frequency), "FREQUENCY", filename);
     if (errno) {
         return 1;
@@ -338,6 +342,7 @@ void write_input(Input *input)
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
     fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
+    fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
 
     fputs("# system parameter #\n", fp);
     fprintf(fp, "FREQUENCY\t= %f\n", input->frequency);
