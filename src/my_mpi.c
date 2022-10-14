@@ -194,9 +194,9 @@ int MPI_Fetch_and_op(void *origin_addr, void *result_addr,
     if (op == MPI_SUM) {
         ierror = MPI_SUCCESS;
         if (datatype == MPI_INT) {
-            *(int *)result_addr = win + *(int *)origin_addr;
+            *(int *)result_addr += *(int *)origin_addr;
         } else if (datatype == MPI_DOUBLE) {
-            *(double *)result_addr = win + *(double *)origin_addr;
+            *(double *)result_addr += *(double *)origin_addr;
         } else {
             ierror = MPI_FAILURE;
         }

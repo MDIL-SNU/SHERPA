@@ -14,21 +14,11 @@
 #include "my_mpi.h"
 #include "sps_utils.h"
 #include "target.h"
-
-
 #ifdef LMP
 #include "lmp_calculator.h"
-void init_win(int *ptr, MPI_Win *win, int val)
-{
-    *ptr = 0;
-}
 #endif
 #ifdef VASP
 #include "vasp_calculator.h"
-void init_win(int *ptr, MPI_Win *win, int val)
-{
-    *win = val;
-}
 #endif
 
 
@@ -173,20 +163,22 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_exit, &exit_win);
 
-    init_win(global_count, &count_win, -1);
-    init_win(global_recycle, &recycle_win, 0);
-    init_win(global_conv, &conv_win, 0);
-    init_win(global_redundant, &redundant_win, 0);
-    init_win(global_exit, &exit_win, 0);
+    #ifdef LMP
+    *global_count = 0;
+    *global_recycle = 0;
+    *global_conv = 0;
+    *global_redundant = 0;
+    *global_exit = 0;
+    #endif
 
     int zero = 0;
     int one = 1;
     int mone = -1;
-    int local_count;
-    int local_recycle;
-    int local_conv;
-    int local_redundant;
-    int local_exit;
+    int local_count = -1;
+    int local_recycle = 0;
+    int local_conv = 0;
+    int local_redundant = 0;
+    int local_exit = 0;
     int local_reac_num = 0;
     int local_dege_num = 0;
     double local_rate_sum = 0.0;
@@ -329,6 +321,13 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+            #ifdef VASP
+            char old_filename[128];
+            sprintf(old_filename, "%s/OUTCAR", input->output_dir);
+            char new_filename[128];
+            sprintf(new_filename, "%s/OUTCAR_%d", input->output_dir, local_count);
+            rename(old_filename, new_filename);
+            # endif
         }
         free_config(initial);
         free_config(final);

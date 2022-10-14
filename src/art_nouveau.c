@@ -444,6 +444,19 @@ int art_nouveau(Config *initial, Config *final, Input *input,
             lanczos_step = lanczos(config0, input, disp_num, disp_list,
                                    &eigenvalue, eigenmode, comm);
         }
+        /* test */
+        if (local_rank == 0) {
+            sprintf(filename, "%s/%d_%d.MODECAR",
+                    input->output_dir, count, art_step);
+            FILE *fp = fopen(filename, "w");
+            for (i = 0; i < disp_num; ++i) {
+                fprintf(fp, "%f %f %f\n",
+                        eigenmode[i * 3 + 0],
+                        eigenmode[i * 3 + 1],
+                        eigenmode[i * 3 + 2]);
+            }
+            fclose(fp);
+        }
         /* mixing */
         if (eigenvalue < 0) {
             negative++;

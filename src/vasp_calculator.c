@@ -32,10 +32,11 @@ void modify_incar(Input *input, char *filename, int ibrion)
 {
     FILE *wp = fopen(filename, "w");
     char line[1024];
-    fputs("\n# Overwritten by SPS #\n", wp);
+    fputs("# Overwritten by SPS #\n", wp);
     sprintf(line, "ISTART    =    %d\n", input->istart);
     fputs(line, wp);
     if (input->istart > 0) {
+        fputs("ICHARG    =    0\n", wp);
         fputs("LWAVE     =    TRUE\n", wp);
     }
     sprintf(line, "IBRION    =    %d\n", ibrion);
@@ -44,9 +45,11 @@ void modify_incar(Input *input, char *filename, int ibrion)
         fputs("NSW       =    0\n", wp);
     } else {
         fputs("NSW       =    1000\n", wp);
+        fputs("POTIM     =    0.5\n", wp);
     }
     sprintf(line, "EDIFFG    =    -%f\n", input->f_tol);
     fputs(line, wp);
+    fputs("\n", wp);
     FILE *rp = fopen("INCAR", "r");
     while (fgets(line, 1024, rp)) {
         fputs(line, wp);
