@@ -191,6 +191,11 @@ int read_input(Input *input, char *filename)
         printf("CONFIDENCE is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
+    if (errno) {
+        printf("MAX_SEARCH is missing.\n");
+        return 1;
+    }
     errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
     if (errno) {
         printf("PAIR_STYLE is missing.\n");
@@ -351,6 +356,7 @@ void write_input(Input *input)
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+    fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);

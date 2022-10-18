@@ -154,6 +154,19 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             eigenmode[j * 3 + 1] = new_eigenmode[j * 3 + 1];
             eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
         }
+        /* test */
+        if (local_rank == 0) {
+            sprintf(filename, "%s/%d_%d_%d.MODECAR",
+                    input->output_dir, count, dimer_step, i);
+            FILE *fp = fopen(filename, "w");
+            for (j = 0; j < disp_num; ++j) {
+                fprintf(fp, "%f %f %f\n",
+                        eigenmode[j * 3 + 0],
+                        eigenmode[j * 3 + 1],
+                        eigenmode[j * 3 + 2]);
+            }
+            fclose(fp);
+        }
         free(n_A);
         free(n_B);
         free(dforce);

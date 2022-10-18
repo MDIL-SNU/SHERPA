@@ -41,6 +41,7 @@ MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
+MAX_SEARCH  = 1
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -97,6 +98,7 @@ RESTART_DIR = ./gen_0
 |TRIAL_STEP|Trial step size of optimization|Angstrom|
 |INIT_RELAX|Initial structure optimization||
 |CONFIDENCE|Confidence level of saddle point search||
+|MAX_SEARCH|Maximum number of saddle point searches||
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
 |PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|

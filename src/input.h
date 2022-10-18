@@ -16,6 +16,7 @@ typedef struct _Input
     double trial_step;
     int init_relax;
     double confidence;
+    int max_search;
 
     char *pair_style;
     char *pair_coeff;

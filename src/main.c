@@ -210,7 +210,8 @@ int main(int argc, char *argv[])
             MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
                              0, (MPI_Aint)0, MPI_SUM, redundant_win);
             MPI_Win_unlock(0, redundant_win);
-            if (local_redundant >= input->nredundant) {
+            if ((local_redundant >= input->nredundant) ||
+                (local_count >= input->max_search)) {
                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
                 MPI_Fetch_and_op(&one, &local_exit, MPI_INT,
                                  0, (MPI_Aint)0, MPI_SUM, exit_win);

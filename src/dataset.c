@@ -73,7 +73,7 @@ void free_dataset(Dataset *dataset)
     if (ptr != NULL) {
         Data *next = ptr->next;
         while (1) {
-            /* already deleted in sps */
+            /* already freed in sps */
             //free(ptr->eigenmode);
             free(ptr);
             if (next == NULL) {
