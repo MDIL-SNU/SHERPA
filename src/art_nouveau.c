@@ -204,28 +204,28 @@ static double *uphill_push(Config *config, Input *input,
         free(parallel_force);
         if (dot(force, eigenmode, disp_num) > 0) {
             for (i = 0; i < disp_num; ++i) {
-                push_vector[i * 3 + 0] = -ratio * dr * eigenmode[i * 3 + 0] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 0];
-                push_vector[i * 3 + 1] = -ratio * dr * eigenmode[i * 3 + 1] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 1];
-                push_vector[i * 3 + 2] = -ratio * dr * eigenmode[i * 3 + 2] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 2];
+                push_vector[i * 3 + 0] = dr * (init_direction[i * 3 + 0] * (1 - ratio)
+                                                  - eigenmode[i * 3 + 0] * ratio);
+                push_vector[i * 3 + 1] = dr * (init_direction[i * 3 + 1] * (1 - ratio)
+                                                  - eigenmode[i * 3 + 1] * ratio);
+                push_vector[i * 3 + 2] = dr * (init_direction[i * 3 + 2] * (1 - ratio)
+                                                  - eigenmode[i * 3 + 2] * ratio);
             }
         } else {
             for (i = 0; i < disp_num; ++i) {
-                push_vector[i * 3 + 0] = ratio * dr * eigenmode[i * 3 + 0] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 0];
-                push_vector[i * 3 + 1] = ratio * dr * eigenmode[i * 3 + 1] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 1];
-                push_vector[i * 3 + 2] = ratio * dr * eigenmode[i * 3 + 2] +
-                                         (1 - ratio) * input->stddev * init_direction[i * 3 + 2];
+                push_vector[i * 3 + 0] = dr * (init_direction[i * 3 + 0] * (1 - ratio)
+                                                  + eigenmode[i * 3 + 0] * ratio);
+                push_vector[i * 3 + 1] = dr * (init_direction[i * 3 + 1] * (1 - ratio)
+                                                  + eigenmode[i * 3 + 1] * ratio);
+                push_vector[i * 3 + 2] = dr * (init_direction[i * 3 + 2] * (1 - ratio)
+                                                  + eigenmode[i * 3 + 2] * ratio);
             }
         }
     } else {
         for (i = 0; i < disp_num; ++i) {
-            push_vector[i * 3 + 0] = input->stddev * init_direction[i * 3 + 0];
-            push_vector[i * 3 + 1] = input->stddev * init_direction[i * 3 + 1];
-            push_vector[i * 3 + 2] = input->stddev * init_direction[i * 3 + 2];
+            push_vector[i * 3 + 0] = input->max_step * init_direction[i * 3 + 0];
+            push_vector[i * 3 + 1] = input->max_step * init_direction[i * 3 + 1];
+            push_vector[i * 3 + 2] = input->max_step * init_direction[i * 3 + 2];
         }
     }
     for (i = 0; i < disp_num; ++i) {
