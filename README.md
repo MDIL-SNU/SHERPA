@@ -42,6 +42,7 @@ TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 1
+WRITE_MODE  = 1
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -50,7 +51,7 @@ PAIR_CUTOFF = 6.0
 NCORE       = 8
 
 # VASP parameter #
-VASP_CMD    = mpirun -np 32 vasp_std
+VASP_CMD    = mpirun -np $nprocs vasp_std
 ISTART      = 1
 
 # dimer parameter #
@@ -99,6 +100,7 @@ RESTART_DIR = ./gen_0
 |INIT_RELAX|Initial structure optimization||
 |CONFIDENCE|Confidence level of saddle point search||
 |MAX_SEARCH|Maximum number of saddle point searches||
+|WRITE_MODE|Write eigenmode for each step||
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
 |PAIR_CUTOFF|Cutoff radius of potential file|Angstrom|

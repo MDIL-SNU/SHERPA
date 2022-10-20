@@ -150,7 +150,7 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
         }
         /* test */
-        if (local_rank == 0) {
+        if ((local_rank == 0) && (input->write_mode)) {
             sprintf(filename, "%s/%d_%d_%d.MODECAR",
                     input->output_dir, count, dimer_step, i);
             FILE *fp = fopen(filename, "w");

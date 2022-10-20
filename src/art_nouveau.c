@@ -445,7 +445,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
                                    &eigenvalue, eigenmode, comm);
         }
         /* test */
-        if (local_rank == 0) {
+        if ((local_rank == 0) && (input->write_mode)) {
             sprintf(filename, "%s/%d_%d.MODECAR",
                     input->output_dir, count, art_step);
             FILE *fp = fopen(filename, "w");

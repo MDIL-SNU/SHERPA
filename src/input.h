@@ -17,6 +17,7 @@ typedef struct _Input
     int init_relax;
     double confidence;
     int max_search;
+    int write_mode;
 
     char *pair_style;
     char *pair_coeff;
