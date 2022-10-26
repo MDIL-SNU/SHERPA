@@ -145,6 +145,10 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
         double *work = (double *)malloc(lwork * sizeof(double));
         dsyev("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
         lambda_new = w[0]; 
+        /* test */
+        for (i = 0; i < k; ++i) {
+            printf("eigenvalue i %d: %f\n", i, w[i]);
+        }
         criteria = fabs((lambda_new - lambda_old) / lambda_new);
         lambda_old = lambda_new;
         free(work);
@@ -406,15 +410,19 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
     free(tmp_eigenmode);
 
-    /* perturbate starting config */
     double *init_direction = (double *)malloc(sizeof(double) * disp_num * 3);
     for (i = 0; i < disp_num; ++i) {
         init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
         init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
         init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
-        config0->pos[disp_list[i] * 3 + 0] += input->stddev * init_direction[i * 3 + 0];
-        config0->pos[disp_list[i] * 3 + 1] += input->stddev * init_direction[i * 3 + 1];
-        config0->pos[disp_list[i] * 3 + 2] += input->stddev * init_direction[i * 3 + 2];
+    }
+    /* perturbate starting config */
+    if (input->init_disp > 0) {
+        for (i = 0; i < disp_num; ++i) {
+            config0->pos[disp_list[i] * 3 + 0] += input->stddev * init_direction[i * 3 + 0];
+            config0->pos[disp_list[i] * 3 + 1] += input->stddev * init_direction[i * 3 + 1];
+            config0->pos[disp_list[i] * 3 + 2] += input->stddev * init_direction[i * 3 + 2];
+        }
     }
 
     double fmax;

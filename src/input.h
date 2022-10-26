@@ -18,6 +18,7 @@ typedef struct _Input
     double confidence;
     int max_search;
     int write_mode;
+    int init_disp;
 
     char *pair_style;
     char *pair_coeff;

@@ -201,6 +201,11 @@ int read_input(Input *input, char *filename)
         printf("WRITE_MODE is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->init_disp), "INIT_DISP", filename);
+    if (errno) {
+        printf("INIT_DISP is missing.\n");
+        return 1;
+    }
     errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
     if (errno) {
         printf("PAIR_STYLE is missing.\n");
@@ -363,6 +368,7 @@ void write_input(Input *input)
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
+    fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);

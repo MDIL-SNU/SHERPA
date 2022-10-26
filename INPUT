@@ -13,6 +13,7 @@ INIT_RELAX  = 1
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 1
 WRITE_MODE  = 1
+INIT_DISP   = 1
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn

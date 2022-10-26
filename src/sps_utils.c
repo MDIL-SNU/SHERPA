@@ -417,6 +417,17 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             config2 = (Config *)malloc(sizeof(Config));
         }
         trial++;
+        if (trial > 10) {
+            if (local_rank == 0) {
+                char filename[128];
+                sprintf(filename, "%s/SPS_%d.log",
+                        input->output_dir, count);
+                FILE *fp = fopen(filename, "a");
+                fputs(" Saddle state: not splited\n", fp);
+                fclose(fp);
+            }
+            return 1;
+        }
     }
 
     int diff1 = diff_config(initial, config1, 2 * input->max_step);

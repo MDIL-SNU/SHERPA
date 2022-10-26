@@ -504,10 +504,12 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
 
     /* perturbate starting config */
-    for (i = 0; i < disp_num; ++i) {
-        config0->pos[disp_list[i] * 3 + 0] += input->stddev * eigenmode[i * 3 + 0];
-        config0->pos[disp_list[i] * 3 + 1] += input->stddev * eigenmode[i * 3 + 1];
-        config0->pos[disp_list[i] * 3 + 2] += input->stddev * eigenmode[i * 3 + 2];
+    if (input->init_disp > 0) {
+        for (i = 0; i < disp_num; ++i) {
+            config0->pos[disp_list[i] * 3 + 0] += input->stddev * eigenmode[i * 3 + 0];
+            config0->pos[disp_list[i] * 3 + 1] += input->stddev * eigenmode[i * 3 + 1];
+            config0->pos[disp_list[i] * 3 + 2] += input->stddev * eigenmode[i * 3 + 2];
+        }
     }
 
     /* cg optimization */
