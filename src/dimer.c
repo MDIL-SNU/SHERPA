@@ -458,8 +458,8 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
     }
     for (i = 0; i < disp_num; ++i) {
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-        full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+        full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
+        full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     if (local_rank == 0) {
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",

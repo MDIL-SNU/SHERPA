@@ -15,10 +15,10 @@ typedef struct _Input
     double max_step;
     double trial_step;
     int init_relax;
+    int init_disp;
     double confidence;
     int max_search;
     int write_mode;
-    int init_disp;
 
     char *pair_style;
     char *pair_coeff;

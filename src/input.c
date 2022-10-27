@@ -186,6 +186,11 @@ int read_input(Input *input, char *filename)
         printf("INIT_RELAX is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->init_disp), "INIT_DISP", filename);
+    if (errno) {
+        printf("INIT_DISP is missing.\n");
+        return 1;
+    }
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
     if (errno) {
         printf("CONFIDENCE is missing.\n");
@@ -199,11 +204,6 @@ int read_input(Input *input, char *filename)
     errno = input_int(&(input->write_mode), "WRITE_MODE", filename);
     if (errno) {
         printf("WRITE_MODE is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->init_disp), "INIT_DISP", filename);
-    if (errno) {
-        printf("INIT_DISP is missing.\n");
         return 1;
     }
     errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
@@ -365,10 +365,10 @@ void write_input(Input *input)
     fprintf(fp, "MAX_STEP\t= %f\n", input->max_step);
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
+    fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
-    fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);

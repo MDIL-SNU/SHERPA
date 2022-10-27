@@ -40,10 +40,10 @@ STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.001
 INIT_RELAX  = 1
+INIT_DISP   = 1
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 1
 WRITE_MODE  = 1
-INIT_DISP   = 1
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -99,9 +99,9 @@ RESTART_DIR = ./gen_0
 |MAX_STEP|Maximum step size of optimization|Angstrom|
 |TRIAL_STEP|Trial step size of optimization|Angstrom|
 |INIT_RELAX|Initial structure optimization||
+|INIT_DISP|Initial structure perturbation||
 |CONFIDENCE|Confidence level of saddle point search||
 |MAX_SEARCH|Maximum number of saddle point searches||
-|INIT_DISP|Initial structure perturbation||
 |WRITE_MODE|Write eigenmode for each step||
 |PAIR_STYLE|Pair style for LAMMPS input||
 |PAIR_COEFF|Pair coeff for LAMMPS input||
