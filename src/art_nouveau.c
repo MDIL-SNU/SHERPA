@@ -145,10 +145,6 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
         double *work = (double *)malloc(lwork * sizeof(double));
         dsyev("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
         lambda_new = w[0]; 
-        /* test */
-        for (i = 0; i < k; ++i) {
-            printf("eigenvalue i %d: %f\n", i, w[i]);
-        }
         criteria = fabs((lambda_new - lambda_old) / lambda_new);
         lambda_old = lambda_new;
         free(work);

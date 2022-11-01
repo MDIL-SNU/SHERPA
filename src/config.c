@@ -180,11 +180,11 @@ int read_config(Config *config, Input *input, char *filename)
     }
 
     /* atomic number type */
-    ptr = strtok(tmp_line, " \n");
+    ptr = strtok(tmp_line, " \r\n");
     config->atom_num = (int *)malloc(sizeof(int) * config->ntype);
     for (i = 0; i < config->ntype; ++i) {
         config->atom_num[i] = get_atom_num(ptr);
-        ptr = strtok(NULL, " \n");
+        ptr = strtok(NULL, " \r\n");
     }
 
     /* each number of type */

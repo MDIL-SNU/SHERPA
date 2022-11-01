@@ -198,7 +198,7 @@ void get_cg_direction(double *direction, double *direction_old,
     double a1 = dot(direction, direction_old, n);
     double a2 = norm(direction_old, n);
     double gamma;
-    if ((a1 < 0.5 * a2) && (a2 > 0.0)) {
+    if ((a1 < 0.5 * a2) && (fabs(a2) > 1e-8)) {
         double *ddirection = (double *)malloc(sizeof(double) * n * 3);
         for (i = 0; i < n; ++i) {
             ddirection[i * 3 + 0] = direction[i * 3 + 0]
