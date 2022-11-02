@@ -338,6 +338,30 @@ static void perp_relax(Config *config0, Input *input,
                 step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
             }
         }
+
+        /* check nan */
+        int nan = 0;
+        for (i = 0; i < disp_num; ++i) {
+            if (isnan(step[i * 3 + 0]) != 0) {
+                nan = 1;
+            }
+            if (isnan(step[i * 3 + 1]) != 0) {
+                nan = 1;
+            }
+            if (isnan(step[i * 3 + 2]) != 0) {
+                nan = 1;
+            }
+        }
+        if (nan > 0) {
+            free(perp_force0);
+            free(perp_force1);
+            free_config(config1);
+            free(direction);
+            free(tmp_force);
+            free(step);
+            break;
+        }
+
         for (i = 0; i < disp_num; ++i) {
             config0->pos[disp_list[i] * 3 + 0] += step[i * 3 + 0];
             config0->pos[disp_list[i] * 3 + 1] += step[i * 3 + 1];
