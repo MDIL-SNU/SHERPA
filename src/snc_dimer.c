@@ -312,19 +312,6 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
             eigenmode[j * 3 + 1] = new_eigenmode[j * 3 + 1];
             eigenmode[j * 3 + 2] = new_eigenmode[j * 3 + 2];
         }
-        /* test */
-        if ((local_rank == 0) && (input->write_mode)) {
-            sprintf(filename, "%s/%d_%d_%d.MODECAR",
-                    input->output_dir, count, dimer_step, i);
-            FILE *fp = fopen(filename, "w");
-            for (j = 0; j < disp_num; ++j) {
-                fprintf(fp, "%f %f %f\n",
-                        eigenmode[j * 3 + 0],
-                        eigenmode[j * 3 + 1],
-                        eigenmode[j * 3 + 2]);
-            }
-            fclose(fp);
-        }
         free(n_A);
         free(n_B);
         free(dforce);
@@ -579,6 +566,26 @@ int snc_dimer(Config *initial, Config *final, Input *input,
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
         rotate(config0, input, disp_num, disp_list,
                eigenmode, H, w, count, dimer_step, comm);
+        /* test */
+        if ((local_rank == 0) && (input->write_mode)) {
+            inv_transform(eigenmode, H, w, disp_num);
+            for (i = 0; i < extract_num; ++i) {
+                full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+                full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
+                full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
+            }
+            sprintf(filename, "%s/%d_%d.MODECAR",
+                    input->output_dir, count, dimer_step);
+            FILE *fp = fopen(filename, "w");
+            for (i = 0; i < final->tot_num; ++i) {
+                fprintf(fp, "%f %f %f\n",
+                        full_eigenmode[i * 3 + 0],
+                        full_eigenmode[i * 3 + 1],
+                        full_eigenmode[i * 3 + 2]);
+            }
+            fclose(fp);
+            transform(eigenmode, H, w, disp_num);
+        }
         translate(config0, input, disp_num, disp_list, eigenmode, H, w,
                   direction_old, cg_direction, dimer_step, comm);
         /* convert coordinate */

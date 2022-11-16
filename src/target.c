@@ -31,7 +31,7 @@ int read_target(Config *config, Input *input,
                 tmp_target_num++;
                 ptr = strtok(NULL, " \n\t");
             }
-            if (tmp_target_num + (*target_num) > (*list_size)) {
+            if (tmp_target_num >= (*list_size)) {
                 do {
                     (*list_size) = (*list_size) << 1;
                 } while (tmp_target_num + (*target_num) > (*list_size));
@@ -43,7 +43,22 @@ int read_target(Config *config, Input *input,
                 (*target_num)++;
             }
         } else if (strncmp(ptr, "T", 1) == 0) {
-            // gen_type();
+            strtok(line, " \n\t");
+            ptr = strtok(NULL, " \n\t");
+            while (ptr != NULL) {
+                int type = atoi(ptr);
+                for (i = 0; i < config->tot_num; ++i) {
+                    if (config->type[i] == type) {
+                        (*target_list)[*target_num] = i;
+                        (*target_num)++;
+                        if ((*target_num) >= (*list_size)) {
+                            (*list_size) = (*list_size) << 1;
+                            *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
+                        }
+                    }
+                }
+                ptr = strtok(NULL, " \n\t");
+            }
         } else if (strncmp(ptr, "A", 1) == 0) {
             //gen_all();
         } else if (strncmp(ptr, "R", 1) == 0) {
@@ -56,7 +71,6 @@ int read_target(Config *config, Input *input,
 }
 
 
-//TODO: A, R
 void write_target(Input *input, int target_num, int *target_list)
 {
     int i;

@@ -1,5 +1,5 @@
 # Saddle_point_search
-Dimer method combined with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator).  
+Saddle point search combined with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 Neural Network Potentials (NNPs) made by [SIMPLE-NN](https://github.com/MDIL-SNU/SIMPLE-NN_v2) are also possible.  
 
 ## Requirement
@@ -132,10 +132,11 @@ RESTART_DIR = ./gen_0
 It contains the target atom indices to be the center of active volume.
 ```text
 I 0 1 2 3
+T 1
 ```
 
 * I: Index
-* T: Type (not supported yet)
+* T: Type
 * A: All (not supported yet)
 * R: Random (not supported yet)
 

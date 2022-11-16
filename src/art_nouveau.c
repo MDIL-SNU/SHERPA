@@ -474,14 +474,19 @@ int art_nouveau(Config *initial, Config *final, Input *input,
         }
         /* test */
         if ((local_rank == 0) && (input->write_mode)) {
+            for (i = 0; i < disp_num; ++i) {
+                full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
+                full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
+                full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
+            }
             sprintf(filename, "%s/%d_%d.MODECAR",
                     input->output_dir, count, art_step);
             FILE *fp = fopen(filename, "w");
-            for (i = 0; i < disp_num; ++i) {
+            for (i = 0; i < final->tot_num; ++i) {
                 fprintf(fp, "%f %f %f\n",
-                        eigenmode[i * 3 + 0],
-                        eigenmode[i * 3 + 1],
-                        eigenmode[i * 3 + 2]);
+                        full_eigenmode[i * 3 + 0],
+                        full_eigenmode[i * 3 + 1],
+                        full_eigenmode[i * 3 + 2]);
             }
             fclose(fp);
         }
