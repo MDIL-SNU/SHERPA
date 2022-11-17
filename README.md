@@ -200,6 +200,7 @@ Otherwise, execute code without parallel command following:
 
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format, which includes `Selective dynamics`.
-3. `NCORE` of 4-8 is recommended with SPS_LMP. 
-4. The filename of final structure follows Final _ `count` _ `atomic index`.POSCAR
-5. For VASP calculation, INCAR, KPOINTS, and POTCAR should be prepared in working directory.
+2. `NCORE` of 4-8 is recommended with SPS_LMP. 
+3. The filename of final structure follows Final _ `count` _ `atomic index`.POSCAR
+4. For VASP calculation, INCAR, KPOINTS, and POTCAR should be prepared in working directory.
+5. To use hybrid potentials, write down all `pair_coeff`s within `PAIR_COEFF` with the delimiter (|) between them.
