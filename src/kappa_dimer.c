@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef LMP
 #include "lmp_calculator.h"
 #endif
@@ -488,7 +489,9 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
         tmp_eigenmode[i * 3 + 1] = full_eigenmode[extract_list[i] * 3 + 1];
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
     }
+    memset(full_eigenmode, 0, sizeof(double) * final->tot_num * 3);
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
+    free(tmp_eigenmode);
 
     /* perturbate starting config */
     if (input->init_disp > 0) {
@@ -544,6 +547,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
             fclose(fp);
         }
         /* kappa-dimer */
+        double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
             tmp_eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
             tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
@@ -551,6 +555,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
         }
         kappa = constrained_rotate(config0, input, disp_num, disp_list,
                                    tmp_eigenmode, comm);
+        free(tmp_eigenmode);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step, kappa, comm);
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);     
@@ -575,7 +580,6 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
             break;
         }
     }
-    free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
     if (local_rank == 0) {

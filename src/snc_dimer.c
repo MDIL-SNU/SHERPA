@@ -2,6 +2,7 @@
 #include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef LMP
 #include "lmp_calculator.h"
 #endif
@@ -523,7 +524,9 @@ int snc_dimer(Config *initial, Config *final, Input *input,
         tmp_eigenmode[i * 3 + 1] = full_eigenmode[extract_list[i] * 3 + 1];
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
     }
+    memset(full_eigenmode, 0, sizeof(double) * final->tot_num * 3);
     double *eigenmode = normalize(tmp_eigenmode, disp_num);
+    free(tmp_eigenmode);
 
     /* perturbate starting config */
     if (input->init_disp > 0) {
@@ -615,7 +618,6 @@ int snc_dimer(Config *initial, Config *final, Input *input,
             break;
         }
     }
-    free(tmp_eigenmode);
     free(direction_old);
     free(cg_direction);
     if (local_rank == 0) {
