@@ -86,91 +86,91 @@ RESTART_DIR = ./gen_0
 ```
 
 * General parameter
-  * NELEMENT [integer]
+  * **NELEMENT** [integer]
     * The number of elements
-  * ATOM_TYPE [strings]
+  * **ATOM_TYPE** [strings]
     * Atomic symbols of elements
-  * INIT_CONFIG [strings]
+  * **INIT_CONFIG** [strings]
     * A path of file containing initial atomic positions
-  * TARGET_LIST [strings]
+  * **TARGET_LIST** [strings]
     * A path of file containing target atoms
-  * DISP_DIST [real]
+  * **DISP_DIST** [real]
     * A displacement for the finite difference method (Angs)
-  * ACTI_CUTOFF [real]
+  * **ACTI_CUTOFF** [real]
     * A cutoff radius of active volume (Angs)
-  * F_TOL [real]
+  * **F_TOL** [real]
     * A force tolerance for dimer method (eV/Angs)
-  * STDDEV [real]
+  * **STDDEV** [real]
     * A standard deviation of gaussian displacement
-  * MAX_STEP [real]
+  * **MAX_STEP** [real]
     * A maximum step size of image movement (Angs)
-  * TRIAL_STEP [real]
+  * **TRIAL_STEP** [real]
     * A trial step size of image for cg optimization (Angs)
-  * INIT_RELAX [integer]
+  * **INIT_RELAX** [integer]
     * An initial structure optimization
-  * INIT_DISP [integer]
+  * **INIT_DISP** [integer]
     * An initial structure perturbation
-  * CONFIDENCE [real]
+  * **CONFIDENCE** [real]
     * A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
-  * MAX_SEARCH [integer]
+  * **MAX_SEARCH** [integer]
     * A maximum number of saddle point searches
-  * WRITE_MODE [integer]
+  * **WRITE_MODE** [integer]
     * An eigenmode for each step
 * LAMMPS parameter
-  * PAIR_STYLE [strings]
+  * **PAIR_STYLE** [strings]
     * Pair style in LAMMPS input
-  * PAIR_COEFF [strings]
+  * **PAIR_COEFF** [strings]
     * Pair coeff in LAMMPS input
-  * PAIR_CUTOFF [real]
+  * **PAIR_CUTOFF** [real]
     * A cutoff radius of potential file (Angs)
-  * NCORE (integer)
+  * **NCORE** (integer)
     * The number of cores for each LAMMPS instance
 * VASP parameter
-  * VASP_CMD [strings]
+  * **VASP_CMD** [strings]
     * A command for running VASP
-  * ISTART [integer]
+  * **ISTART** [integer]
     * ISTAT tag in INCAR
 * Dimer parameter
-  * KAPPA_DIMER [integer]
+  * **KAPPA_DIMER** [integer]
     * Basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664))
-  * SNC_DIMER [integer]
+  * **SNC_DIMER** [integer]
     * Scaled normal coordinate dimer method (Ref.[3](https://doi.org/10.1016/j.commatsci.2021.110785))
-  * F_ROT_MIN [real]
+  * **F_ROT_MIN** [real]
     * A minimum force criteria for rotation (eV/Angs)
-  * F_ROT_MAX [real]
+  * **F_ROT_MAX** [real]
     * A maximum force criteria for rotation (eV/Angs)
-  * MAX_NUM_ROT [integer]
+  * **MAX_NUM_ROT** [integer]
     * A maximum number of rotation
-  * TRIAL_ANGLE [real]
+  * **TRIAL_ANGLE** [real]
     * A trial rotation angle (degree)
 * ART nouveau parameter
-  * ART_NOUVEAU [integer]
+  * **ART_NOUVEAU** [integer]
     * Activation and relaxation technique (Ref.[4](http://dx.doi.org/10.1103/PhysRevE.62.7723))
-  * LAMBDA_CRIT [real]
+  * **LAMBDA_CRIT** [real]
     * A criteria value of inflection region (eV/Angs^2)
-  * LAMBDA_CONV [real]
+  * **LAMBDA_CONV** [real]
     * A convergence criteria value for Lanczos method (eV/Angs^2)
-  * MAX_NUM_RLX [integer]
+  * **MAX_NUM_RLX** [integer]
     * A maximum number of relaxation
-  * ART_DELAY [integer]
+  * **ART_DELAY** [integer]
     * An initial step without Lanczos method
-  * ART_MIXING [integer]
+  * **ART_MIXING** [integer]
     * A mixing step above inflection line
 * System parameter
-  * FREQUENCY [real]
+  * **FREQUENCY** [real]
     * An attempt frequency of reaction (1/s)
-  * TEMPERATURE [real]
+  * **TEMPERATURE** [real]
     * An system temperature (K)
 * Random parameter
-  * RANDOM_SEED [integer]
+  * **RANDOM_SEED** [integer]
     * A seed for random number
 * Directory parameter
-  * OUTPUT_DIR [strings]
+  * **OUTPUT_DIR** [strings]
     * A directory for output files
 * Restart parameter
-  * RESTART [integer]
+  * **RESTART** [integer]
     * A restart from previous SPS
-  * RESTART_DIR [strings]
+  * **RESTART_DIR** [strings]
     * A directory of previous SPS output
 
 ## TARGET

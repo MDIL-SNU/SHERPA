@@ -7,13 +7,15 @@
 #include "sps_utils.h"
 
 
-void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv,
-               MPI_Comm comm)
+void *lmp_init(Config *config, Input *input, MPI_Comm comm)
 {
     /* create LAMMPS instance */
     int i;
     void *lmp;
     char cmd[1024];
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+    //char *lmpargv[] = {"liblammps", "-screen", "none"};
+    int lmpargc = sizeof(lmpargv) / sizeof(char *);
     lmp = lammps_open(lmpargc, lmpargv, comm, NULL);
     if (lmp == NULL) {
         printf("LAMMPS initialization failed");
@@ -39,6 +41,13 @@ void *lmp_init(Config *config, Input *input, int lmpargc, char **lmpargv,
                 get_mass(get_atom_num(input->atom_type[i])));
         lammps_command(lmp, cmd);
     }
+    /* potential */
+    sprintf(cmd, "pair_style %s", input->pair_style);
+    lammps_command(lmp, cmd);
+    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
+    lammps_command(lmp, cmd);
+    /* balance */
+    lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
     return lmp;
 }
 
@@ -49,17 +58,7 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    //char *lmpargv[] = {"liblammps", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
+    lmp = lmp_init(config, input, comm);
     /* oneshot */
     lammps_command(lmp, "run 0");
     *energy = lammps_get_thermo(lmp, "pe");
@@ -76,17 +75,7 @@ void oneshot_disp(Config *config, Input *input, double *energy, double *force,
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    //char *lmpargv[] = {"liblammps", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
+    lmp = lmp_init(config, input, comm);
     /* oneshot */
     lammps_command(lmp, "run 0");
     *energy = lammps_get_thermo(lmp, "pe");
@@ -109,17 +98,7 @@ void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
     char tmp_cmd[64], cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
-    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    //char *lmpargv[] = {"liblammps", "-screen", "none"};
-    int lmpargc = sizeof(lmpargv) / sizeof(char *);
-    lmp = lmp_init(config, input, lmpargc, lmpargv, comm);
-    /* potential */
-    sprintf(cmd, "pair_style %s", input->pair_style);
-    lammps_command(lmp, cmd);
-    sprintf(cmd, "pair_coeff %s", input->pair_coeff);
-    lammps_command(lmp, cmd);
-    /* balance */
-    lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
+    lmp = lmp_init(config, input, comm);
     /* fix */
     int fix_num = 0;
     for (i = 0; i < config->tot_num; ++i) {
