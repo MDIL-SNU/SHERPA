@@ -10,7 +10,6 @@
 #include "dimer.h"
 #include "input.h"
 #include "kappa_dimer.h"
-#include "snc_dimer.h"
 #include "my_mpi.h"
 #include "sps_utils.h"
 #include "target.h"
@@ -255,9 +254,6 @@ int main(int argc, char *argv[])
         if (input->art_nouveau > 0) {
             conv = art_nouveau(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
-        } else if (input->snc_dimer > 0) {
-            conv = snc_dimer(initial, final, input, eigenmode,
-                             local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
             conv = kappa_dimer(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);

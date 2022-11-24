@@ -33,12 +33,9 @@ void modify_incar(Input *input, char *filename, int ibrion)
     FILE *wp = fopen(filename, "w");
     char line[1024];
     fputs("# Overwritten by SPS #\n", wp);
-    sprintf(line, "ISTART    =    %d\n", input->istart);
-    fputs(line, wp);
-    if (input->istart > 0) {
-        fputs("ICHARG    =    0\n", wp);
-        fputs("LWAVE     =    TRUE\n", wp);
-    }
+    fputs("ISTART    =    1\n", wp);
+    fputs("ICHARG    =    0\n", wp);
+    fputs("LWAVE     =    TRUE\n", wp);
     sprintf(line, "IBRION    =    %d\n", ibrion);
     fputs(line, wp);
     if (ibrion == -1) {

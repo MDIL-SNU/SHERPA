@@ -52,11 +52,9 @@ NCORE       = 8
 
 # VASP parameter #
 VASP_CMD    = mpirun -np $nprocs $vasp_path
-ISTART      = 1
 
 # dimer parameter #
 KAPPA_DIMER = 0
-SNC_DIMER   = 0
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
 MAX_NUM_ROT = 4
@@ -128,13 +126,9 @@ RESTART_DIR = ./gen_0
 * VASP parameter
   * **VASP_CMD** [strings]
     * A command for running VASP
-  * **ISTART** [integer]
-    * ISTAT tag in INCAR
 * Dimer parameter
   * **KAPPA_DIMER** [integer]
     * Basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664))
-  * **SNC_DIMER** [integer]
-    * Scaled normal coordinate dimer method (Ref.[3](https://doi.org/10.1016/j.commatsci.2021.110785))
   * **F_ROT_MIN** [real]
     * A minimum force criteria for rotation (eV/Angs)
   * **F_ROT_MAX** [real]
@@ -145,7 +139,7 @@ RESTART_DIR = ./gen_0
     * A trial rotation angle (degree)
 * ART nouveau parameter
   * **ART_NOUVEAU** [integer]
-    * Activation and relaxation technique (Ref.[4](http://dx.doi.org/10.1103/PhysRevE.62.7723))
+    * Activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723))
   * **LAMBDA_CRIT** [real]
     * A criteria value of inflection region (eV/Angs^2)
   * **LAMBDA_CONV** [real]

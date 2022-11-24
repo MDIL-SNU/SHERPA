@@ -231,19 +231,9 @@ int read_input(Input *input, char *filename)
         printf("VASP_CMD is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->istart), "ISTART", filename);
-    if (errno) {
-        printf("ISTART is missing.\n");
-        return 1;
-    }
     errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
     if (errno) {
         printf("KAPPA_DIMER is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->snc_dimer), "SNC_DIMER", filename);
-    if (errno) {
-        printf("SNC_DIMER is missing.\n");
         return 1;
     }
     errno = input_double(&(input->f_rot_min), "F_ROT_MIN", filename);
@@ -335,7 +325,7 @@ int read_input(Input *input, char *filename)
     #endif
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
-    if (input->kappa_dimer + input->snc_dimer + input->art_nouveau > 1) {
+    if (input->kappa_dimer + input->art_nouveau > 1) {
         return 1;
     }
     return 0;
@@ -380,12 +370,10 @@ void write_input(Input *input)
 
     fputs("# VASP parameter #\n", fp);
     fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
-    fprintf(fp, "ISTART\t\t= %d\n", input->istart);
     fputs("\n", fp);
 
     fputs("# dimer parameter #\n", fp);
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
-    fprintf(fp, "SNC_DIMER\t= %d\n", input->snc_dimer);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
     fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
     fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);

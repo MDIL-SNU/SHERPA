@@ -25,10 +25,8 @@ typedef struct _Input
     int ncore;
 
     char *vasp_cmd;
-    int istart;
 
     int kappa_dimer;
-    int snc_dimer;
     double f_rot_min;
     double f_rot_max;
     int max_num_rot;

@@ -12,7 +12,6 @@ SET ( COMMON_SRC_FILES
         art_nouveau.c
         dimer.c
         kappa_dimer.c
-        snc_dimer.c
         input.c
         my_mpi.c
         target.c

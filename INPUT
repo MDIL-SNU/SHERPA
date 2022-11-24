@@ -23,11 +23,9 @@ NCORE       = 8
 
 # VASP parameter #
 VASP_CMD    = mpirun -np $nprocs vasp_std
-ISTART      = 1
 
 # dimer parameter #
 KAPPA_DIMER = 0
-SNC_DIMER   = 0
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
 MAX_NUM_ROT = 4
