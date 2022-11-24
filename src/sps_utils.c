@@ -388,7 +388,10 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     Config *config1 = (Config *)malloc(sizeof(Config));
     Config *config2 = (Config *)malloc(sizeof(Config));
     int trial = 1;
-    double energy;
+    double energy1;
+    double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double energy2;
+    double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     while (1) {
         copy_config(config1, config0);
         copy_config(config2, config0);
@@ -406,8 +409,15 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             config2->pos[disp_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2]
                                                - 0.1 * trial * eigenmode[i * 3 + 2];
         }
-        atom_relax(config1, input, &energy, comm); 
-        atom_relax(config2, input, &energy, comm); 
+        oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
+        oneshot_disp(config2, input, &energy2, force2, disp_num, disp_list, comm);
+        /* add criteria */
+        if (dot(force1, force2, disp_num) > 0) {
+            trial++;
+            continue;
+        }
+        atom_relax(config1, input, &energy1, comm);
+        atom_relax(config2, input, &energy2, comm);
         if (diff_config(config1, config2, 2 * input->max_step) == 1) {
             break;
         } else {
@@ -429,6 +439,8 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             return 1;
         }
     }
+    free(force1);
+    free(force2);
 
     int diff1 = diff_config(initial, config1, 2 * input->max_step);
     int diff2 = diff_config(initial, config2, 2 * input->max_step);

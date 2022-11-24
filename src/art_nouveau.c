@@ -470,7 +470,8 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     int negative = 0;
     for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
-        if (art_step > input->art_delay) {
+        /* add new criteria */
+        if ((art_step > input->art_delay) && (fmax >= input->f_tol)) {
             lanczos_step = lanczos(config0, input, disp_num, disp_list,
                                    &eigenvalue, eigenmode, comm);
         }
