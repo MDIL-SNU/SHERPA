@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "art_nouveau.h"
 #include "alg_utils.h"
 #include "config.h"
 #include "dataset.h"
@@ -251,10 +250,7 @@ int main(int argc, char *argv[])
         copy_config(initial, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
-        if (input->art_nouveau > 0) {
-            conv = art_nouveau(initial, final, input, eigenmode,
-                               local_count, atom_index, &Ea, local_comm);
-        } else if (input->kappa_dimer > 0) {
+        if (input->kappa_dimer > 0) {
             conv = kappa_dimer(initial, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {

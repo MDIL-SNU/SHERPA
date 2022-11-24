@@ -9,7 +9,6 @@ SET ( COMMON_SRC_FILES
         main.c 
         config.c
         dataset.c
-        art_nouveau.c
         dimer.c
         kappa_dimer.c
         input.c

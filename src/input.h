@@ -32,13 +32,6 @@ typedef struct _Input
     int max_num_rot;
     double trial_angle;
 
-    int art_nouveau;
-    double lambda_crit;
-    double lambda_conv;
-    int max_num_rlx;
-    int art_delay;
-    int art_mixing;
-
     double frequency;
     double temperature;
 

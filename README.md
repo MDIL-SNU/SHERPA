@@ -137,19 +137,6 @@ RESTART_DIR = ./gen_0
   - A maximum number of rotation
 * **TRIAL_ANGLE** [real]
   - A trial rotation angle (degree)
-### ART nouveau parameter
-* **ART_NOUVEAU** [integer]
-  - Activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723))
-* **LAMBDA_CRIT** [real]
-  - A criteria value of inflection region (eV/Angs^2)
-* **LAMBDA_CONV** [real]
-  - A convergence criteria value for Lanczos method (eV/Angs^2)
-* **MAX_NUM_RLX** [integer]
-  - A maximum number of relaxation
-* **ART_DELAY** [integer]
-  - An initial step without Lanczos method
-* **ART_MIXING** [integer]
-  - A mixing step above inflection line
 ### System parameter
 * **FREQUENCY** [real]
   - An attempt frequency of reaction (1/s)

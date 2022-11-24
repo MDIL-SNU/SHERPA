@@ -256,36 +256,6 @@ int read_input(Input *input, char *filename)
         printf("TRIAL_ANGLE is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->art_nouveau), "ART_NOUVEAU", filename);
-    if (errno) {
-        printf("ART_NOUVEAU is missing.\n");
-        return 1;
-    }
-    errno = input_double(&(input->lambda_crit), "LAMBDA_CRIT", filename);
-    if (errno) {
-        printf("LAMBDA_CRIT is missing.\n");
-        return 1;
-    }
-    errno = input_double(&(input->lambda_conv), "LAMBDA_CONV", filename);
-    if (errno) {
-        printf("LAMBDA_CONV is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
-    if (errno) {
-        printf("MAX_NUM_RLX is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->art_delay), "ART_DELAY", filename);
-    if (errno) {
-        printf("ART_DELAY is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->art_mixing), "ART_MIXING", filename);
-    if (errno) {
-        printf("ART_MIXING is missing.\n");
-        return 1;
-    }
     errno = input_double(&(input->frequency), "FREQUENCY", filename);
     if (errno) {
         printf("FREQUENCY is missing.\n");
@@ -325,9 +295,6 @@ int read_input(Input *input, char *filename)
     #endif
     input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
-    if (input->kappa_dimer + input->art_nouveau > 1) {
-        return 1;
-    }
     return 0;
 }
 
@@ -378,15 +345,6 @@ void write_input(Input *input)
     fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
     fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
     fprintf(fp, "TRIAL_ANGLE\t= %f\n", input->trial_angle * 180 / 3.141592);
-    fputs("\n", fp);
-
-    fputs("# art_nouveau parameter #\n", fp);
-    fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
-    fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
-    fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
-    fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
-    fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
-    fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
     fputs("\n", fp);
 
     fputs("# system parameter #\n", fp);
