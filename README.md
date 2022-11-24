@@ -32,12 +32,12 @@ NELEMENT    = 2
 ATOM_TYPE   = O Pt
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
-DISP_DIST   = 0.001
-ACTI_CUTOFF = 5.1
+DISP_DIST   = 0.01
+ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
 STDDEV      = 0.1
 MAX_STEP    = 0.1
-TRIAL_STEP  = 0.001
+TRIAL_STEP  = 0.01
 INIT_RELAX  = 1
 INIT_DISP   = 1
 CONFIDENCE  = 0.9
@@ -83,101 +83,101 @@ RESTART     = 0
 RESTART_DIR = ./gen_0
 ```
 
-* General parameter
-  * **NELEMENT** [integer]
-    * The number of elements
-  * **ATOM_TYPE** [strings]
-    * Atomic symbols of elements
-  * **INIT_CONFIG** [strings]
-    * A path of file containing initial atomic positions
-  * **TARGET_LIST** [strings]
-    * A path of file containing target atoms
-  * **DISP_DIST** [real]
-    * A displacement for the finite difference method (Angs)
-  * **ACTI_CUTOFF** [real]
-    * A cutoff radius of active volume (Angs)
-  * **F_TOL** [real]
-    * A force tolerance for dimer method (eV/Angs)
-  * **STDDEV** [real]
-    * A standard deviation of gaussian displacement
-  * **MAX_STEP** [real]
-    * A maximum step size of image movement (Angs)
-  * **TRIAL_STEP** [real]
-    * A trial step size of image for cg optimization (Angs)
-  * **INIT_RELAX** [integer]
-    * An initial structure optimization
-  * **INIT_DISP** [integer]
-    * An initial structure perturbation
-  * **CONFIDENCE** [real]
-    * A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
-  * **MAX_SEARCH** [integer]
-    * A maximum number of saddle point searches
-  * **WRITE_MODE** [integer]
-    * An eigenmode for each step
-* LAMMPS parameter
-  * **PAIR_STYLE** [strings]
-    * Pair style in LAMMPS input
-  * **PAIR_COEFF** [strings]
-    * Pair coeff in LAMMPS input
-  * **PAIR_CUTOFF** [real]
-    * A cutoff radius of potential file (Angs)
-  * **NCORE** (integer)
-    * The number of cores for each LAMMPS instance
-* VASP parameter
-  * **VASP_CMD** [strings]
-    * A command for running VASP
-* Dimer parameter
-  * **KAPPA_DIMER** [integer]
-    * Basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664))
-  * **F_ROT_MIN** [real]
-    * A minimum force criteria for rotation (eV/Angs)
-  * **F_ROT_MAX** [real]
-    * A maximum force criteria for rotation (eV/Angs)
-  * **MAX_NUM_ROT** [integer]
-    * A maximum number of rotation
-  * **TRIAL_ANGLE** [real]
-    * A trial rotation angle (degree)
-* ART nouveau parameter
-  * **ART_NOUVEAU** [integer]
-    * Activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723))
-  * **LAMBDA_CRIT** [real]
-    * A criteria value of inflection region (eV/Angs^2)
-  * **LAMBDA_CONV** [real]
-    * A convergence criteria value for Lanczos method (eV/Angs^2)
-  * **MAX_NUM_RLX** [integer]
-    * A maximum number of relaxation
-  * **ART_DELAY** [integer]
-    * An initial step without Lanczos method
-  * **ART_MIXING** [integer]
-    * A mixing step above inflection line
-* System parameter
-  * **FREQUENCY** [real]
-    * An attempt frequency of reaction (1/s)
-  * **TEMPERATURE** [real]
-    * An system temperature (K)
-* Random parameter
-  * **RANDOM_SEED** [integer]
-    * A seed for random number
-* Directory parameter
-  * **OUTPUT_DIR** [strings]
-    * A directory for output files
-* Restart parameter
-  * **RESTART** [integer]
-    * A restart from previous SPS
-  * **RESTART_DIR** [strings]
-    * A directory of previous SPS output
+### General parameter
+* **NELEMENT** [integer]
+* The number of elements
+* **ATOM_TYPE** [strings]
+* Atomic symbols of elements
+* **INIT_CONFIG** [strings]
+* A path of file containing initial atomic positions
+* **TARGET_LIST** [strings]
+* A path of file containing target atoms
+* **DISP_DIST** [real]
+* A displacement for the finite difference method (Angs)
+* **ACTI_CUTOFF** [real]
+* A cutoff radius of active volume (Angs)
+* **F_TOL** [real]
+* A force tolerance for dimer method (eV/Angs)
+* **STDDEV** [real]
+* A standard deviation of gaussian displacement
+* **MAX_STEP** [real]
+* A maximum step size of image movement (Angs)
+* **TRIAL_STEP** [real]
+* A trial step size of image for cg optimization (Angs)
+* **INIT_RELAX** [integer]
+* An initial structure optimization
+* **INIT_DISP** [integer]
+* An initial structure perturbation
+* **CONFIDENCE** [real]
+* A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
+* **MAX_SEARCH** [integer]
+* A maximum number of saddle point searches
+* **WRITE_MODE** [integer]
+* An eigenmode for each step
+### LAMMPS parameter
+* **PAIR_STYLE** [strings]
+* Pair style in LAMMPS input
+* **PAIR_COEFF** [strings]
+* Pair coeff in LAMMPS input
+* **PAIR_CUTOFF** [real]
+* A cutoff radius of potential file (Angs)
+* **NCORE** (integer)
+* The number of cores for each LAMMPS instance
+### VASP parameter
+* **VASP_CMD** [strings]
+* A command for running VASP
+### Dimer parameter
+* **KAPPA_DIMER** [integer]
+* Basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664))
+* **F_ROT_MIN** [real]
+* A minimum force criteria for rotation (eV/Angs)
+* **F_ROT_MAX** [real]
+* A maximum force criteria for rotation (eV/Angs)
+* **MAX_NUM_ROT** [integer]
+* A maximum number of rotation
+* **TRIAL_ANGLE** [real]
+* A trial rotation angle (degree)
+### ART nouveau parameter
+* **ART_NOUVEAU** [integer]
+* Activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723))
+* **LAMBDA_CRIT** [real]
+* A criteria value of inflection region (eV/Angs^2)
+* **LAMBDA_CONV** [real]
+* A convergence criteria value for Lanczos method (eV/Angs^2)
+* **MAX_NUM_RLX** [integer]
+* A maximum number of relaxation
+* **ART_DELAY** [integer]
+* An initial step without Lanczos method
+* **ART_MIXING** [integer]
+* A mixing step above inflection line
+### System parameter
+* **FREQUENCY** [real]
+* An attempt frequency of reaction (1/s)
+* **TEMPERATURE** [real]
+* An system temperature (K)
+### Random parameter
+* **RANDOM_SEED** [integer]
+* A seed for random number
+### Directory parameter
+* **OUTPUT_DIR** [strings]
+* A directory for output files
+### Restart parameter
+* **RESTART** [integer]
+* A restart from previous SPS
+* **RESTART_DIR** [strings]
+* A directory of previous SPS output
 
 ## TARGET
 It contains the target atom indices or types to be the center of active volume.
 ```text
 I 0 1 2 3
 T 1
+A
 ```
 
-* I: Index
-* T: Type
-* A: All (not supported yet)
-* R: Random (not supported yet)
+* I: Index (starting from 0)
+* T: Type (starting from 1)
+* A: All
 
 ## Command
 If you run SPS with LAMMPS, please use command following:
@@ -193,8 +193,7 @@ Otherwise, execute code without parallel command following:
 ```
 
 ## Tips  
-1. `INIT_CONFIG` should be VASP5 POSCAR format, which includes `Selective dynamics`.
-2. `NCORE` of 4-8 is recommended with SPS_LMP. 
-3. The filename of final structure follows Final _ `count` _ `atomic index`.POSCAR
-4. For VASP calculation, INCAR, KPOINTS, and POTCAR should be prepared in working directory.
-5. To use hybrid potentials, write down all `pair_coeff`s within `PAIR_COEFF` with the delimiter (|) between them.
+1. `INIT_CONFIG` should be VASP5 POSCAR format, which supports `Selective dynamics`.
+2. The filename of final structure has the format as "Final _ `count` _ `atomic index`.POSCAR"
+3. For VASP calculation, INCAR, KPOINTS, and POTCAR should be located in the current directory.
+4. To use hybrid potentials, write down all `pair_coeff`s within `PAIR_COEFF` with the delimiter (|) between them.

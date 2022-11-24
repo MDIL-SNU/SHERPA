@@ -60,9 +60,14 @@ int read_target(Config *config, Input *input,
                 ptr = strtok(NULL, " \n\t");
             }
         } else if (strncmp(ptr, "A", 1) == 0) {
-            //gen_all();
-        } else if (strncmp(ptr, "R", 1) == 0) {
-            //gen_random();
+            while (config->tot_num >= (*list_size)) {
+                (*list_size) = (*list_size) << 1;
+            }
+            *target_list = (int *)malloc(sizeof(int) * (*list_size));
+            for (i = 0; i < config->tot_num; ++i) {
+                (*target_list)[*target_num] = i;
+                (*target_num)++;
+            }
         } else {
             return 1;
         }
