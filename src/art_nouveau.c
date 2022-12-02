@@ -447,7 +447,6 @@ int art_nouveau(Config *initial, Config *final, Input *input,
         }
     }
 
-    double fmax;
     int art_step;
     int lanczos_step = 0;
     int converge = 0;
@@ -467,11 +466,22 @@ int art_nouveau(Config *initial, Config *final, Input *input,
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
+    double fmax = 0.0;
+    for (i = 0; i < disp_num; ++i) {
+        double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
+                    + force0[i * 3 + 1] * force0[i * 3 + 1]
+                    + force0[i * 3 + 2] * force0[i * 3 + 2];
+        tmpf = sqrt(tmpf);
+        if (tmpf > fmax) {
+            fmax = tmpf;
+        }
+    }
     int negative = 0;
     for (art_step = 1; art_step <= 1000; ++art_step) {
         /* lanczos */
         /* add new criteria */
-        if ((art_step > input->art_delay) && (fmax >= input->f_tol)) {
+        if ((art_step > input->art_delay) && (fmax > input->f_tol)) {
             lanczos_step = lanczos(config0, input, disp_num, disp_list,
                                    &eigenvalue, eigenmode, comm);
         }
