@@ -454,6 +454,28 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
             fputs(" Saddle state: disconnected\n", fp);
             fclose(fp);
         }
+        for (i = 0; i < config0->tot_num; ++i) {
+            final->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
+            final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
+            final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
+        }
+        if (local_rank == 0) {
+            char filename[128];
+            sprintf(filename, "%s/x1_Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
+            write_config(final, filename, "w");
+        }
+        for (i = 0; i < config0->tot_num; ++i) {
+            final->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
+            final->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
+            final->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
+        }
+        if (local_rank == 0) {
+            char filename[128];
+            sprintf(filename, "%s/x2_Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
+            write_config(final, filename, "w");
+        }
         free_config(config1);
         free_config(config2);
         return 1;
