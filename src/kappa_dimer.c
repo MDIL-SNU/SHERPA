@@ -525,17 +525,6 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-    double fmax = 0.0;
-    for (i = 0; i < disp_num; ++i) {
-        double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
-                    + force0[i * 3 + 1] * force0[i * 3 + 1]
-                    + force0[i * 3 + 2] * force0[i * 3 + 2];
-        tmpf = sqrt(tmpf);
-        if (tmpf > fmax) {
-            fmax = tmpf;
-        }
-    }
     for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
         rotate(config0, input, disp_num, disp_list,
                eigenmode, count, dimer_step, comm);
@@ -557,22 +546,20 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
             }
             fclose(fp);
         }
-        if (fmax > input->f_tol) {
-            /* kappa-dimer */
-            double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
-            for (i = 0; i < disp_num; ++i) {
-                tmp_eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
-                tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
-                tmp_eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
-            }
-            kappa = constrained_rotate(config0, input, disp_num, disp_list,
-                                       tmp_eigenmode, comm);
-            free(tmp_eigenmode);
+        /* kappa-dimer */
+        double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
+        for (i = 0; i < disp_num; ++i) {
+            tmp_eigenmode[i * 3 + 0] = eigenmode[i * 3 + 0];
+            tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
+            tmp_eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
         }
+        kappa = constrained_rotate(config0, input, disp_num, disp_list,
+                                   tmp_eigenmode, comm);
+        free(tmp_eigenmode);
         translate(config0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step, kappa, comm);
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);     
-        fmax = 0.0;
+        double fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
                         + force0[i * 3 + 1] * force0[i * 3 + 1]
