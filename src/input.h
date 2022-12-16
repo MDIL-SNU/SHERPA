@@ -8,20 +8,21 @@ typedef struct _Input
     char *init_config;
     char *target_list;
     double disp_dist;
-    double pair_cutoff;
     double acti_cutoff;
     double f_tol;
-    double stddev;
     double max_step;
     double trial_step;
     int init_relax;
     int init_disp;
+    double disp_cutoff;
+    double disp_stddev;
     double confidence;
     int max_search;
     int write_mode;
 
     char *pair_style;
     char *pair_coeff;
+    double pair_cutoff;
     int ncore;
 
     char *vasp_cmd;

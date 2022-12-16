@@ -270,9 +270,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
         end++;
     }
     for (i = begin; i < end; ++i) {
-        eigenmode[i * 3 + 0] = normal_random(0, input->stddev);
-        eigenmode[i * 3 + 1] = normal_random(0, input->stddev);
-        eigenmode[i * 3 + 2] = normal_random(0, input->stddev);
+        eigenmode[i * 3 + 0] = normal_random(0, input->disp_stddev);
+        eigenmode[i * 3 + 1] = normal_random(0, input->disp_stddev);
+        eigenmode[i * 3 + 2] = normal_random(0, input->disp_stddev);
     }
     int count = (end - begin) * 3;
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
@@ -292,9 +292,8 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 }
 
 
-void set_active_volume(Config *config, Input *input, double *center,
-                       int *outer_num, int **outer_list,
-                       int *inner_num, int **inner_list, MPI_Comm comm)
+void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
+                     int *atom_num, int **atom_list, MPI_Comm comm)
 {
     int i, rank, size;
     double del[3];
@@ -310,10 +309,8 @@ void set_active_volume(Config *config, Input *input, double *center,
     if (r > local_rank) {
         end++;
     }
-    int tmp_outer_num = 0;
-    int tmp_inner_num = 0;
-    int *tmp_outer_list = (int *)malloc(sizeof(int) * config->tot_num);
-    int *tmp_inner_list = (int *)malloc(sizeof(int) * config->tot_num);
+    int tmp_num = 0;
+    int *tmp_list = (int *)malloc(sizeof(int) * config->tot_num);
     for (i = begin; i < end; ++i) {
         del[0] = config->pos[i * 3 + 0] - center[0];
         del[1] = config->pos[i * 3 + 1] - center[1];
@@ -323,53 +320,34 @@ void set_active_volume(Config *config, Input *input, double *center,
         double dist = sqrt(del[0] * del[0]
                          + del[1] * del[1]
                          + del[2] * del[2]);
-        if (dist < 2 * input->pair_cutoff) {
-            tmp_outer_list[tmp_outer_num] = i;
-            tmp_outer_num++; 
-        }
-        if ((dist < input->acti_cutoff) && (config->fix[i]  == 0)) {
-            tmp_inner_list[tmp_inner_num] = i;
-            tmp_inner_num++;
+        if (dist < cutoff) {
+            tmp_list[tmp_num] = i;
+            tmp_num++;
         }
     }
-    MPI_Allreduce(&tmp_outer_num, outer_num, 1, MPI_INT, MPI_SUM, comm);
-    MPI_Allreduce(&tmp_inner_num, inner_num, 1, MPI_INT, MPI_SUM, comm);
-    *outer_list = (int *)malloc(sizeof(int) * (*outer_num));
-    *inner_list = (int *)malloc(sizeof(int) * (*inner_num));
+    MPI_Allreduce(&tmp_num, atom_num, 1, MPI_INT, MPI_SUM, comm);
+    *atom_list = (int *)malloc(sizeof(int) * (*atom_num));
 
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
     int *disp = (int *)malloc(sizeof(int) * input->ncore);
 
-    /* outer list */
-    MPI_Allgather(&tmp_outer_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
+    /* all gather */
+    MPI_Allgather(&tmp_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
     disp[0] = 0;
     if (input->ncore > 1) {
         for (i = 1; i < input->ncore; ++i) {
             disp[i] = disp[i - 1] + counts[i - 1];
         }
     }
-    MPI_Allgatherv(tmp_outer_list, tmp_outer_num, MPI_INT,
-                   *outer_list, counts, disp, MPI_INT, comm);
+    MPI_Allgatherv(tmp_list, tmp_num, MPI_INT,
+                   *atom_list, counts, disp, MPI_INT, comm);
 
-    /* inner list */
-    MPI_Allgather(&tmp_inner_num, 1, MPI_INT, counts, 1, MPI_INT, comm);
-    disp[0] = 0;
-    if (input->ncore > 1) {
-        for (i = 1; i < input->ncore; ++i) {
-            disp[i] = disp[i - 1] + counts[i - 1];
-        }
-    }
-    MPI_Allgatherv(tmp_inner_list, tmp_inner_num, MPI_INT,
-                   *inner_list, counts, disp, MPI_INT, comm);
-
-    free(tmp_outer_list);
-    free(tmp_inner_list);
+    free(tmp_list);
     free(counts);
     free(disp);
 
     /* sort */
-    int_sort_increase(*outer_num, *outer_list);
-    int_sort_increase(*inner_num, *inner_list);
+    int_sort_increase(*atom_num, *atom_list);
 }
 
 
