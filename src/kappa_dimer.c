@@ -510,11 +510,14 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     if (input->init_disp > 0) {
         get_sphere_list(config0, input, center, input->disp_cutoff,
                         &tmp_num, &tmp_list, comm);
-        for (i = 0; i < tmp_num; ++i) {
-            if (config0->fix[tmp_list[i]] == 0) {
-                config0->pos[tmp_list[i] * 3 + 0] += tmp_eigenmode[tmp_list[i] * 3 + 0];
-                config0->pos[tmp_list[i] * 3 + 1] += tmp_eigenmode[tmp_list[i] * 3 + 1];
-                config0->pos[tmp_list[i] * 3 + 2] += tmp_eigenmode[tmp_list[i] * 3 + 2];
+        for (i = 0; i < disp_num; ++i) {
+            for (j = 0; j < tmp_num; ++j) {
+                if (disp_list[i] == tmp_list[j]) {
+                    config0->pos[tmp_list[j] * 3 + 0] += tmp_eigenmode[i * 3 + 0];
+                    config0->pos[tmp_list[j] * 3 + 1] += tmp_eigenmode[i * 3 + 1];
+                    config0->pos[tmp_list[j] * 3 + 2] += tmp_eigenmode[i * 3 + 2];
+                    break;
+                }
             }
         }
         free(tmp_list);
