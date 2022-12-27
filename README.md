@@ -2,9 +2,7 @@
 Script for saddle point searches combined with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 
 ## Requirement
-- Intel C compiler
-- Intel MPI
-- Intel oneAPI MKL
+- Intel oneAPI >= 21.3
 - CMake >= 3.13
 - LAMMPS >= 23Jun2022
 
@@ -35,11 +33,12 @@ TARGET_LIST = ./TARGET
 DISP_DIST   = 0.01
 ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
-STDDEV      = 0.1
 MAX_STEP    = 0.1
 TRIAL_STEP  = 0.01
 INIT_RELAX  = 1
 INIT_DISP   = 1
+DISP_CUTOFF = 3
+DISP_STDDEV = 0.1
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 1
 WRITE_MODE  = 1
@@ -98,8 +97,6 @@ RESTART_DIR = ./gen_0
   - A cutoff radius of active volume (Angs)
 * **F_TOL** [real]
   - A force tolerance for dimer method (eV/Angs)
-* **STDDEV** [real]
-  - A standard deviation of gaussian displacement
 * **MAX_STEP** [real]
   - A maximum step size of image movement (Angs)
 * **TRIAL_STEP** [real]
@@ -108,6 +105,10 @@ RESTART_DIR = ./gen_0
   - An initial structure optimization
 * **INIT_DISP** [integer]
   - An initial structure perturbation
+* **DISP_CUTOFF** [real]
+  - A cutoff radius of initial displacement (Angs)
+* **DISP_STDDEV** [real]
+  - A standard deviation of gaussian displacement
 * **CONFIDENCE** [real]
   - A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
 * **MAX_SEARCH** [integer]
@@ -121,7 +122,7 @@ RESTART_DIR = ./gen_0
   - Pair coeff in LAMMPS input
 * **PAIR_CUTOFF** [real]
   - A cutoff radius of potential file (Angs)
-* **NCORE** (integer)
+* **NCORE** [integer]
   - The number of cores for each LAMMPS instance
 ### VASP parameter
 * **VASP_CMD** [strings]

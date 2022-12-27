@@ -166,11 +166,6 @@ int read_input(Input *input, char *filename)
         printf("F_TOL is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->stddev), "STDDEV", filename);
-    if (errno) {
-        printf("STDDEV is missing.\n");
-        return 1;
-    }
     errno = input_double(&(input->max_step), "MAX_STEP", filename);
     if (errno) {
         printf("MAX_STEP is missing.\n");
@@ -189,6 +184,16 @@ int read_input(Input *input, char *filename)
     errno = input_int(&(input->init_disp), "INIT_DISP", filename);
     if (errno) {
         printf("INIT_DISP is missing.\n");
+        return 1;
+    }
+    errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
+    if (errno) {
+        printf("DISP_CUTOFF is missing.\n");
+        return 1;
+    }
+    errno = input_double(&(input->disp_stddev), "DISP_STDDEV", filename);
+    if (errno) {
+        printf("DISP_STDDEV is missing.\n");
         return 1;
     }
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
@@ -351,11 +356,12 @@ void write_input(Input *input)
     fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
-    fprintf(fp, "STDDEV\t\t= %f\n", input->stddev);
     fprintf(fp, "MAX_STEP\t= %f\n", input->max_step);
     fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
+    fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
+    fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);

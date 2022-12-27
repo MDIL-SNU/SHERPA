@@ -19,9 +19,8 @@ void get_cg_direction(double *direction, double *direction_old,
                       double *cg_direction, int n);
 void trim_atoms(Config *config, int update_num, int *update_list);
 double *get_eigenmode(Input *input, int n, MPI_Comm comm);
-void set_active_volume(Config *config, Input *input, double *center,
-                       int *update_num, int **update_list,
-                       int *extract_num, int **extract_list, MPI_Comm comm);
+void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
+                     int *atom_num, int **atom_list, MPI_Comm comm);
 int split_configs(Config *initial, Config *final, Config *config0, Input *input,
                   double *eigenmode, int count, int index,
                   int update_num, int *update_list,

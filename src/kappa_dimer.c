@@ -458,48 +458,78 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     double center[3] = {initial->pos[index * 3 + 0],
                         initial->pos[index * 3 + 1],
                         initial->pos[index * 3 + 2]};
+    /* update list */
     int update_num;
-    int extract_num;
     int *update_list;
-    int *extract_list;
-    set_active_volume(initial, input, center, &update_num, &update_list,
-                      &extract_num, &extract_list, comm);
-    trim_atoms(initial, update_num, update_list);
+    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
+                    &update_num, &update_list, comm);
+    /* extract list */
+    int tmp_num;
+    int *tmp_list;
+    get_sphere_list(initial, input, center, input->acti_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    int extract_num = 0;
+    int *extract_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    for (i = 0; i < tmp_num; ++i) {
+        if (initial->fix[tmp_list[i]] == 0) {
+            extract_list[extract_num] = tmp_list[i];
+            extract_num++;
+        }
+    }
+    free(tmp_list);
 
     /* starting dimer */ 
     Config *config0 = (Config *)malloc(sizeof(Config));
+    trim_atoms(initial, update_num, update_list);
     copy_config(config0, initial);
-    int tmp_num;
-    int disp_num;
-    int *tmp_list;
-    int *disp_list;
-    set_active_volume(config0, input, center, &tmp_num, &tmp_list,
-                      &disp_num, &disp_list, comm);
+    get_sphere_list(config0, input, center, input->acti_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    int disp_num = 0;
+    int *disp_list = (int *)malloc(sizeof(int) * config0->tot_num);
+    for (i = 0; i < tmp_num; ++i) {
+        if (config0->fix[tmp_list[i]] == 0) {
+            disp_list[disp_num] = tmp_list[i];
+            disp_num++;
+        }
+    }
     free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
     }
-
-    /* normalize */
-    double *tmp_eigenmode = (double *)malloc(sizeof(double) * disp_num * 3);
-    for (i = 0; i < disp_num; ++i) {
+    double *tmp_eigenmode = (double *)malloc(sizeof(double) * extract_num * 3);
+    for (i = 0; i < extract_num; ++i) {
         tmp_eigenmode[i * 3 + 0] = full_eigenmode[extract_list[i] * 3 + 0];
         tmp_eigenmode[i * 3 + 1] = full_eigenmode[extract_list[i] * 3 + 1];
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[extract_list[i] * 3 + 2];
     }
     memset(full_eigenmode, 0, sizeof(double) * final->tot_num * 3);
-    double *eigenmode = normalize(tmp_eigenmode, disp_num);
-    free(tmp_eigenmode);
 
-    /* perturbate starting config */
+    /* initial perturbation */
     if (input->init_disp > 0) {
+        get_sphere_list(config0, input, center, input->disp_cutoff,
+                        &tmp_num, &tmp_list, comm);
         for (i = 0; i < disp_num; ++i) {
-            config0->pos[disp_list[i] * 3 + 0] += input->stddev * eigenmode[i * 3 + 0];
-            config0->pos[disp_list[i] * 3 + 1] += input->stddev * eigenmode[i * 3 + 1];
-            config0->pos[disp_list[i] * 3 + 2] += input->stddev * eigenmode[i * 3 + 2];
+            for (j = 0; j < tmp_num; ++j) {
+                if (disp_list[i] == tmp_list[j]) {
+                    config0->pos[tmp_list[j] * 3 + 0] += tmp_eigenmode[i * 3 + 0];
+                    config0->pos[tmp_list[j] * 3 + 1] += tmp_eigenmode[i * 3 + 1];
+                    config0->pos[tmp_list[j] * 3 + 2] += tmp_eigenmode[i * 3 + 2];
+                    break;
+                }
+            }
         }
+        free(tmp_list);
+    }
+    /* normalize */
+    double *eigenmode = normalize(tmp_eigenmode, extract_num);
+    free(tmp_eigenmode);
+    double *init_direction = (double *)malloc(sizeof(double) * disp_num * 3);
+    for (i = 0; i < disp_num; ++i) {
+        init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
+        init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
+        init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
     }
 
     /* cg optimization */
