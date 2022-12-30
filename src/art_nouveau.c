@@ -15,7 +15,8 @@
 #include "sps_utils.h"
 
 
-static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
+static int lanczos(Config *config, double *force0, Input *input,
+                   int disp_num, int *disp_list,
                    double *eigenvalue, double *eigenmode, MPI_Comm comm)
 {
     int i, j;
@@ -23,10 +24,6 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     double *alpha = (double *)malloc(sizeof(double) * size);
     double *beta = (double *)malloc(sizeof(double) * size);
     double *eigenvector;
-
-    double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config, input, &energy0, force0, disp_num, disp_list, comm);
 
     /* V is transpose of column matrix */
     double *V = (double *)malloc(sizeof(double) * size * disp_num * 3);
@@ -171,7 +168,6 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
     }
 
     free(eigenvector);
-    free(force0);
     free(force1);
     free(alpha);
     free(beta);
@@ -183,15 +179,12 @@ static int lanczos(Config *config, Input *input, int disp_num, int *disp_list,
 }
 
 
-static double *uphill_push(Config *config, Input *input,
+static double *uphill_push(Config *config, double *force, Input *input,
                            int disp_num, int *disp_list,
                            double eigenvalue, double *eigenmode,
                            double *init_direction, int negative, MPI_Comm comm)
 {
     int i;
-    double energy;
-    double *force = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config, input, &energy, force, disp_num, disp_list, comm);
     double *push_vector = (double *)malloc(sizeof(double) * disp_num * 3);
     if (eigenvalue < input->lambda_crit) {
         double *parallel_force = parallel_vector(force, eigenmode, disp_num);
@@ -236,7 +229,6 @@ static double *uphill_push(Config *config, Input *input,
     }
     double *push_direction = normalize(push_vector, disp_num);
     free(push_vector);
-    free(force);
     return push_direction;
 }
 
@@ -490,11 +482,12 @@ int art_nouveau(Config *initial, Config *final, Input *input,
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
     int negative = 0;
-    for (art_step = 1; art_step <= 1000; ++art_step) {
+    for (art_step = 1; art_step <= input->max_num_itr; ++art_step) {
         /* lanczos */
         if (art_step > input->art_delay) {
-            lanczos_step = lanczos(config0, input, disp_num, disp_list,
+            lanczos_step = lanczos(config0, force0, input, disp_num, disp_list,
                                    &eigenvalue, eigenmode, comm);
         }
         /* test */
@@ -522,7 +515,8 @@ int art_nouveau(Config *initial, Config *final, Input *input,
             negative = 0;
         }
         /* uphill push */
-        double *push_direction = uphill_push(config0, input, disp_num, disp_list,
+        double *push_direction = uphill_push(config0, force0, input,
+                                             disp_num, disp_list,
                                              eigenvalue, eigenmode,
                                              init_direction, negative, comm);
         /* normal relax */

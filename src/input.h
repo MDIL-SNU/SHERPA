@@ -17,6 +17,7 @@ typedef struct _Input
     double disp_cutoff;
     double disp_stddev;
     double confidence;
+    int max_num_itr;
     int max_search;
     int write_mode;
 

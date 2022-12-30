@@ -201,6 +201,11 @@ int read_input(Input *input, char *filename)
         printf("CONFIDENCE is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->max_num_itr), "MAX_NUM_ITR", filename);
+    if (errno) {
+        printf("MAX_NUM_ITR is missing.\n");
+        return 1;
+    }
     errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
     if (errno) {
         printf("MAX_SEARCH is missing.\n");
@@ -363,6 +368,7 @@ void write_input(Input *input)
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+    fprintf(fp, "MAX_NUM_ITR\t= %d\n", input->max_num_itr);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
     fputs("\n", fp);

@@ -40,6 +40,7 @@ INIT_DISP   = 1
 DISP_CUTOFF = 3
 DISP_STDDEV = 0.1
 CONFIDENCE  = 0.9
+MAX_NUM_ITR = 500
 MAX_SEARCH  = 1
 WRITE_MODE  = 1
 
@@ -111,6 +112,8 @@ RESTART_DIR = ./gen_0
   - A standard deviation of gaussian displacement
 * **CONFIDENCE** [real]
   - A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
+* **MAX_NUM_ITR** [integer]
+  - A maximum number of iterations during saddle point searches
 * **MAX_SEARCH** [integer]
   - A maximum number of saddle point searches
 * **WRITE_MODE** [integer]
