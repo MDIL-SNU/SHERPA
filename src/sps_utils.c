@@ -374,18 +374,12 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
         copy_config(config1, config0);
         copy_config(config2, config0);
         for (i = 0; i < disp_num; ++i) {
-            config1->pos[disp_list[i] * 3 + 0] = config0->pos[disp_list[i] * 3 + 0]
-                                               + 0.1 * trial * eigenmode[i * 3 + 0];
-            config1->pos[disp_list[i] * 3 + 1] = config0->pos[disp_list[i] * 3 + 1]
-                                               + 0.1 * trial * eigenmode[i * 3 + 1];
-            config1->pos[disp_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2]
-                                               + 0.1 * trial * eigenmode[i * 3 + 2];
-            config2->pos[disp_list[i] * 3 + 0] = config0->pos[disp_list[i] * 3 + 0]
-                                               - 0.1 * trial * eigenmode[i * 3 + 0];
-            config2->pos[disp_list[i] * 3 + 1] = config0->pos[disp_list[i] * 3 + 1]
-                                               - 0.1 * trial * eigenmode[i * 3 + 1];
-            config2->pos[disp_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2]
-                                               - 0.1 * trial * eigenmode[i * 3 + 2];
+            config1->pos[disp_list[i] * 3 + 0] += 0.1 * trial * eigenmode[i * 3 + 0];
+            config1->pos[disp_list[i] * 3 + 1] += 0.1 * trial * eigenmode[i * 3 + 1];
+            config1->pos[disp_list[i] * 3 + 2] += 0.1 * trial * eigenmode[i * 3 + 2];
+            config2->pos[disp_list[i] * 3 + 0] -= 0.1 * trial * eigenmode[i * 3 + 0];
+            config2->pos[disp_list[i] * 3 + 1] -= 0.1 * trial * eigenmode[i * 3 + 1];
+            config2->pos[disp_list[i] * 3 + 2] -= 0.1 * trial * eigenmode[i * 3 + 2];
         }
         oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
         oneshot_disp(config2, input, &energy2, force2, disp_num, disp_list, comm);

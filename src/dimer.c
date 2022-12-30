@@ -38,8 +38,9 @@ static double *projected_force(double *force0, double *eigenmode,
 }
 
 
-static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
-                   double *eigenmode, int count, int dimer_step, MPI_Comm comm)
+static void rotate(Config *config0, double energy0, double *force0, Input *input,
+                   int disp_num, int *disp_list, double *eigenmode, int count,
+                   int dimer_step, MPI_Comm comm)
 {
     int i, j, rank, size;
     double magnitude, cmin;
@@ -49,11 +50,9 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
-    double energy0, energy1;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double energy1;
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
     for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
@@ -174,13 +173,12 @@ static void rotate(Config *config0, Input *input, int disp_num, int *disp_list,
         }
         free(f_rot_A);
     }
-    free(force0);
     free(force1);
     free(force2);
 }
 
 
-static void translate(Config *config0, Input *input,
+static void translate(Config *config0, double *force0, Input *input,
                       int disp_num, int *disp_list, double *eigenmode,
                       double *direction_old, double *cg_direction,
                       int dimer_step, MPI_Comm comm)
@@ -188,11 +186,9 @@ static void translate(Config *config0, Input *input,
     int i;
     double magnitude;
     char filename[128];
-    double energy0, energy1;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double energy1;
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm); 
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < disp_num; ++i) {
@@ -286,7 +282,6 @@ static void translate(Config *config0, Input *input,
         config0->pos[disp_list[i] * 3 + 2] += step[i * 3 + 2];
     } 
     free(dforce);
-    free(force0);
     free(force1);
     free(force2);
     free(f0p);
@@ -406,8 +401,9 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    for (dimer_step = 1; dimer_step <= 1000; ++dimer_step) {
-        rotate(config0, input, disp_num, disp_list,
+    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
+    for (dimer_step = 1; dimer_step <= input->max_num_itr; ++dimer_step) {
+        rotate(config0, energy0, force0, input, disp_num, disp_list,
                eigenmode, count, dimer_step, comm);
         /* test */
         if ((local_rank == 0) && (input->write_mode)) {
@@ -427,10 +423,9 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
             }
             fclose(fp);
         }
-        translate(config0, input, disp_num, disp_list, eigenmode,
+        translate(config0, force0, input, disp_num, disp_list, eigenmode,
                   direction_old, cg_direction, dimer_step, comm);
-        oneshot_disp(config0, input, &energy0, force0,
-                     disp_num, disp_list, comm);     
+        oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
         fmax = 0.0;
         for (i = 0; i < disp_num; ++i) {
             double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
