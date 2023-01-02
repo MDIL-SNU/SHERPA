@@ -276,6 +276,29 @@ static void translate(Config *config0, double *force0, Input *input,
             }
         }
     }
+    /* check nan */
+    int nan = 0;
+    for (i = 0; i < disp_num; ++i) {
+        if (isnan(step[i * 3 + 0]) != 0) {
+            nan = 1;
+        }
+        if (isnan(step[i * 3 + 1]) != 0) {
+            nan = 1;
+        }
+        if (isnan(step[i * 3 + 2]) != 0) {
+            nan = 1;
+        }
+    }
+    if (nan > 0) {
+        free(dforce);
+        free(force1);
+        free(force2);
+        free(f0p);
+        free(direction);
+        free(step);
+        return;
+    }
+
     for (i = 0; i < disp_num; ++i) {
         config0->pos[disp_list[i] * 3 + 0] += step[i * 3 + 0];
         config0->pos[disp_list[i] * 3 + 1] += step[i * 3 + 1];

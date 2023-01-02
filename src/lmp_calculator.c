@@ -14,7 +14,7 @@ void *lmp_init(Config *config, Input *input, MPI_Comm comm)
     void *lmp;
     char cmd[1024];
     char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    //char *lmpargv[] = {"liblammps", "-screen", "none"};
+//    char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
     lmp = lammps_open(lmpargc, lmpargv, comm, NULL);
     if (lmp == NULL) {
