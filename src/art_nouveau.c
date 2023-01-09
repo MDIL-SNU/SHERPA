@@ -192,7 +192,7 @@ static double *uphill_push(Config *config, double *force, Input *input,
         double divisor = fabs(eigenvalue) > fabs(input->lambda_crit) ?
                          fabs(eigenvalue) : fabs(input->lambda_crit);
         double alpha = f_norm / divisor;
-        double dr = input->max_step < alpha ? input->max_step : alpha;
+        double dr = input->max_move < alpha ? input->max_move : alpha;
         double ratio = negative > input->art_mixing ?
                        1.0 : (double)negative / input->art_mixing;
         free(parallel_force);
@@ -217,9 +217,9 @@ static double *uphill_push(Config *config, double *force, Input *input,
         }
     } else {
         for (i = 0; i < disp_num; ++i) {
-            push_vector[i * 3 + 0] = input->max_step * init_direction[i * 3 + 0];
-            push_vector[i * 3 + 1] = input->max_step * init_direction[i * 3 + 1];
-            push_vector[i * 3 + 2] = input->max_step * init_direction[i * 3 + 2];
+            push_vector[i * 3 + 0] = input->max_move * init_direction[i * 3 + 0];
+            push_vector[i * 3 + 1] = input->max_move * init_direction[i * 3 + 1];
+            push_vector[i * 3 + 2] = input->max_move * init_direction[i * 3 + 2];
         }
     }
     for (i = 0; i < disp_num; ++i) {
@@ -255,7 +255,7 @@ static void perp_relax(Config *config0, Input *input,
     double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     int relax_step;
-    int end_step = eigenvalue < input->lambda_crit ? 1000 : input->max_num_rlx;
+    int end_step = eigenvalue < input->lambda_crit ? input->above_rlx : input->below_rlx;
     for (relax_step = 0; relax_step < end_step; ++relax_step) {
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
         double *perp_force0 = perpendicular_vector(force0, push_direction, disp_num);
@@ -295,11 +295,11 @@ static void perp_relax(Config *config0, Input *input,
         copy_config(config1, config0);
         for (i = 0; i < disp_num; ++i) {
             config1->pos[disp_list[i] * 3 + 0] += direction[i * 3 + 0]
-                                                * input->trial_step;
+                                                * input->trial_move;
             config1->pos[disp_list[i] * 3 + 1] += direction[i * 3 + 1]
-                                                * input->trial_step;
+                                                * input->trial_move;
             config1->pos[disp_list[i] * 3 + 2] += direction[i * 3 + 2]
-                                                * input->trial_step;
+                                                * input->trial_move;
         }
         oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm); 
         double *perp_force1 = perpendicular_vector(force1, push_direction, disp_num);
@@ -316,19 +316,19 @@ static void perp_relax(Config *config0, Input *input,
             tmp_force[i * 3 + 1] = perp_force1[i * 3 + 1] - perp_force0[i * 3 + 1];
             tmp_force[i * 3 + 2] = perp_force1[i * 3 + 2] - perp_force0[i * 3 + 2];
         }
-        double C = dot(tmp_force, direction, disp_num) / input->trial_step;
-        double coeff = -F / C + input->trial_step * 0.5;
+        double C = dot(tmp_force, direction, disp_num) / input->trial_move;
+        double coeff = -F / C + input->trial_move * 0.5;
         double *step = (double *)malloc(sizeof(double) * disp_num * 3);
         for (i = 0; i < disp_num; ++i) {
             step[i * 3 + 0] = coeff * direction[i * 3 + 0];
             step[i * 3 + 1] = coeff * direction[i * 3 + 1];
             step[i * 3 + 2] = coeff * direction[i * 3 + 2];
         }
-        if (norm(step, disp_num) > input->max_step) {
+        if (norm(step, disp_num) > input->max_move) {
             for (i = 0; i < disp_num; ++i) {
-                step[i * 3 + 0] = direction[i * 3 + 0] * input->max_step;
-                step[i * 3 + 1] = direction[i * 3 + 1] * input->max_step;
-                step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
+                step[i * 3 + 0] = direction[i * 3 + 0] * input->max_move;
+                step[i * 3 + 1] = direction[i * 3 + 1] * input->max_move;
+                step[i * 3 + 2] = direction[i * 3 + 2] * input->max_move;
             }
         }
 
@@ -386,21 +386,16 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     int local_rank = rank % input->ncore;
 
     /* generate lists */
+    int tmp_num;
+    int *tmp_list;
     double center[3] = {initial->pos[index * 3 + 0],
                         initial->pos[index * 3 + 1],
                         initial->pos[index * 3 + 2]};
-    /* update list */
-    int update_num;
-    int *update_list;
-    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
-                    &update_num, &update_list, comm);
     /* extract list */
-    int tmp_num;
-    int *tmp_list;
     get_sphere_list(initial, input, center, input->acti_cutoff,
                     &tmp_num, &tmp_list, comm);
     int extract_num = 0;
-    int *extract_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    int *extract_list = (int *)malloc(sizeof(int) * tmp_num);
     for (i = 0; i < tmp_num; ++i) {
         if (initial->fix[tmp_list[i]] == 0) {
             extract_list[extract_num] = tmp_list[i];
@@ -408,15 +403,41 @@ int art_nouveau(Config *initial, Config *final, Input *input,
         }
     }
     free(tmp_list);
-
-    /* starting dimer */ 
+    /* update list */
+    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    int update_num = 0;
+    int *update_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    int inner_num = 0;
+    int *inner_mask = (int *)calloc(initial->tot_num, sizeof(int));
+    for (i = 0; i < tmp_num; ++i) {
+        update_list[update_num] = tmp_list[i];
+        update_num++;
+        inner_mask[tmp_list[i]] = 1;
+    }
+    free(tmp_list);
+    /* sphere cut */
+    int outer_num = 0;
+    int *outer_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    for (i = initial->tot_num - 1; i >= 0; --i) {
+        if (inner_mask[i] == 0) {
+            outer_list[outer_num] = i;
+            outer_num++;
+        }
+    }
+    for (i = 0; i < outer_num; ++i) {
+        extract_atom(initial, outer_list[i]);
+    }
+    free(inner_mask);
+    free(outer_list);
+    /* starting configuration */
     Config *config0 = (Config *)malloc(sizeof(Config));
-    trim_atoms(initial, update_num, update_list);
     copy_config(config0, initial);
+    /* displacement list */
     get_sphere_list(config0, input, center, input->acti_cutoff,
                     &tmp_num, &tmp_list, comm);
     int disp_num = 0;
-    int *disp_list = (int *)malloc(sizeof(int) * config0->tot_num);
+    int *disp_list = (int *)malloc(sizeof(int) * tmp_num);
     for (i = 0; i < tmp_num; ++i) {
         if (config0->fix[tmp_list[i]] == 0) {
             disp_list[disp_num] = tmp_list[i];
@@ -484,7 +505,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
     int negative = 0;
-    for (art_step = 1; art_step <= input->max_num_itr; ++art_step) {
+    for (art_step = 1; art_step <= 100; ++art_step) {
         /* lanczos */
         if (art_step > input->art_delay) {
             lanczos_step = lanczos(config0, force0, input, disp_num, disp_list,
@@ -559,9 +580,9 @@ int art_nouveau(Config *initial, Config *final, Input *input,
         }
         free(force0);
         free_config(config0);
-        free(disp_list);
-        free(update_list);
         free(extract_list);
+        free(update_list);
+        free(disp_list);
         free(full_eigenmode);
         free(eigenmode);
         return 1;
@@ -577,12 +598,11 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     *Ea = ts_energy - i_energy;
 
     /* saddle update */
-    for (i = 0; i < config0->tot_num; ++i) {
-        final->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
-        final->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
-        final->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
-    }
     for (i = 0; i < disp_num; ++i) {
+        /* final stores saddle */
+        final->pos[extract_list[i] * 3 + 0] = config0->pos[disp_list[i] * 3 + 0];
+        final->pos[extract_list[i] * 3 + 1] = config0->pos[disp_list[i] * 3 + 1];
+        final->pos[extract_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2];
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
         full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
         full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
@@ -605,8 +625,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
 
     /* split */
     int conv = split_configs(initial, final, config0, input,
-                             eigenmode, count, index,
-                             update_num, update_list,
+                             eigenmode, count, index, update_num, update_list,
                              disp_num, disp_list, comm);
 
     if ((local_rank == 0) && (conv == 0)) {

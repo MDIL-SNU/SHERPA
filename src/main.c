@@ -238,6 +238,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
+
         if (data == NULL) {
             atom_index = target_list[local_count % target_num];
             eigenmode = NULL;

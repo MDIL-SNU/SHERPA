@@ -4,6 +4,18 @@
 #include "alg_utils.h"
 
 
+void int_shuffle(int list_len, int *int_list)
+{
+    int i, tmp;
+    for (i = 0; i < list_len - 1; ++i) {
+        int random = i + rand() % (list_len - i);
+        tmp = int_list[i];
+        int_list[i] = int_list[random];
+        int_list[random] = tmp;
+    }
+}
+
+
 void int_sort_decrease(int list_len, int *int_list)
 {
     int i;

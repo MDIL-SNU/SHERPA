@@ -33,14 +33,13 @@ TARGET_LIST = ./TARGET
 DISP_DIST   = 0.01
 ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
-MAX_STEP    = 0.1
-TRIAL_STEP  = 0.01
+MAX_MOVE    = 0.1
+TRIAL_MOVE  = 0.01
 INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3
 DISP_STDDEV = 0.1
 CONFIDENCE  = 0.9
-MAX_NUM_ITR = 500
 MAX_SEARCH  = 1
 WRITE_MODE  = 1
 
@@ -57,14 +56,15 @@ VASP_CMD    = mpirun -np $nprocs $vasp_path
 KAPPA_DIMER = 0
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
-MAX_NUM_ROT = 4
-TRIAL_ANGLE = 45
+MAX_ROT     = 4
+MAX_TLS     = 500
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
 LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
-MAX_NUM_RLX = 4
+BELOW_RLX   = 4
+ABOVE_RLX   = 500
 ART_DELAY   = 3
 ART_MIXING  = 3
 
@@ -98,9 +98,9 @@ RESTART_DIR = ./gen_0
   - A cutoff radius of active volume (Angs)
 * **F_TOL** [real]
   - A force tolerance for dimer method (eV/Angs)
-* **MAX_STEP** [real]
+* **MAX_MOVE** [real]
   - A maximum step size of image movement (Angs)
-* **TRIAL_STEP** [real]
+* **TRIAL_MOVE** [real]
   - A trial step size of image for cg optimization (Angs)
 * **INIT_RELAX** [integer]
   - An initial structure optimization
@@ -112,8 +112,6 @@ RESTART_DIR = ./gen_0
   - A standard deviation of gaussian displacement
 * **CONFIDENCE** [real]
   - A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
-* **MAX_NUM_ITR** [integer]
-  - A maximum number of iterations during saddle point searches
 * **MAX_SEARCH** [integer]
   - A maximum number of saddle point searches
 * **WRITE_MODE** [integer]
@@ -137,23 +135,27 @@ RESTART_DIR = ./gen_0
   - A minimum force criteria for rotation (eV/Angs)
 * **F_ROT_MAX** [real]
   - A maximum force criteria for rotation (eV/Angs)
-* **MAX_NUM_ROT** [integer]
-  - A maximum number of rotation
+* **MAX_ROT** [integer]
+  - A maximum number of rotation steps
+* **MAX_TLS** [integer]
+  - A maximum number of translation steps
 * **TRIAL_ANGLE** [real]
   - A trial rotation angle (degree)
 ### ART nouveau parameter
 * **ART_NOUVEAU** [integer]
   - Activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723))
 * **LAMBDA_CRIT** [real]
-  - A criteria value of inflection region (eV/Angs^2)
+  - A criteria value of inflection points (eV/Angs^2)
 * **LAMBDA_CONV** [real]
   - A convergence criteria value for Lanczos method (eV/Angs^2)
-* **MAX_NUM_RLX** [integer]
-  - A maximum number of relaxation
+* **BELOW_RLX** [integer]
+  - A number of orthogonal relaxation steps below inflection points
+* **ABOVE_RLX** [integer]
+  - A number of orthogonal relaxation steps above inflection points
 * **ART_DELAY** [integer]
-  - An initial step without Lanczos method
+  - A number of initial steps without Lanczos method
 * **ART_MIXING** [integer]
-  - A mixing step above inflection line
+  - A number of mixing steps above inflection points
 ### System parameter
 * **FREQUENCY** [real]
   - An attempt frequency of reaction (1/s)
@@ -182,6 +184,15 @@ A
 * I: Index (starting from 0)
 * T: Type (starting from 1)
 * A: All
+
+If `R` is appended after a single character, the indices of target atoms are shuffled randomly.
+```text
+IR 0 1 2 3
+TR 1
+AR
+```
+
+* +R: random shuffle
 
 ## Command
 If you run SPS with LAMMPS, please use command following:

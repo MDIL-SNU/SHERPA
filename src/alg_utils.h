@@ -4,6 +4,7 @@
 #include "input.h"
 
 
+void int_shuffle(int list_len, int *int_list);
 void int_sort_decrease(int list_len, int *int_list);
 void int_sort_increase(int list_len, int *int_list);
 double normal_random(double mean, double std);

@@ -58,7 +58,7 @@ static void rotate(Config *config0, double energy0, double *force0,
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    for (i = 0; i < input->max_num_rot; ++i) {
+    for (i = 0; i < input->max_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
         for (j = 0; j < disp_num; ++j) {
@@ -110,7 +110,7 @@ static void rotate(Config *config0, double energy0, double *force0,
         /* trial rotation */
         double *n_B, *rot_unit_B;
         rotate_vector(n_A, rot_unit_A, &n_B, &rot_unit_B,
-                      disp_num, input->trial_angle); 
+                      disp_num, 3.1415926535897932384626 * 0.25);
         Config *trial_config1 = (Config *)malloc(sizeof(Config));
         copy_config(trial_config1, config0);
         for (j = 0; j < disp_num; ++j) {
@@ -136,8 +136,8 @@ static void rotate(Config *config0, double energy0, double *force0,
         magnitude = dot(dforce, rot_unit_B, disp_num);
         double c1d = magnitude / input->disp_dist;
         /* fourier coefficients */
-        double a1 = (c0d * cos(2 * input->trial_angle) - c1d) 
-                  / (2 * sin(2 * input->trial_angle));
+        double a1 = (c0d * cos(2 * 3.1415926535897932384626 * 0.25) - c1d)
+                  / (2 * sin(2 * 3.1415926535897932384626 * 0.25));
         double b1 = 0.5 * c0d;
         double a0 = 2 * (c0 - a1);
         /* rotational angle */
@@ -196,7 +196,7 @@ static double constrained_rotate(Config *config0, double *force0,
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *unit_force0 = normalize(force0, disp_num);
-    for (i = 0; i < input->max_num_rot; ++i) {
+    for (i = 0; i < input->max_rot; ++i) {
         /* let eigenmode normal to force */
         tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
         new_eigenmode = normalize(tmp_eigenmode, disp_num);
@@ -259,7 +259,7 @@ static double constrained_rotate(Config *config0, double *force0,
         /* trial rotation */
         double *n_B, *rot_unit_B;
         rotate_vector(n_A, rot_unit_A, &n_B, &rot_unit_B,
-                      disp_num, input->trial_angle); 
+                      disp_num, 3.1415926535897932384626 * 0.25);
         Config *trial_config1 = (Config *)malloc(sizeof(Config));
         copy_config(trial_config1, config0);
         for (j = 0; j < disp_num; ++j) {
@@ -284,8 +284,8 @@ static double constrained_rotate(Config *config0, double *force0,
         magnitude = dot(dforce, rot_unit_B, disp_num);
         double c1d = magnitude / input->disp_dist;
         /* fourier coefficients */
-        double a1 = (c0d * cos(2 * input->trial_angle) - c1d) 
-                  / (2 * sin(2 * input->trial_angle));
+        double a1 = (c0d * cos(2 * 3.1415926535897932384626 * 0.25) - c1d)
+                  / (2 * sin(2 * 3.1415926535897932384626 * 0.25));
         double b1 = 0.5 * c0d;
         double a0 = 2 * (c0 - a1);
         /* rotational angle */
@@ -369,20 +369,20 @@ static void translate(Config *config0, double *force0, Input *input,
     double *step = (double *)malloc(sizeof(double) * disp_num * 3);
     if (curvature > 0) {
         for (i = 0; i < disp_num; ++i) {
-            step[i * 3 + 0] = direction[i * 3 + 0] * input->max_step;
-            step[i * 3 + 1] = direction[i * 3 + 1] * input->max_step;
-            step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
+            step[i * 3 + 0] = direction[i * 3 + 0] * input->max_move;
+            step[i * 3 + 1] = direction[i * 3 + 1] * input->max_move;
+            step[i * 3 + 2] = direction[i * 3 + 2] * input->max_move;
         }
     } else {
         Config *trial_config0 = (Config *)malloc(sizeof(Config));
         copy_config(trial_config0, config0);
         for (i = 0; i < disp_num; ++i) {
             trial_config0->pos[disp_list[i] * 3 + 0] += direction[i * 3 + 0]
-                                                      * input->trial_step;
+                                                      * input->trial_move;
             trial_config0->pos[disp_list[i] * 3 + 1] += direction[i * 3 + 1]
-                                                      * input->trial_step;
+                                                      * input->trial_move;
             trial_config0->pos[disp_list[i] * 3 + 2] += direction[i * 3 + 2]
-                                                      * input->trial_step;
+                                                      * input->trial_move;
         }
         double trial_energy0;
         double *trial_force0 = (double *)malloc(sizeof(double) * disp_num * 3);
@@ -402,8 +402,8 @@ static void translate(Config *config0, double *force0, Input *input,
             tmp_force[i * 3 + 1] = f0tp[i * 3 + 1] - f0p[i * 3 + 1];
             tmp_force[i * 3 + 2] = f0tp[i * 3 + 2] - f0p[i * 3 + 2];
         }
-        double C = dot(tmp_force, direction, disp_num) / input->trial_step;
-        double coeff = -F / C + input->trial_step * 0.5;
+        double C = dot(tmp_force, direction, disp_num) / input->trial_move;
+        double coeff = -F / C + input->trial_move * 0.5;
         for (i = 0; i < disp_num; ++i) {
             step[i * 3 + 0] = coeff * direction[i * 3 + 0];
             step[i * 3 + 1] = coeff * direction[i * 3 + 1];
@@ -413,11 +413,11 @@ static void translate(Config *config0, double *force0, Input *input,
         free(tmp_force);
         free(f0tp);
         free_config(trial_config0);
-        if (norm(step, disp_num) > input->max_step) {
+        if (norm(step, disp_num) > input->max_move) {
             for (i = 0; i < disp_num; ++i) {
-                step[i * 3 + 0] = direction[i * 3 + 0] * input->max_step;
-                step[i * 3 + 1] = direction[i * 3 + 1] * input->max_step;
-                step[i * 3 + 2] = direction[i * 3 + 2] * input->max_step;
+                step[i * 3 + 0] = direction[i * 3 + 0] * input->max_move;
+                step[i * 3 + 1] = direction[i * 3 + 1] * input->max_move;
+                step[i * 3 + 2] = direction[i * 3 + 2] * input->max_move;
             }
         }
     }
@@ -470,17 +470,12 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     int local_rank = rank % input->ncore;
 
     /* generate lists */
+    int tmp_num;
+    int *tmp_list;
     double center[3] = {initial->pos[index * 3 + 0],
                         initial->pos[index * 3 + 1],
                         initial->pos[index * 3 + 2]};
-    /* update list */
-    int update_num;
-    int *update_list;
-    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
-                    &update_num, &update_list, comm);
     /* extract list */
-    int tmp_num;
-    int *tmp_list;
     get_sphere_list(initial, input, center, input->acti_cutoff,
                     &tmp_num, &tmp_list, comm);
     int extract_num = 0;
@@ -492,11 +487,37 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
         }
     }
     free(tmp_list);
-
-    /* starting dimer */ 
+    /* update list */
+    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    int update_num = 0;
+    int *update_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    int inner_num = 0;
+    int *inner_mask = (int *)calloc(initial->tot_num, sizeof(int));
+    for (i = 0; i < tmp_num; ++i) {
+        update_list[update_num] = tmp_list[i];
+        update_num++;
+        inner_mask[tmp_list[i]] = 1;
+    }
+    free(tmp_list);
+    /* sphere cut */
+    int outer_num = 0;
+    int *outer_list = (int *)malloc(sizeof(int) * initial->tot_num);
+    for (i = initial->tot_num - 1; i >= 0; --i) {
+        if (inner_mask[i] == 0) {
+            outer_list[outer_num] = i;
+            outer_num++;
+        }
+    }
+    for (i = 0; i < outer_num; ++i) {
+        extract_atom(initial, outer_list[i]);
+    }
+    free(inner_mask);
+    free(outer_list);
+    /* starting configuration */
     Config *config0 = (Config *)malloc(sizeof(Config));
-    trim_atoms(initial, update_num, update_list);
     copy_config(config0, initial);
+    /* displacement list */
     get_sphere_list(config0, input, center, input->acti_cutoff,
                     &tmp_num, &tmp_list, comm);
     int disp_num = 0;
@@ -571,7 +592,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-    for (dimer_step = 1; dimer_step <= input->max_num_itr; ++dimer_step) {
+    for (dimer_step = 1; dimer_step <= input->max_tls; ++dimer_step) {
         rotate(config0, energy0, force0, input, disp_num, disp_list,
                eigenmode, count, dimer_step, comm);
         /* test */
@@ -643,11 +664,13 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
             fputs(" Saddle state: not converged\n", fp);
             fclose(fp);
         }
-        free_config(config0);
         free(force0);
-        free(eigenmode);
-        free(update_list);
+        free_config(config0);
         free(extract_list);
+        free(update_list);
+        free(disp_list);
+        free(full_eigenmode);
+        free(eigenmode);
         return 1;
     }
     /* relax initial structure and barrier energy */
@@ -660,12 +683,10 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     *Ea = ts_energy - i_energy;
 
     /* saddle update */
-    for (i = 0; i < config0->tot_num; ++i) {
-        final->pos[update_list[i] * 3 + 0] = config0->pos[i * 3 + 0];
-        final->pos[update_list[i] * 3 + 1] = config0->pos[i * 3 + 1];
-        final->pos[update_list[i] * 3 + 2] = config0->pos[i * 3 + 2];
-    }
     for (i = 0; i < disp_num; ++i) {
+        final->pos[extract_list[i] * 3 + 0] = config0->pos[disp_list[i] * 3 + 0];
+        final->pos[extract_list[i] * 3 + 1] = config0->pos[disp_list[i] * 3 + 1];
+        final->pos[extract_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2];
         full_eigenmode[extract_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
         full_eigenmode[extract_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
         full_eigenmode[extract_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
@@ -687,8 +708,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     }
 
     int conv = split_configs(initial, final, config0, input,
-                             eigenmode, count, index,
-                             update_num, update_list,
+                             eigenmode, count, index, update_num, update_list,
                              disp_num, disp_list, comm);
 
     if ((local_rank == 0) && (conv == 0)) {

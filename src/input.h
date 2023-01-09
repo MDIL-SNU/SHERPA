@@ -10,14 +10,13 @@ typedef struct _Input
     double disp_dist;
     double acti_cutoff;
     double f_tol;
-    double max_step;
-    double trial_step;
+    double max_move;
+    double trial_move;
     int init_relax;
     int init_disp;
     double disp_cutoff;
     double disp_stddev;
     double confidence;
-    int max_num_itr;
     int max_search;
     int write_mode;
 
@@ -31,13 +30,14 @@ typedef struct _Input
     int kappa_dimer;
     double f_rot_min;
     double f_rot_max;
-    int max_num_rot;
-    double trial_angle;
+    int max_rot;
+    int max_tls;
 
     int art_nouveau;
     double lambda_crit;
     double lambda_conv;
-    int max_num_rlx;
+    int below_rlx;
+    int above_rlx;
     int art_delay;
     int art_mixing;
 

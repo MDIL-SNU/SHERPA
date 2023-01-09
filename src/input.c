@@ -166,14 +166,14 @@ int read_input(Input *input, char *filename)
         printf("F_TOL is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->max_step), "MAX_STEP", filename);
+    errno = input_double(&(input->max_move), "MAX_MOVE", filename);
     if (errno) {
-        printf("MAX_STEP is missing.\n");
+        printf("MAX_MOVE is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->trial_step), "TRIAL_STEP", filename);
+    errno = input_double(&(input->trial_move), "TRIAL_MOVE", filename);
     if (errno) {
-        printf("TRIAL_STEP is missing.\n");
+        printf("TRIAL_MOVE is missing.\n");
         return 1;
     }
     errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
@@ -199,11 +199,6 @@ int read_input(Input *input, char *filename)
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
     if (errno) {
         printf("CONFIDENCE is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->max_num_itr), "MAX_NUM_ITR", filename);
-    if (errno) {
-        printf("MAX_NUM_ITR is missing.\n");
         return 1;
     }
     errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
@@ -256,14 +251,14 @@ int read_input(Input *input, char *filename)
         printf("F_ROT_MAX is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->max_num_rot), "MAX_NUM_ROT", filename);
+    errno = input_int(&(input->max_rot), "MAX_ROT", filename);
     if (errno) {
-        printf("MAX_NUM_ROT is missing.\n");
+        printf("MAX_ROT is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->trial_angle), "TRIAL_ANGLE", filename);
+    errno = input_int(&(input->max_tls), "MAX_TLS", filename);
     if (errno) {
-        printf("TRIAL_ANGLE is missing.\n");
+        printf("MAX_TLS is missing.\n");
         return 1;
     }
     errno = input_int(&(input->art_nouveau), "ART_NOUVEAU", filename);
@@ -281,9 +276,14 @@ int read_input(Input *input, char *filename)
         printf("LAMBDA_CONV is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
+    errno = input_int(&(input->below_rlx), "BELOW_RLX", filename);
     if (errno) {
-        printf("MAX_NUM_RLX is missing.\n");
+        printf("BELOW_RLX is missing.\n");
+        return 1;
+    }
+    errno = input_int(&(input->above_rlx), "ABOVE_RLX", filename);
+    if (errno) {
+        printf("ABOVE_RLX is missing.\n");
         return 1;
     }
     errno = input_int(&(input->art_delay), "ART_DELAY", filename);
@@ -333,7 +333,6 @@ int read_input(Input *input, char *filename)
     input->ncore = 1;
     input->pair_cutoff = 100.0;
     #endif
-    input->trial_angle *= 3.1415926535897932384626 / 180;
     input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->art_nouveau > 1) {
         return 1;
@@ -361,14 +360,13 @@ void write_input(Input *input)
     fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
-    fprintf(fp, "MAX_STEP\t= %f\n", input->max_step);
-    fprintf(fp, "TRIAL_STEP\t= %f\n", input->trial_step);
+    fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
+    fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
-    fprintf(fp, "MAX_NUM_ITR\t= %d\n", input->max_num_itr);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
     fputs("\n", fp);
@@ -388,15 +386,16 @@ void write_input(Input *input)
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
     fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
-    fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
-    fprintf(fp, "TRIAL_ANGLE\t= %f\n", input->trial_angle * 180 / 3.141592);
+    fprintf(fp, "MAX_ROT\t= %d\n", input->max_rot);
+    fprintf(fp, "MAX_TLS\t= %d\n", input->max_tls);
     fputs("\n", fp);
 
     fputs("# art_nouveau parameter #\n", fp);
     fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
     fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
-    fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
+    fprintf(fp, "BELOW_RLX\t= %d\n", input->below_rlx);
+    fprintf(fp, "ABOVE_RLX\t= %d\n", input->above_rlx);
     fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
     fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
     fputs("\n", fp);

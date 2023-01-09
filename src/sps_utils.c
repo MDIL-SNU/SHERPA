@@ -147,7 +147,7 @@ int check_unique(Config *config, Input *input, char *self)
                 continue;
             }
             /* 0: identical, 1: different */
-            unique = diff_config(tmp_config, config, 2 * input->max_step);
+            unique = diff_config(tmp_config, config, 2 * input->max_move);
             free_config(tmp_config);
             if (unique == 0) {
                 strtok(namelist[i]->d_name, "_");
@@ -390,7 +390,7 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
         }
         atom_relax(config1, input, &energy1, comm);
         atom_relax(config2, input, &energy2, comm);
-        if (diff_config(config1, config2, 2 * input->max_step) == 1) {
+        if (diff_config(config1, config2, 2 * input->max_move) == 1) {
             break;
         } else {
             free_config(config1);
@@ -414,8 +414,8 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     free(force1);
     free(force2);
 
-    int diff1 = diff_config(initial, config1, 2 * input->max_step);
-    int diff2 = diff_config(initial, config2, 2 * input->max_step);
+    int diff1 = diff_config(initial, config1, 2 * input->max_move);
+    int diff2 = diff_config(initial, config2, 2 * input->max_move);
     /* log */
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
