@@ -56,15 +56,14 @@ VASP_CMD    = mpirun -np $nprocs $vasp_path
 KAPPA_DIMER = 0
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
-MAX_ROT     = 4
-MAX_TLS     = 500
+MAX_NUM_ROT = 4
+MAX_NUM_TLS = 500
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
 LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
-BELOW_RLX   = 4
-ABOVE_RLX   = 500
+MAX_NUM_RLX = 4
 ART_DELAY   = 3
 ART_MIXING  = 3
 
@@ -135,9 +134,9 @@ RESTART_DIR = ./gen_0
   - A minimum force criteria for rotation (eV/Angs)
 * **F_ROT_MAX** [real]
   - A maximum force criteria for rotation (eV/Angs)
-* **MAX_ROT** [integer]
+* **MAX_NUM_ROT** [integer]
   - A maximum number of rotation steps
-* **MAX_TLS** [integer]
+* **MAX_NUM_TLS** [integer]
   - A maximum number of translation steps
 * **TRIAL_ANGLE** [real]
   - A trial rotation angle (degree)
@@ -148,10 +147,8 @@ RESTART_DIR = ./gen_0
   - A criteria value of inflection points (eV/Angs^2)
 * **LAMBDA_CONV** [real]
   - A convergence criteria value for Lanczos method (eV/Angs^2)
-* **BELOW_RLX** [integer]
-  - A number of orthogonal relaxation steps below inflection points
-* **ABOVE_RLX** [integer]
-  - A number of orthogonal relaxation steps above inflection points
+* **MAX_NUM_RLX** [integer]
+  - A maximum number of orthogonal relaxation steps below inflection points
 * **ART_DELAY** [integer]
   - A number of initial steps without Lanczos method
 * **ART_MIXING** [integer]

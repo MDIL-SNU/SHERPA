@@ -17,13 +17,11 @@ double *get_rot_force(Input *input, double *force1, double *force2,
                       double *eigenmode, int n);
 void get_cg_direction(double *direction, double *direction_old,
                       double *cg_direction, int n);
-void trim_atoms(Config *config, int update_num, int *update_list);
 double *get_eigenmode(Input *input, int n, MPI_Comm comm);
 void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
                      int *atom_num, int **atom_list, MPI_Comm comm);
 int split_configs(Config *initial, Config *final, Config *config0, Input *input,
-                  double *eigenmode, int count, int index,
-                  int update_num, int *update_list,
-                  int disp_num, int *disp_list,
+                  double *Ea, double *eigenmode, int count, int index,
+                  int update_num, int *update_list, int disp_num, int *disp_list,
                   MPI_Comm comm);
 #endif

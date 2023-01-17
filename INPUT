@@ -29,15 +29,14 @@ VASP_CMD    = mpirun -np $nprocs vasp_std
 KAPPA_DIMER = 0
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
-MAX_ROT     = 4
-MAX_TLS     = 500
+MAX_NUM_ROT = 4
+MAX_NUM_TLS = 500
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
 LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
-BELOW_RLX   = 4
-ABOVE_RLX   = 500
+MAX_NUM_RLX = 4
 ART_DELAY   = 0
 ART_MIXING  = 3
 

@@ -255,7 +255,7 @@ static void perp_relax(Config *config0, Input *input,
     double *cg_direction = (double *)calloc(disp_num * 3, sizeof(double));
 
     int relax_step;
-    int end_step = eigenvalue < input->lambda_crit ? input->above_rlx : input->below_rlx;
+    int end_step = eigenvalue < input->lambda_crit ? 500 : input->max_num_rlx;
     for (relax_step = 0; relax_step < end_step; ++relax_step) {
         oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
         double *perp_force0 = perpendicular_vector(force0, push_direction, disp_num);
@@ -379,6 +379,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
                 MPI_Comm comm)
 {
     int i, j, rank, size;
+    int conv = 1;
     char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -486,7 +487,6 @@ int art_nouveau(Config *initial, Config *final, Input *input,
 
     int art_step;
     int lanczos_step = 0;
-    int converge = 0;
     double eigenvalue = 1;
     if (local_rank == 0) {
         sprintf(filename, "%s/SPS_%d.log",
@@ -558,44 +558,31 @@ int art_nouveau(Config *initial, Config *final, Input *input,
             }
         }
         if (fmax < input->f_tol) {
-            converge = 1;
+            conv = 0;
             break;
         }
     }
+    free(force0);
     free(init_direction);
     if (local_rank == 0) {
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");
         fputs("--------------------------------------------------------------------\n", fp);
+        if (conv > 0) {
+            fputs(" Saddle state: not converged\n", fp);
+        }
         fclose(fp);
     }
-    if (converge == 0) {
-        if (local_rank == 0) {
-            sprintf(filename, "%s/SPS_%d.log",
-                    input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            fputs(" Saddle state: not converged\n", fp);
-            fclose(fp);
-        }
-        free(force0);
+    if (conv > 0) {
         free_config(config0);
         free(extract_list);
         free(update_list);
         free(disp_list);
         free(full_eigenmode);
         free(eigenmode);
-        return 1;
+        return conv;
     }
-
-    /* relax initial structure and barrier energy */
-    atom_relax(initial, input, &energy0, comm);
-    oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
-    double i_energy = energy0;
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-    double ts_energy = energy0;
-    free(force0);
-    *Ea = ts_energy - i_energy;
 
     /* saddle update */
     for (i = 0; i < disp_num; ++i) {
@@ -624,18 +611,9 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     }
 
     /* split */
-    int conv = split_configs(initial, final, config0, input,
-                             eigenmode, count, index, update_num, update_list,
-                             disp_num, disp_list, comm);
-
-    if ((local_rank == 0) && (conv == 0)) {
-        char filename[128];
-        sprintf(filename, "%s/SPS_%d.log",
-                input->output_dir, count);
-        FILE *fp = fopen(filename, "a");
-        fprintf(fp, " Barrier energy: %f eV\n", *Ea);
-        fclose(fp);
-    }
+    conv = split_configs(initial, final, config0, input,
+                         Ea, eigenmode, count, index,
+                         update_num, update_list, disp_num, disp_list, comm);
 
     free_config(config0);
     free(extract_list);

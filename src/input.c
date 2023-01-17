@@ -251,14 +251,14 @@ int read_input(Input *input, char *filename)
         printf("F_ROT_MAX is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->max_rot), "MAX_ROT", filename);
+    errno = input_int(&(input->max_num_rot), "MAX_NUM_ROT", filename);
     if (errno) {
-        printf("MAX_ROT is missing.\n");
+        printf("MAX_NUM_ROT is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->max_tls), "MAX_TLS", filename);
+    errno = input_int(&(input->max_num_tls), "MAX_NUM_TLS", filename);
     if (errno) {
-        printf("MAX_TLS is missing.\n");
+        printf("MAX_NUM_TLS is missing.\n");
         return 1;
     }
     errno = input_int(&(input->art_nouveau), "ART_NOUVEAU", filename);
@@ -276,14 +276,9 @@ int read_input(Input *input, char *filename)
         printf("LAMBDA_CONV is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->below_rlx), "BELOW_RLX", filename);
+    errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
     if (errno) {
-        printf("BELOW_RLX is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->above_rlx), "ABOVE_RLX", filename);
-    if (errno) {
-        printf("ABOVE_RLX is missing.\n");
+        printf("MAX_NUM_RLX is missing.\n");
         return 1;
     }
     errno = input_int(&(input->art_delay), "ART_DELAY", filename);
@@ -386,16 +381,15 @@ void write_input(Input *input)
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
     fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
-    fprintf(fp, "MAX_ROT\t= %d\n", input->max_rot);
-    fprintf(fp, "MAX_TLS\t= %d\n", input->max_tls);
+    fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
+    fprintf(fp, "MAX_NUM_TLS\t= %d\n", input->max_num_tls);
     fputs("\n", fp);
 
     fputs("# art_nouveau parameter #\n", fp);
     fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
     fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
-    fprintf(fp, "BELOW_RLX\t= %d\n", input->below_rlx);
-    fprintf(fp, "ABOVE_RLX\t= %d\n", input->above_rlx);
+    fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
     fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
     fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
     fputs("\n", fp);

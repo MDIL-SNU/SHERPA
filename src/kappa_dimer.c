@@ -58,7 +58,7 @@ static void rotate(Config *config0, double energy0, double *force0,
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
-    for (i = 0; i < input->max_rot; ++i) {
+    for (i = 0; i < input->max_num_rot; ++i) {
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
         for (j = 0; j < disp_num; ++j) {
@@ -196,7 +196,7 @@ static double constrained_rotate(Config *config0, double *force0,
     double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
     double *unit_force0 = normalize(force0, disp_num);
-    for (i = 0; i < input->max_rot; ++i) {
+    for (i = 0; i < input->max_num_rot; ++i) {
         /* let eigenmode normal to force */
         tmp_eigenmode = perpendicular_vector(eigenmode, unit_force0, disp_num);
         new_eigenmode = normalize(tmp_eigenmode, disp_num);
@@ -463,6 +463,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
                 MPI_Comm comm)
 {
     int i, j, rank, size;
+    int conv = 1;
     char filename[128];
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -574,7 +575,6 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
 
     /* run */
     double kappa;
-    int converge = 0;
     int dimer_step;
     if (local_rank == 0) {
         sprintf(filename, "%s/SPS_%d.log",
@@ -592,7 +592,7 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
     oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-    for (dimer_step = 1; dimer_step <= input->max_tls; ++dimer_step) {
+    for (dimer_step = 1; dimer_step <= input->max_num_tls; ++dimer_step) {
         rotate(config0, energy0, force0, input, disp_num, disp_list,
                eigenmode, count, dimer_step, comm);
         /* test */
@@ -643,10 +643,11 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
             write_config(config0, filename, "a");
         }
         if (fmax < input->f_tol) {
-            converge = 1;
+            conv = 0;
             break;
         }
     }
+    free(force0);
     free(direction_old);
     free(cg_direction);
     if (local_rank == 0) {
@@ -654,36 +655,24 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");
         fputs("----------------------------------------------------------------------------\n", fp);
+        if (conv > 0) {
+            fputs(" Saddle state: not converged\n", fp);
+        }
         fclose(fp);
     }
-    if (converge == 0) {
-        if (local_rank == 0) {
-            sprintf(filename, "%s/SPS_%d.log",
-                    input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            fputs(" Saddle state: not converged\n", fp);
-            fclose(fp);
-        }
-        free(force0);
+    if (conv > 0) {
         free_config(config0);
         free(extract_list);
         free(update_list);
         free(disp_list);
         free(full_eigenmode);
         free(eigenmode);
-        return 1;
+        return conv;
     }
-    /* relax initial structure and barrier energy */
-    atom_relax(initial, input, &energy0, comm);
-    oneshot_disp(initial, input, &energy0, force0, disp_num, disp_list, comm);
-    double i_energy = energy0;
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
-    double ts_energy = energy0;
-    free(force0);
-    *Ea = ts_energy - i_energy;
 
     /* saddle update */
     for (i = 0; i < disp_num; ++i) {
+        /* final stores saddle */
         final->pos[extract_list[i] * 3 + 0] = config0->pos[disp_list[i] * 3 + 0];
         final->pos[extract_list[i] * 3 + 1] = config0->pos[disp_list[i] * 3 + 1];
         final->pos[extract_list[i] * 3 + 2] = config0->pos[disp_list[i] * 3 + 2];
@@ -707,17 +696,10 @@ int kappa_dimer(Config *initial, Config *final, Input *input,
         fclose(fp);
     }
 
-    int conv = split_configs(initial, final, config0, input,
-                             eigenmode, count, index, update_num, update_list,
-                             disp_num, disp_list, comm);
-
-    if ((local_rank == 0) && (conv == 0)) {
-        sprintf(filename, "%s/SPS_%d.log",
-                input->output_dir, count);
-        FILE *fp = fopen(filename, "a");
-        fprintf(fp, " Barrier energy: %f eV\n", *Ea);
-        fclose(fp);
-    }
+    /* split */
+    conv = split_configs(initial, final, config0, input,
+                         Ea, eigenmode, count, index,
+                         update_num, update_list, disp_num, disp_list, comm);
 
     free_config(config0);
     free(extract_list);

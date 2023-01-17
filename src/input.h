@@ -30,14 +30,13 @@ typedef struct _Input
     int kappa_dimer;
     double f_rot_min;
     double f_rot_max;
-    int max_rot;
-    int max_tls;
+    int max_num_rot;
+    int max_num_tls;
 
     int art_nouveau;
     double lambda_crit;
     double lambda_conv;
-    int below_rlx;
-    int above_rlx;
+    int max_num_rlx;
     int art_delay;
     int art_mixing;
 
