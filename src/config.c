@@ -103,7 +103,7 @@ static void convert_basis(Config *config)
 
 
 /* remove one atom from config */
-void extract_atom(Config *config, int index)
+void remove_atom(Config *config, int index)
 {
     int i, j, ntype, tot_num;
     int acc_num = 0;

@@ -12,6 +12,7 @@ void insert_data(Dataset *dataset, int n, int index, double *eigenmode)
 {
     int i;
     Data *data = (Data *)malloc(sizeof(Data));
+    data->next = NULL;
     data->index = index;
     data->eigenmode = (double *)malloc(sizeof(double) * n * 3);
     for (i = 0; i < n; ++i) {
@@ -19,12 +20,11 @@ void insert_data(Dataset *dataset, int n, int index, double *eigenmode)
         data->eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
         data->eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
     }
-    if (dataset->head == NULL) {
-        dataset->head = data;
-        dataset->head->next = NULL;
+    if ((dataset->head == NULL) && (dataset->tail == NULL)) {
+        dataset->head = dataset->tail = data;
     } else {
-        data->next = dataset->head;
-        dataset->head = data;
+        dataset->tail->next = data;
+        dataset->tail = data;
     }
 }
 

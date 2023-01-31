@@ -14,6 +14,7 @@ typedef struct _Data
 typedef struct _Dataset
 {
     struct _Data *head;
+    struct _Data *tail;
 } Dataset;
 
 void insert_data(Dataset *dataset, int n, int index, double *eigenmode);

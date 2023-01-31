@@ -75,8 +75,8 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void oneshot_disp(Config *config, Input *input, double *energy, double *force,
-                  int disp_num, int *disp_list, MPI_Comm comm)
+void oneshot_local(Config *config, Input *input, double *energy, double *force,
+                  int local_num, int *local_list, MPI_Comm comm)
 {
     int i;
     char cmd[1024];
@@ -88,10 +88,10 @@ void oneshot_disp(Config *config, Input *input, double *energy, double *force,
     *energy = lammps_get_thermo(lmp, "pe");
     double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
     lammps_gather_atoms(lmp, "f", 1, 3, tmp_force);
-    for (i = 0; i < disp_num; ++i) {
-        force[i * 3 + 0] = tmp_force[disp_list[i] * 3 + 0];
-        force[i * 3 + 1] = tmp_force[disp_list[i] * 3 + 1];
-        force[i * 3 + 2] = tmp_force[disp_list[i] * 3 + 2];
+    for (i = 0; i < local_num; ++i) {
+        force[i * 3 + 0] = tmp_force[local_list[i] * 3 + 0];
+        force[i * 3 + 1] = tmp_force[local_list[i] * 3 + 1];
+        force[i * 3 + 2] = tmp_force[local_list[i] * 3 + 2];
     }
     /* delete LAMMPS instance */
     free(tmp_force);

@@ -326,10 +326,9 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 }
 
 
-int split_configs(Config *initial, Config *final, Config *config0, Input *input,
-                  double *Ea, double *eigenmode, int count, int index,
-                  int update_num, int *update_list, int disp_num, int *disp_list,
-                  MPI_Comm comm)
+int postprocess(Config *initial, Config *final, Input *input, double *Ea,
+                double *eigenmode, int count, int index,
+                int global_num, int *global_list, MPI_Comm comm)
 {
     int i, j, rank, size;
 
@@ -338,82 +337,72 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
     int local_rank = rank % input->ncore;
 
     double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * disp_num * 3);
-    /* initial relax */
-    atom_relax(initial, input, &energy0, comm);
+    double *force0 = (double *)malloc(sizeof(double) * final->tot_num * 3);
+    /* initial oneshot */
+    oneshot(initial, input, &energy0, force0, comm);
+    double initial_energy = energy0;
     /* saddle oneshot */
-    oneshot_disp(config0, input, &energy0, force0, disp_num, disp_list, comm);
+    oneshot(final, input, &energy0, force0, comm);
+    double saddle_energy = energy0;
+    *Ea = saddle_energy - initial_energy;
     free(force0);
 
     /* forward image */
     Config *config1 = (Config *)malloc(sizeof(Config));
-    copy_config(config1, config0);
+    copy_config(config1, final);
     double energy1;
-    double *force1 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * final->tot_num * 3);
     for (i = 0; i < 10; ++i) {
-        for (j = 0; j < disp_num; ++j) {
-            config1->pos[disp_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
-            config1->pos[disp_list[j] * 3 + 1] += 0.1 * eigenmode[j * 3 + 1];
-            config1->pos[disp_list[j] * 3 + 2] += 0.1 * eigenmode[j * 3 + 2];
+        for (j = 0; j < global_num; ++j) {
+            config1->pos[global_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
+            config1->pos[global_list[j] * 3 + 1] += 0.1 * eigenmode[j * 3 + 1];
+            config1->pos[global_list[j] * 3 + 2] += 0.1 * eigenmode[j * 3 + 2];
         }
-        oneshot_disp(config1, input, &energy1, force1, disp_num, disp_list, comm);
+        oneshot(config1, input, &energy1, force1, comm);
         if (energy1 < energy0) {
             break;
         }
     }
+    free(force1);
+    atom_relax(config1, input, &energy1, comm);
+    int diff1 = diff_config(initial, config1, 2 * input->max_move);
+
     /* backward image */
     Config *config2 = (Config *)malloc(sizeof(Config));
-    copy_config(config2, config0);
+    copy_config(config2, final);
     double energy2;
-    double *force2 = (double *)malloc(sizeof(double) * disp_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * final->tot_num * 3);
     for (i = 0; i < 10; ++i) {
-        for (j = 0; j < disp_num; ++j) {
-            config2->pos[disp_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
-            config2->pos[disp_list[j] * 3 + 1] -= 0.1 * eigenmode[j * 3 + 1];
-            config2->pos[disp_list[j] * 3 + 2] -= 0.1 * eigenmode[j * 3 + 2];
+        for (j = 0; j < global_num; ++j) {
+            config2->pos[global_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
+            config2->pos[global_list[j] * 3 + 1] -= 0.1 * eigenmode[j * 3 + 1];
+            config2->pos[global_list[j] * 3 + 2] -= 0.1 * eigenmode[j * 3 + 2];
         }
-        oneshot_disp(config2, input, &energy2, force2, disp_num, disp_list, comm);
+        oneshot(config2, input, &energy2, force2, comm);
         if (energy2 < energy0) {
             break;
         }
     }
-    free(force1);
     free(force2);
-    atom_relax(config1, input, &energy1, comm);
     atom_relax(config2, input, &energy2, comm);
-    int diff1 = diff_config(initial, config1, 2 * input->max_move);
     int diff2 = diff_config(initial, config2, 2 * input->max_move);
+
     /* log */
     if (diff1 * diff2 > 0) {
         if (local_rank == 0) {
             char filename[128];
+            sprintf(filename, "%s/x1_Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
+            write_config(config1, filename, "w");
+            sprintf(filename, "%s/x2_Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
+            write_config(config2, filename, "w");
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs(" Saddle state: disconnected\n", fp);
+            fprintf(fp, " Barrier energy: %f eV\n", *Ea);
             fclose(fp);
-        }
-        for (i = 0; i < config0->tot_num; ++i) {
-            final->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
-            final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
-            final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
-        }
-        if (local_rank == 0) {
-            char filename[128];
-            sprintf(filename, "%s/x1_Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            write_config(final, filename, "w");
-        }
-        for (i = 0; i < config0->tot_num; ++i) {
-            final->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
-            final->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
-            final->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
-        }
-        if (local_rank == 0) {
-            char filename[128];
-            sprintf(filename, "%s/x2_Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            write_config(final, filename, "w");
         }
         free_config(config1);
         free_config(config2);
@@ -425,23 +414,22 @@ int split_configs(Config *initial, Config *final, Config *config0, Input *input,
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs(" Saddle state: not splited\n", fp);
+            fprintf(fp, " Barrier energy: %f eV\n", *Ea);
             fclose(fp);
         }
         return 1;
     } else {
         if (diff1 == 0) {
-            *Ea = energy0 - energy1;
-            for (i = 0; i < config0->tot_num; ++i) {
-                final->pos[update_list[i] * 3 + 0] = config2->pos[i * 3 + 0];
-                final->pos[update_list[i] * 3 + 1] = config2->pos[i * 3 + 1];
-                final->pos[update_list[i] * 3 + 2] = config2->pos[i * 3 + 2];
+            for (i = 0; i < final->tot_num; ++i) {
+                final->pos[i * 3 + 0] = config2->pos[i * 3 + 0];
+                final->pos[i * 3 + 1] = config2->pos[i * 3 + 1];
+                final->pos[i * 3 + 2] = config2->pos[i * 3 + 2];
             }
         } else {
-            *Ea = energy0 - energy2;
-            for (i = 0; i < config0->tot_num; ++i) {
-                final->pos[update_list[i] * 3 + 0] = config1->pos[i * 3 + 0];
-                final->pos[update_list[i] * 3 + 1] = config1->pos[i * 3 + 1];
-                final->pos[update_list[i] * 3 + 2] = config1->pos[i * 3 + 2];
+            for (i = 0; i < final->tot_num; ++i) {
+                final->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
+                final->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
+                final->pos[i * 3 + 2] = config1->pos[i * 3 + 2];
             }
         }
         free_config(config1);

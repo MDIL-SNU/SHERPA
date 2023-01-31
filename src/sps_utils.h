@@ -20,8 +20,7 @@ void get_cg_direction(double *direction, double *direction_old,
 double *get_eigenmode(Input *input, int n, MPI_Comm comm);
 void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
                      int *atom_num, int **atom_list, MPI_Comm comm);
-int split_configs(Config *initial, Config *final, Config *config0, Input *input,
-                  double *Ea, double *eigenmode, int count, int index,
-                  int update_num, int *update_list, int disp_num, int *disp_list,
-                  MPI_Comm comm);
+int postprocess(Config *initial, Config *final, Input *input,
+                double *Ea, double *eigenmode, int count, int index,
+                int global_num, int *global_list, MPI_Comm comm);
 #endif

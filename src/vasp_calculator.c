@@ -131,8 +131,8 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void oneshot_disp(Config *config, Input *input, double *energy, double *force,
-                  int disp_num, int *disp_list, MPI_Comm comm)
+void oneshot_local(Config *config, Input *input, double *energy, double *force,
+                  int local_num, int *local_list, MPI_Comm comm)
 {
     int i;
     FILE *fp;
@@ -153,10 +153,10 @@ void oneshot_disp(Config *config, Input *input, double *energy, double *force,
     double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
     sprintf(filename, "%s_tmp/OUTCAR", input->output_dir);
     read_outcar(filename, config->pos, energy, tmp_force);
-    for (i = 0; i < disp_num; ++i) {
-        force[i * 3 + 0] = tmp_force[disp_list[i] * 3 + 0];
-        force[i * 3 + 1] = tmp_force[disp_list[i] * 3 + 1];
-        force[i * 3 + 2] = tmp_force[disp_list[i] * 3 + 2];
+    for (i = 0; i < local_num; ++i) {
+        force[i * 3 + 0] = tmp_force[local_list[i] * 3 + 0];
+        force[i * 3 + 1] = tmp_force[local_list[i] * 3 + 1];
+        force[i * 3 + 2] = tmp_force[local_list[i] * 3 + 2];
     }
     free(tmp_force);
     sprintf(cmd, "cat %s_tmp/OUTCAR >> %s/OUTCAR",

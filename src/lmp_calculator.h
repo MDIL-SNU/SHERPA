@@ -8,7 +8,7 @@
 void *lmp_init(Config *config, Input *input, MPI_Comm comm);
 void oneshot(Config *config, Input *input, double *energy, double *force,
              MPI_Comm comm);
-void oneshot_disp(Config *config, Input *input, double *energy, double *force,
-                  int disp_num, int *disp_list, MPI_Comm comm);
+void oneshot_local(Config *config, Input *input, double *energy, double *force,
+                   int disp_num, int *disp_list, MPI_Comm comm);
 void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm);
 #endif
