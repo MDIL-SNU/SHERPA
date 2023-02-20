@@ -45,8 +45,8 @@ void *lmp_init(Config *config, Input *input, MPI_Comm comm)
     sprintf(cmd, "pair_style %s", input->pair_style);
     lammps_command(lmp, cmd);
     char *ptr;
-    char tmp_pair_coeff[512];
-    memcpy(tmp_pair_coeff, input->pair_coeff, sizeof(char) * 512);
+    char tmp_pair_coeff[65536];
+    memcpy(tmp_pair_coeff, input->pair_coeff, sizeof(char) * 65536);
     ptr = strtok(tmp_pair_coeff, "|\n");
     while (ptr != NULL) {
         sprintf(cmd, "pair_coeff %s", ptr);

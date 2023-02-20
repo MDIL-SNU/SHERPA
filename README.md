@@ -64,7 +64,7 @@ ART_NOUVEAU = 1
 LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
-ART_DELAY   = 3
+ART_DELAY   = 0
 ART_MIXING  = 3
 
 # system parameter #
@@ -171,7 +171,7 @@ RESTART_DIR = ./gen_0
   - A directory of previous SPS output
 
 ## TARGET
-It contains the target atom indices or types to be the center of active volume.
+The active volume is centered around either the target atom indices or types, with each condition combined using the OR operation.
 ```text
 I 0 1 2 3
 T 1
@@ -209,4 +209,8 @@ Otherwise, execute code without parallel command following:
 2. The filename of final structure has the format as "Final _ `count` _ `atomic index`.POSCAR"
 3. For VASP calculation, INCAR, KPOINTS, and POTCAR should be located in the current directory.
 4. To use hybrid potentials, write down all `pair_coeff`s within `PAIR_COEFF` with the delimiter (|) between them.
+For example,
+```text
+PAIR_COEFF = 1 1 potential_saved_1 | 1 2 potential_saved_2
+```
 5. To provide specific initial vector, set `RESTART` of 1 and provide "Final _ `count` _ `atomic index`.POSCAR" and "`count`.MODECAR" in `RESTART_DIR`.

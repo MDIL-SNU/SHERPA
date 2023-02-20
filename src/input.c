@@ -81,7 +81,7 @@ int input_char(char **var, char *tag, char *filename)
         } else if (strncmp(ptr, tag, strlen(tag)) == 0) {
             strtok(line, " \n\t");
             strtok(NULL, " \n\t");
-            *var = (char *)malloc(sizeof(char) * 1024);
+            *var = (char *)malloc(sizeof(char) * 65536);
             strcpy(*var, strtok(NULL, "\n"));
             fclose(fp);
             return 0;
