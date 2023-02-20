@@ -408,7 +408,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     }
     free(tmp_list);
     /* sphere cut */
-    get_sphere_list(initial, input, center, 2 * input->pair_cutoff,
+    get_sphere_list(initial, input, center, input->calc_cutoff,
                     &tmp_num, &tmp_list, comm);
     int inner_num = 0;
     int *inner_mask = (int *)calloc(initial->tot_num, sizeof(int));

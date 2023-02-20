@@ -161,6 +161,11 @@ int read_input(Input *input, char *filename)
         printf("ACTI_CUTOFF is missing.\n");
         return 1;
     }
+    errno = input_double(&(input->calc_cutoff), "CALC_CUTOFF", filename);
+    if (errno) {
+        printf("CALC_CUTOFF is missing.\n");
+        return 1;
+    }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
         printf("F_TOL is missing.\n");
@@ -219,11 +224,6 @@ int read_input(Input *input, char *filename)
     errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
     if (errno) {
         printf("PAIR_COEFF is missing.\n");
-        return 1;
-    }
-    errno = input_double(&(input->pair_cutoff), "PAIR_CUTOFF", filename);
-    if (errno) {
-        printf("PAIR_CUTOFF is missing.\n");
         return 1;
     }
     errno = input_int(&(input->ncore), "NCORE", filename);
@@ -326,7 +326,6 @@ int read_input(Input *input, char *filename)
     }
     #ifdef VASP
     input->ncore = 1;
-    input->pair_cutoff = 100.0;
     #endif
     input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->art_nouveau > 1) {
@@ -354,6 +353,7 @@ void write_input(Input *input)
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
+    fprintf(fp, "CALC_CUTOFF\t= %f\n", input->calc_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
@@ -369,7 +369,6 @@ void write_input(Input *input)
     fputs("# LAMMPS parameter #\n", fp);
     fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
     fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
-    fprintf(fp, "PAIR_CUTOFF\t= %f\n", input->pair_cutoff);
     fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
     fputs("\n", fp);
 

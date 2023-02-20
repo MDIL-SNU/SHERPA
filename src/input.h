@@ -9,6 +9,7 @@ typedef struct _Input
     char *target_list;
     double disp_dist;
     double acti_cutoff;
+    double calc_cutoff;
     double f_tol;
     double max_move;
     double trial_move;
@@ -22,7 +23,6 @@ typedef struct _Input
 
     char *pair_style;
     char *pair_coeff;
-    double pair_cutoff;
     int ncore;
 
     char *vasp_cmd;

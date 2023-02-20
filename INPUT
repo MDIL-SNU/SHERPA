@@ -5,6 +5,7 @@ INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 DISP_DIST   = 0.01
 ACTI_CUTOFF = 6.0
+CALC_CUTOFF = 12.0
 F_TOL       = 0.01
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
@@ -19,7 +20,6 @@ WRITE_MODE  = 1
 # LAMMPS parameter #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-PAIR_CUTOFF = 6.0
 NCORE       = 8
 
 # VASP parameter #

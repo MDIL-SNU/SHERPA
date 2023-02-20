@@ -32,6 +32,7 @@ INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 DISP_DIST   = 0.01
 ACTI_CUTOFF = 6.0
+CALC_CUTOFF = 12.0
 F_TOL       = 0.01
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
@@ -46,7 +47,6 @@ WRITE_MODE  = 1
 # LAMMPS parameter #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-PAIR_CUTOFF = 6.0
 NCORE       = 8
 
 # VASP parameter #
@@ -95,6 +95,8 @@ RESTART_DIR = ./gen_0
   - A displacement for the finite difference method (Angs)
 * **ACTI_CUTOFF** [real]
   - A cutoff radius of active volume (Angs)
+* **CALC_CUTOFF** [real]
+  - A cutoff radius of sphere cluster (Angs)
 * **F_TOL** [real]
   - A force tolerance for dimer method (eV/Angs)
 * **MAX_MOVE** [real]
@@ -120,8 +122,6 @@ RESTART_DIR = ./gen_0
   - Pair style in LAMMPS input
 * **PAIR_COEFF** [strings]
   - Pair coeff in LAMMPS input
-* **PAIR_CUTOFF** [real]
-  - A cutoff radius of potential file (Angs)
 * **NCORE** [integer]
   - The number of cores for each LAMMPS instance
 ### VASP parameter
@@ -171,7 +171,7 @@ RESTART_DIR = ./gen_0
   - A directory of previous SPS output
 
 ## TARGET
-The active volume is centered around either the target atom indices or types, with each condition combined using the OR operation.
+The TARGET file lists either the target atom indices or types that serve as the center of the active volume, with each condition being added sequentially.
 ```text
 I 0 1 2 3
 T 1
@@ -182,7 +182,7 @@ A
 * T: Type (starting from 1)
 * A: All
 
-If `R` is appended after a single character, the indices of target atoms are shuffled randomly.
+If `R` is appended after a single character, the indices of target atoms are randomly shuffled.
 ```text
 IR 0 1 2 3
 TR 1
