@@ -30,10 +30,11 @@ NELEMENT    = 2
 ATOM_TYPE   = O Pt
 INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
-DISP_DIST   = 0.01
-ACTI_CUTOFF = 6.0
+FINITE_DIFF = 0.01
 CALC_CUTOFF = 12.0
+ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
+DIFF_TOL    = 0.02
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 INIT_RELAX  = 1
@@ -91,14 +92,16 @@ RESTART_DIR = ./gen_0
   - A path of file containing initial atomic positions
 * **TARGET_LIST** [strings]
   - A path of file containing target atoms
-* **DISP_DIST** [real]
+* **FINITE_DIFF** [real]
   - A displacement for the finite difference method (Angs)
-* **ACTI_CUTOFF** [real]
-  - A cutoff radius of active volume (Angs)
 * **CALC_CUTOFF** [real]
   - A cutoff radius of sphere cluster (Angs)
+* **ACTI_CUTOFF** [real]
+  - A cutoff radius of active volume (Angs)
 * **F_TOL** [real]
   - A force tolerance for dimer method (eV/Angs)
+* **DIFF_TOL** [real]
+  - A distance tolerance for identical structures (Angs)
 * **MAX_MOVE** [real]
   - A maximum step size of image movement (Angs)
 * **TRIAL_MOVE** [real]

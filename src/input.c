@@ -151,14 +151,9 @@ int read_input(Input *input, char *filename)
         printf("TARGET_LIST is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->disp_dist), "DISP_DIST", filename);
+    errno = input_double(&(input->finite_diff), "FINITE_DIFF", filename);
     if (errno) {
-        printf("DISP_DIST is missing.\n");
-        return 1;
-    }
-    errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
-    if (errno) {
-        printf("ACTI_CUTOFF is missing.\n");
+        printf("FINITE_DIFF is missing.\n");
         return 1;
     }
     errno = input_double(&(input->calc_cutoff), "CALC_CUTOFF", filename);
@@ -166,9 +161,19 @@ int read_input(Input *input, char *filename)
         printf("CALC_CUTOFF is missing.\n");
         return 1;
     }
+    errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
+    if (errno) {
+        printf("ACTI_CUTOFF is missing.\n");
+        return 1;
+    }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
         printf("F_TOL is missing.\n");
+        return 1;
+    }
+    errno = input_double(&(input->diff_tol), "DIFF_TOL", filename);
+    if (errno) {
+        printf("DIFF_TOL is missing.\n");
         return 1;
     }
     errno = input_double(&(input->max_move), "MAX_MOVE", filename);
@@ -351,10 +356,11 @@ void write_input(Input *input)
     fputs("\n", fp);
     fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
-    fprintf(fp, "DISP_DIST\t= %f\n", input->disp_dist);
-    fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
+    fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "CALC_CUTOFF\t= %f\n", input->calc_cutoff);
+    fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
+    fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);

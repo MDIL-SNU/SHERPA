@@ -34,20 +34,20 @@ static int lanczos(Config *config, double *force0, Input *input,
         V[i * 3 + 0] = eigenmode[i * 3 + 0];
         V[i * 3 + 1] = eigenmode[i * 3 + 1];
         V[i * 3 + 2] = eigenmode[i * 3 + 2];
-        config->pos[local_list[i] * 3 + 0] += input->disp_dist * V[i * 3 + 0];
-        config->pos[local_list[i] * 3 + 1] += input->disp_dist * V[i * 3 + 1];
-        config->pos[local_list[i] * 3 + 2] += input->disp_dist * V[i * 3 + 2];
+        config->pos[local_list[i] * 3 + 0] += input->finite_diff * V[i * 3 + 0];
+        config->pos[local_list[i] * 3 + 1] += input->finite_diff * V[i * 3 + 1];
+        config->pos[local_list[i] * 3 + 2] += input->finite_diff * V[i * 3 + 2];
     }
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * local_num * 3);
     oneshot_local(config, input, &energy1, force1, local_num, local_list, comm);
     for (i = 0; i < local_num; ++i) {
-        config->pos[local_list[i] * 3 + 0] -= input->disp_dist * V[i * 3 + 0];
-        config->pos[local_list[i] * 3 + 1] -= input->disp_dist * V[i * 3 + 1];
-        config->pos[local_list[i] * 3 + 2] -= input->disp_dist * V[i * 3 + 2];
-        HL[i * 3 + 0] = (force0[i * 3 + 0] - force1[i * 3 + 0]) / input->disp_dist;
-        HL[i * 3 + 1] = (force0[i * 3 + 1] - force1[i * 3 + 1]) / input->disp_dist;
-        HL[i * 3 + 2] = (force0[i * 3 + 2] - force1[i * 3 + 2]) / input->disp_dist;
+        config->pos[local_list[i] * 3 + 0] -= input->finite_diff * V[i * 3 + 0];
+        config->pos[local_list[i] * 3 + 1] -= input->finite_diff * V[i * 3 + 1];
+        config->pos[local_list[i] * 3 + 2] -= input->finite_diff * V[i * 3 + 2];
+        HL[i * 3 + 0] = (force0[i * 3 + 0] - force1[i * 3 + 0]) / input->finite_diff;
+        HL[i * 3 + 1] = (force0[i * 3 + 1] - force1[i * 3 + 1]) / input->finite_diff;
+        HL[i * 3 + 2] = (force0[i * 3 + 2] - force1[i * 3 + 2]) / input->finite_diff;
         alpha[0] += V[i * 3 + 0] * HL[i * 3 + 0];
         alpha[0] += V[i * 3 + 1] * HL[i * 3 + 1];
         alpha[0] += V[i * 3 + 2] * HL[i * 3 + 2];
@@ -80,19 +80,19 @@ static int lanczos(Config *config, double *force0, Input *input,
         double *L1 = &V[k * local_num * 3];
         double *L2 = &V[(k + 1) * local_num * 3];
         for (i = 0; i < local_num; ++i) {
-            config->pos[local_list[i] * 3 + 0] += input->disp_dist * L1[i * 3 + 0];
-            config->pos[local_list[i] * 3 + 1] += input->disp_dist * L1[i * 3 + 1];
-            config->pos[local_list[i] * 3 + 2] += input->disp_dist * L1[i * 3 + 2];
+            config->pos[local_list[i] * 3 + 0] += input->finite_diff * L1[i * 3 + 0];
+            config->pos[local_list[i] * 3 + 1] += input->finite_diff * L1[i * 3 + 1];
+            config->pos[local_list[i] * 3 + 2] += input->finite_diff * L1[i * 3 + 2];
         } 
         oneshot_local(config, input, &energy1, force1, local_num, local_list, comm);
         alpha[k] = 0.0;
         for (i = 0; i < local_num; ++i) {
-            config->pos[local_list[i] * 3 + 0] -= input->disp_dist * L1[i * 3 + 0];
-            config->pos[local_list[i] * 3 + 1] -= input->disp_dist * L1[i * 3 + 1];
-            config->pos[local_list[i] * 3 + 2] -= input->disp_dist * L1[i * 3 + 2];
-            HL[i * 3 + 0] = (force0[i * 3 + 0] - force1[i * 3 + 0]) / input->disp_dist;
-            HL[i * 3 + 1] = (force0[i * 3 + 1] - force1[i * 3 + 1]) / input->disp_dist;
-            HL[i * 3 + 2] = (force0[i * 3 + 2] - force1[i * 3 + 2]) / input->disp_dist;
+            config->pos[local_list[i] * 3 + 0] -= input->finite_diff * L1[i * 3 + 0];
+            config->pos[local_list[i] * 3 + 1] -= input->finite_diff * L1[i * 3 + 1];
+            config->pos[local_list[i] * 3 + 2] -= input->finite_diff * L1[i * 3 + 2];
+            HL[i * 3 + 0] = (force0[i * 3 + 0] - force1[i * 3 + 0]) / input->finite_diff;
+            HL[i * 3 + 1] = (force0[i * 3 + 1] - force1[i * 3 + 1]) / input->finite_diff;
+            HL[i * 3 + 2] = (force0[i * 3 + 2] - force1[i * 3 + 2]) / input->finite_diff;
             alpha[k] += L1[i * 3 + 0] * HL[i * 3 + 0];
             alpha[k] += L1[i * 3 + 1] * HL[i * 3 + 1];
             alpha[k] += L1[i * 3 + 2] * HL[i * 3 + 2];

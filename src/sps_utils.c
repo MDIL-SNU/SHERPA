@@ -147,7 +147,7 @@ int check_unique(Config *config, Input *input, char *self)
                 continue;
             }
             /* 0: identical, 1: different */
-            unique = diff_config(tmp_config, config, 2 * input->max_move);
+            unique = diff_config(tmp_config, config, input->diff_tol);
             free_config(tmp_config);
             if (unique == 0) {
                 strtok(namelist[i]->d_name, "_");
@@ -182,9 +182,9 @@ double *get_rot_force(Input *input, double *force1, double *force2,
     }
     double *rot_force = perpendicular_vector(dforce, eigenmode, n);
     for (i = 0; i < n; ++i) {
-        rot_force[i * 3 + 0] /= 2 * input->disp_dist;
-        rot_force[i * 3 + 1] /= 2 * input->disp_dist;
-        rot_force[i * 3 + 2] /= 2 * input->disp_dist;
+        rot_force[i * 3 + 0] /= 2 * input->finite_diff;
+        rot_force[i * 3 + 1] /= 2 * input->finite_diff;
+        rot_force[i * 3 + 2] /= 2 * input->finite_diff;
     }
     free(dforce);
     return rot_force;
@@ -365,7 +365,7 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
     }
     free(force1);
     atom_relax(config1, input, &energy1, comm);
-    int diff1 = diff_config(initial, config1, 2 * input->max_move);
+    int diff1 = diff_config(initial, config1, input->diff_tol);
 
     /* backward image */
     Config *config2 = (Config *)malloc(sizeof(Config));
@@ -385,7 +385,7 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
     }
     free(force2);
     atom_relax(config2, input, &energy2, comm);
-    int diff2 = diff_config(initial, config2, 2 * input->max_move);
+    int diff2 = diff_config(initial, config2, input->diff_tol);
 
     /* log */
     if (diff1 * diff2 > 0) {

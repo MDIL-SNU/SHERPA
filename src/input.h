@@ -7,11 +7,12 @@ typedef struct _Input
     char **atom_type;
     char *init_config;
     char *target_list;
-    double disp_dist;
-    double acti_cutoff;
+    double finite_diff;
     double calc_cutoff;
+    double acti_cutoff;
     double f_tol;
     double max_move;
+    double diff_tol;
     double trial_move;
     int init_relax;
     int init_disp;

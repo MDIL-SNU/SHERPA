@@ -57,11 +57,11 @@ static void rotate(Config *config0, double energy0, double *force0, Input *input
         Config *config1 = (Config *)malloc(sizeof(Config));
         copy_config(config1, config0);
         for (j = 0; j < local_num; ++j) {
-            config1->pos[local_list[j] * 3 + 0] += input->disp_dist
+            config1->pos[local_list[j] * 3 + 0] += input->finite_diff
                                                 * eigenmode[j * 3 + 0];
-            config1->pos[local_list[j] * 3 + 1] += input->disp_dist
+            config1->pos[local_list[j] * 3 + 1] += input->finite_diff
                                                 * eigenmode[j * 3 + 1];
-            config1->pos[local_list[j] * 3 + 2] += input->disp_dist
+            config1->pos[local_list[j] * 3 + 2] += input->finite_diff
                                                 * eigenmode[j * 3 + 2];
         }
         oneshot_local(config1, input, &energy1, force1, local_num, local_list, comm);
@@ -99,9 +99,9 @@ static void rotate(Config *config0, double energy0, double *force0, Input *input
             dforce[j * 3 + 2] = force2[j * 3 + 2] - force1[j * 3 + 2];
         }
         magnitude = dot(dforce, eigenmode, local_num);
-        double c0 = magnitude / (2.0 * input->disp_dist);
+        double c0 = magnitude / (2.0 * input->finite_diff);
         magnitude = dot(dforce, rot_unit_A, local_num);
-        double c0d = magnitude / input->disp_dist;
+        double c0d = magnitude / input->finite_diff;
         /* trial rotation */
         double *n_B, *rot_unit_B;
         rotate_vector(n_A, rot_unit_A, &n_B, &rot_unit_B,
@@ -110,11 +110,11 @@ static void rotate(Config *config0, double energy0, double *force0, Input *input
         copy_config(trial_config1, config0);
         for (j = 0; j < local_num; ++j) {
             trial_config1->pos[local_list[j] * 3 + 0] += n_B[j * 3 + 0]
-                                                      * input->disp_dist;
+                                                      * input->finite_diff;
             trial_config1->pos[local_list[j] * 3 + 1] += n_B[j * 3 + 1]
-                                                      * input->disp_dist;
+                                                      * input->finite_diff;
             trial_config1->pos[local_list[j] * 3 + 2] += n_B[j * 3 + 2]
-                                                      * input->disp_dist;
+                                                      * input->finite_diff;
         } 
         /* derivative of curvature */
         oneshot_local(trial_config1, input, &energy1, force1,
@@ -129,7 +129,7 @@ static void rotate(Config *config0, double energy0, double *force0, Input *input
             dforce[j * 3 + 2] = force2[j * 3 + 2] - force1[j * 3 + 2];
         }
         magnitude = dot(dforce, rot_unit_B, local_num);
-        double c1d = magnitude / input->disp_dist;
+        double c1d = magnitude / input->finite_diff;
         /* fourier coefficients */
         double a1 = (c0d * cos(2 * 3.1415926535897932384626 * 0.25) - c1d)
                   / (2 * sin(2 * 3.1415926535897932384626 * 0.25));
@@ -192,11 +192,11 @@ static void translate(Config *config0, double *force0, Input *input,
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, config0);
     for (i = 0; i < local_num; ++i) {
-        config1->pos[local_list[i] * 3 + 0] += input->disp_dist
+        config1->pos[local_list[i] * 3 + 0] += input->finite_diff
                                             * eigenmode[i * 3 + 0];
-        config1->pos[local_list[i] * 3 + 1] += input->disp_dist
+        config1->pos[local_list[i] * 3 + 1] += input->finite_diff
                                             * eigenmode[i * 3 + 1];
-        config1->pos[local_list[i] * 3 + 2] += input->disp_dist
+        config1->pos[local_list[i] * 3 + 2] += input->finite_diff
                                             * eigenmode[i * 3 + 2];
     }
     /* curvature */
@@ -214,7 +214,7 @@ static void translate(Config *config0, double *force0, Input *input,
         dforce[i * 3 + 2] = force2[i * 3 + 2] - force1[i * 3 + 2];
     }
     magnitude = dot(dforce, eigenmode, local_num);
-    double curvature = magnitude / (2.0 * input->disp_dist);
+    double curvature = magnitude / (2.0 * input->finite_diff);
     /* projected force */
     double *f0p = projected_force(force0, eigenmode, curvature, local_num);
     /* cg_direction */
