@@ -15,13 +15,13 @@ INIT_DISP   = 1
 DISP_CUTOFF = 3.0
 DISP_STDDEV = 0.1
 CONFIDENCE  = 0.9
-MAX_SEARCH  = 1
-WRITE_MODE  = 1
+MAX_SEARCH  = 10
+WRITE_MODE  = 0
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-NCORE       = 8
+NCORE       = 4
 
 # VASP parameter #
 VASP_CMD    = mpirun -np $nprocs vasp_std

@@ -42,13 +42,13 @@ INIT_DISP   = 1
 DISP_CUTOFF = 3
 DISP_STDDEV = 0.1
 CONFIDENCE  = 0.9
-MAX_SEARCH  = 1
-WRITE_MODE  = 1
+MAX_SEARCH  = 10
+WRITE_MODE  = 0
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
-NCORE       = 8
+NCORE       = 4
 
 # VASP parameter #
 VASP_CMD    = mpirun -np $nprocs $vasp_path
@@ -195,25 +195,48 @@ AR
 * +R: random shuffle
 
 ## Command
-If you run SPS with LAMMPS, please use command following:
+If you run SPS with LAMMPS, please use the command following:
 ```bash
 mpirun -np $numproc ./SPS_LMP
 ```
 $numproc stands for the number of CPU cores in parallel computation.
 
 
-Otherwise, execute code without parallel command following:
+Otherwise, execute code with the command following:
 ```bash
 ./SPS_VASP
 ```
 
+## Outputs
+### SPS_`count`.log
+It contains information such as steps, potential energy, eigenvalue, or curvature and so on.
+Its format depends on the algorithm you used.
+In addition, it says whether the saddle point is connected or not.
+
+### SPS_`count`.XDATCAR
+The trajectory from the initial to the saddle point are appended into here.
+
+### `count`.MODECAR
+The eigenvector at the saddle point is written as N x 3 array, where N is the number of all atoms.
+
+### Saddle_`count`.POSCAR
+The configuration of the saddle point is written as POSCAR format.
+
+### Final_`count`_ `atomic_index`.POSCAR
+If the saddle point is connected and unique, the final configuration is written as "Final_ `count`_ `atomic_index`.POSCAR".
+
+
+If the saddle point is connected and not unique, the final configuration is written as "`previous_count`_ Final_ `count`_ `atomic_index`.POSCAR", where `previous_count` stands for the `count` of the same saddle point.
+
+
+If the saddle point is disconnected, the final configurations are written as "x1_Final_`count`_ `atomic_index`.POSCAR" and "x2_Final_`count`_ `atomic_index`.POSCAR".
+
 ## Tips  
 1. `INIT_CONFIG` should be VASP5 POSCAR format, which supports `Selective dynamics`.
-2. The filename of final structure has the format as "Final _ `count` _ `atomic index`.POSCAR"
-3. For VASP calculation, INCAR, KPOINTS, and POTCAR should be located in the current directory.
+2. For VASP calculation, INCAR, KPOINTS, and POTCAR should be located in the current directory.
+3. To provide specific initial vector, set `RESTART` of 1 and provide "Final_ `count`_ `atomic index`.POSCAR" and "`count`.MODECAR" in `RESTART_DIR`.
 4. To use hybrid potentials, write down all `pair_coeff`s within `PAIR_COEFF` with the delimiter (|) between them.
 For example,
 ```text
 PAIR_COEFF = 1 1 potential_saved_1 | 1 2 potential_saved_2
 ```
-5. To provide specific initial vector, set `RESTART` of 1 and provide "Final _ `count` _ `atomic index`.POSCAR" and "`count`.MODECAR" in `RESTART_DIR`.

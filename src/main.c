@@ -135,6 +135,10 @@ int main(int argc, char *argv[])
     }
     MPI_Comm group_comm;
     MPI_Comm_split(MPI_COMM_WORLD, head, rank, &group_comm);
+    /* reset ncore for the last group */
+    if (rank >= group_size * input->ncore) {
+        input->ncore = size - group_size * input->ncore;
+    }
 
     /* one-sided communication */
     MPI_Win count_win;
