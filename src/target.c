@@ -37,12 +37,10 @@ int read_target(Config *config, Input *input,
                     tmp_target_num++;
                     ptr = strtok(NULL, " \n\t");
                 }
-                if (tmp_target_num >= (*list_size)) {
-                    do {
-                        (*list_size) = (*list_size) << 1;
-                    } while (tmp_target_num + (*target_num) > (*list_size));
-                    *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
+                while (tmp_target_num + (*target_num) > (*list_size)) {
+                    (*list_size) = (*list_size) << 1;
                 }
+                *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
                 strtok(tmp_line, " \n\t");
                 for (i = 0; i < tmp_target_num; ++i) {
                     (*target_list)[*target_num] = atoi(strtok(NULL, " \n\t"));
@@ -66,10 +64,10 @@ int read_target(Config *config, Input *input,
                     ptr = strtok(NULL, " \n\t");
                 }
             } else if (strncmp(ptr, "A", 1) == 0) {
-                while (config->tot_num >= (*list_size)) {
+                while (config->tot_num + (*target_num) >= (*list_size)) {
                     (*list_size) = (*list_size) << 1;
                 }
-                *target_list = (int *)malloc(sizeof(int) * (*list_size));
+                *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
                 for (i = 0; i < config->tot_num; ++i) {
                     (*target_list)[*target_num] = i;
                     (*target_num)++;
