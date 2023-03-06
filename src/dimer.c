@@ -313,7 +313,7 @@ static void translate(Config *config0, double *force0, Input *input,
 }
 
 
-int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
+int dimer(Config *initial, Config *saddle, Input *input, double *full_eigenmode,
           int count, int index, double *Ea, MPI_Comm comm)
 {
     int i, j, rank, size;
@@ -382,7 +382,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
-        full_eigenmode = get_eigenmode(input, final->tot_num, comm); 
+        full_eigenmode = get_eigenmode(input, saddle->tot_num, comm);
     }
     double *tmp_eigenmode = (double *)malloc(sizeof(double) * global_num * 3);
     for (i = 0; i < global_num; ++i) {
@@ -390,7 +390,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
         tmp_eigenmode[i * 3 + 1] = full_eigenmode[global_list[i] * 3 + 1];
         tmp_eigenmode[i * 3 + 2] = full_eigenmode[global_list[i] * 3 + 2];
     }
-    memset(full_eigenmode, 0, sizeof(double) * final->tot_num * 3);
+    memset(full_eigenmode, 0, sizeof(double) * saddle->tot_num * 3);
 
     /* initial perturbation */
     if (input->init_disp > 0) {
@@ -454,7 +454,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
             sprintf(filename, "%s/%d_%d.MODECAR",
                     input->output_dir, count, dimer_step);
             FILE *fp = fopen(filename, "w");
-            for (i = 0; i < final->tot_num; ++i) {
+            for (i = 0; i < saddle->tot_num; ++i) {
                 fprintf(fp, "%f %f %f\n",
                         full_eigenmode[i * 3 + 0],
                         full_eigenmode[i * 3 + 1],
@@ -510,10 +510,9 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
 
     /* saddle update */
     for (i = 0; i < local_num; ++i) {
-        /* final <- saddle */
-        final->pos[global_list[i] * 3 + 0] = config0->pos[local_list[i] * 3 + 0];
-        final->pos[global_list[i] * 3 + 1] = config0->pos[local_list[i] * 3 + 1];
-        final->pos[global_list[i] * 3 + 2] = config0->pos[local_list[i] * 3 + 2];
+        saddle->pos[global_list[i] * 3 + 0] = config0->pos[local_list[i] * 3 + 0];
+        saddle->pos[global_list[i] * 3 + 1] = config0->pos[local_list[i] * 3 + 1];
+        saddle->pos[global_list[i] * 3 + 2] = config0->pos[local_list[i] * 3 + 2];
         full_eigenmode[global_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
         full_eigenmode[global_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
         full_eigenmode[global_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
@@ -522,12 +521,12 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
         /* saddle configuration */
         sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                 input->output_dir, count, index);
-        write_config(final, filename, "w");
+        write_config(saddle, filename, "w");
         /* eigenmode */
         sprintf(filename, "%s/%d.MODECAR",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "w");
-        for (i = 0; i < final->tot_num; ++i) {
+        for (i = 0; i < saddle->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],
                     full_eigenmode[i * 3 + 1],
@@ -537,7 +536,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
     }
 
     /* postprocess */
-    conv = postprocess(initial, final, input, Ea, eigenmode, count, index,
+    conv = postprocess(initial, saddle, input, Ea, eigenmode, count, index,
                        global_num, global_list, comm);
 
     free_config(config0);

@@ -127,7 +127,7 @@ int name_filter(const struct dirent *info)
 /* nonpositive: not unique, positive: unique */
 int check_unique(Config *config, Input *input, char *self)
 {
-    int i, j, errno, unique;
+    int i, j, unique, count, index, errno;
     struct dirent **namelist;
 
     int ncount = scandir(input->output_dir, &namelist, name_filter, NULL);
@@ -136,9 +136,12 @@ int check_unique(Config *config, Input *input, char *self)
             if (strcmp(self, namelist[i]->d_name) == 0) {
                 continue;
             }
+            strtok(namelist[i]->d_name, "_");
+            count = atoi(strtok(NULL, "_"));
+            index = atoi(strtok(NULL, "_"));
             char filename[512];
-            sprintf(filename, "%s/%s",
-                    input->output_dir, namelist[i]->d_name);
+            sprintf(filename, "%s/Saddle_%d_%d_POSCAR",
+                    input->output_dir, count, index);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
             /* already deleted */
@@ -150,8 +153,6 @@ int check_unique(Config *config, Input *input, char *self)
             unique = diff_config(tmp_config, config, input->diff_tol);
             free_config(tmp_config);
             if (unique == 0) {
-                strtok(namelist[i]->d_name, "_");
-                int count = atoi(strtok(NULL, "_"));
                 for (j = 0; j < ncount; ++j) {
                     free(namelist[j]);
                 }
@@ -326,7 +327,7 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 }
 
 
-int postprocess(Config *initial, Config *final, Input *input, double *Ea,
+int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
                 double *eigenmode, int count, int index,
                 int global_num, int *global_list, MPI_Comm comm)
 {
@@ -337,21 +338,21 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
     int local_rank = rank % input->ncore;
 
     double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * final->tot_num * 3);
+    double *force0 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     /* initial oneshot */
     oneshot(initial, input, &energy0, force0, comm);
     double initial_energy = energy0;
     /* saddle oneshot */
-    oneshot(final, input, &energy0, force0, comm);
+    oneshot(saddle, input, &energy0, force0, comm);
     double saddle_energy = energy0;
     *Ea = saddle_energy - initial_energy;
     free(force0);
 
     /* forward image */
     Config *config1 = (Config *)malloc(sizeof(Config));
-    copy_config(config1, final);
+    copy_config(config1, saddle);
     double energy1;
-    double *force1 = (double *)malloc(sizeof(double) * final->tot_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < global_num; ++j) {
             config1->pos[global_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
@@ -369,9 +370,9 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
 
     /* backward image */
     Config *config2 = (Config *)malloc(sizeof(Config));
-    copy_config(config2, final);
+    copy_config(config2, saddle);
     double energy2;
-    double *force2 = (double *)malloc(sizeof(double) * final->tot_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < global_num; ++j) {
             config2->pos[global_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
@@ -424,24 +425,15 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
         free_config(config2);
         return 1;
     } else {
-        if (diff1 == 0) {
-            for (i = 0; i < final->tot_num; ++i) {
-                final->pos[i * 3 + 0] = config2->pos[i * 3 + 0];
-                final->pos[i * 3 + 1] = config2->pos[i * 3 + 1];
-                final->pos[i * 3 + 2] = config2->pos[i * 3 + 2];
-            }
-        } else {
-            for (i = 0; i < final->tot_num; ++i) {
-                final->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
-                final->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
-                final->pos[i * 3 + 2] = config1->pos[i * 3 + 2];
-            }
-        }
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/Final_%d_%d.POSCAR",
                     input->output_dir, count, index);
-            write_config(final, filename, "w");
+            if (diff1 == 0) {
+                write_config(config2, filename, "w");
+            } else {
+                write_config(config1, filename, "w");
+            }
             sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fputs(" Saddle state: connected\n", fp);

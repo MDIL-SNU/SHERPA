@@ -251,19 +251,19 @@ int main(int argc, char *argv[])
             eigenmode = data->eigenmode;
         }
 
-        /* initial/saddle/final configuration */
+        /* initial/saddle configuration */
         Config *initial = (Config *)malloc(sizeof(Config));
         copy_config(initial, config);
-        Config *final = (Config *)malloc(sizeof(Config));
-        copy_config(final, config);
+        Config *saddle = (Config *)malloc(sizeof(Config));
+        copy_config(saddle, config);
         if (input->art_nouveau > 0) {
-            conv = art_nouveau(initial, final, input, eigenmode,
+            conv = art_nouveau(initial, saddle, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else if (input->kappa_dimer > 0) {
-            conv = kappa_dimer(initial, final, input, eigenmode,
+            conv = kappa_dimer(initial, saddle, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {
-            conv = dimer(initial, final, input, eigenmode,
+            conv = dimer(initial, saddle, input, eigenmode,
                          local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
                 MPI_Win_unlock(0, conv_win);
                 char filename[128];
                 sprintf(filename, "Final_%d_%d.POSCAR", local_count, atom_index);
-                unique = check_unique(final, input, filename);
+                unique = check_unique(saddle, input, filename);
                 /* unique == 1 -> unique */
                 if (unique > 0) {
                     local_reac_list[local_reac_num] = local_count;
@@ -301,13 +301,10 @@ int main(int argc, char *argv[])
                         MPI_Win_unlock(0, recycle_win);
                     }
                 } else {
-                    char old_filename[128];
-                    sprintf(old_filename, "%s/Final_%d_%d.POSCAR",
-                            input->output_dir, local_count, atom_index);
-                    char new_filename[128];
-                    sprintf(new_filename, "%s/%d_Final_%d_%d.POSCAR",
+                    char tmp_filename[128];
+                    sprintf(tmp_filename, "%s/%d_Final_%d_%d.POSCAR",
                             input->output_dir, -unique, local_count, atom_index);
-                    rename(old_filename, new_filename);
+                    rename(filename, tmp_filename);
                     if (data == NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
@@ -332,7 +329,7 @@ int main(int argc, char *argv[])
             # endif
         }
         free_config(initial);
-        free_config(final);
+        free_config(saddle);
     }
     int recycle_num = 0;
     if (rank == 0) {
