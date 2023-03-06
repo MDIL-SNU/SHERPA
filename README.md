@@ -229,6 +229,9 @@ If the saddle point is connected and unique, the final configuration is written 
 If the saddle point is connected and not unique, the final configuration is written as "`previous_count`_ Final_ `count`_ `atomic_index`.POSCAR", where `previous_count` stands for the `count` of the same saddle point.
 
 
+If the saddle point is not splited, the final configurations are written as "x0_Final_`count`_ `atomic_index`.POSCAR".
+
+
 If the saddle point is disconnected, the final configurations are written as "x1_Final_`count`_ `atomic_index`.POSCAR" and "x2_Final_`count`_ `atomic_index`.POSCAR".
 
 ## Tips  

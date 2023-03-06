@@ -388,7 +388,7 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
     int diff2 = diff_config(initial, config2, input->diff_tol);
 
     /* log */
-    if (diff1 * diff2 > 0) {
+    if ((diff1 == 1) && (diff2 == 1)) {
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/x1_Final_%d_%d.POSCAR",
@@ -407,9 +407,12 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
         free_config(config1);
         free_config(config2);
         return 1;
-    } else if (diff1 + diff2 == 0) {
+    } else if ((diff1  == 0) && (diff2 == 0)) {
         if (local_rank == 0) {
             char filename[128];
+            sprintf(filename, "%s/x0_Final_%d_%d.POSCAR",
+                    input->output_dir, count, index);
+            write_config(config1, filename, "w");
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
@@ -417,6 +420,8 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
             fprintf(fp, " Barrier energy: %f eV\n", *Ea);
             fclose(fp);
         }
+        free_config(config1);
+        free_config(config2);
         return 1;
     } else {
         if (diff1 == 0) {
@@ -432,8 +437,6 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
                 final->pos[i * 3 + 2] = config1->pos[i * 3 + 2];
             }
         }
-        free_config(config1);
-        free_config(config2);
         if (local_rank == 0) {
             char filename[128];
             sprintf(filename, "%s/Final_%d_%d.POSCAR",
@@ -445,6 +448,8 @@ int postprocess(Config *initial, Config *final, Input *input, double *Ea,
             fprintf(fp, " Barrier energy: %f eV\n", *Ea);
             fclose(fp);
         }
+        free_config(config1);
+        free_config(config2);
         return 0;
     }
 }

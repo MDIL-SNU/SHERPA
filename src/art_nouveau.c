@@ -500,7 +500,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
     double *force0 = (double *)malloc(sizeof(double) * local_num * 3);
     oneshot_local(config0, input, &energy0, force0, local_num, local_list, comm);
     int negative = 0;
-    for (art_step = 1; art_step <= 100; ++art_step) {
+    for (art_step = 1; art_step <= 500; ++art_step) {
         /* lanczos */
         if (art_step > input->art_delay) {
             lanczos_step = lanczos(config0, force0, input, local_num, local_list,
@@ -565,7 +565,7 @@ int art_nouveau(Config *initial, Config *final, Input *input,
         FILE *fp = fopen(filename, "a");
         fputs("--------------------------------------------------------------------\n", fp);
         if (conv > 0) {
-            fputs(" Saddle state: not converged\n", fp);
+            fputs(" Saddle state: unconverged\n", fp);
         }
         fclose(fp);
     }

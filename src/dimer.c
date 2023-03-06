@@ -495,7 +495,7 @@ int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
         FILE *fp = fopen(filename, "a");
         fputs("----------------------------------------------------------------------------\n", fp);
         if (conv > 0) {
-            fputs(" Saddle state: not converged\n", fp);
+            fputs(" Saddle state: unconverged\n", fp);
         }
         fclose(fp);
     }
