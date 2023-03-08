@@ -22,5 +22,5 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
                      int *atom_num, int **atom_list, MPI_Comm comm);
 int postprocess(Config *initial, Config *final, Input *input,
                 double *Ea, double *eigenmode, int count, int index,
-                int global_num, int *global_list, MPI_Comm comm);
+                int global_num, int *global_list, double time, MPI_Comm comm);
 #endif

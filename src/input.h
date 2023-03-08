@@ -3,9 +3,6 @@
 
 typedef struct _Input
 {
-    int nelem;
-    char **atom_type;
-    char *init_config;
     char *target_list;
     double finite_diff;
     double calc_cutoff;
@@ -14,13 +11,17 @@ typedef struct _Input
     double max_move;
     double diff_tol;
     double trial_move;
+    double confidence;
+    int max_search;
+    int write_mode;
+
+    int nelem;
+    char **atom_type;
+    char *init_config;
     int init_relax;
     int init_disp;
     double disp_cutoff;
     double disp_stddev;
-    double confidence;
-    int max_search;
-    int write_mode;
 
     char *pair_style;
     char *pair_coeff;
@@ -40,9 +41,6 @@ typedef struct _Input
     int max_num_rlx;
     int art_delay;
     int art_mixing;
-
-    double frequency;
-    double temperature;
 
     int random_seed;
 

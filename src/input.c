@@ -296,16 +296,6 @@ int read_input(Input *input, char *filename)
         printf("ART_MIXING is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->frequency), "FREQUENCY", filename);
-    if (errno) {
-        printf("FREQUENCY is missing.\n");
-        return 1;
-    }
-    errno = input_double(&(input->temperature), "TEMPERATURE", filename);
-    if (errno) {
-        printf("TEMPERATURE is missing.\n");
-        return 1;
-    }
     errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
     if (errno) {
         printf("RANDOM_SEED is missing.\n");
@@ -348,13 +338,6 @@ void write_input(Input *input)
     FILE *fp = fopen(filename, "w");
 
     fputs("# general parameter #\n", fp);
-    fprintf(fp, "NELEMENT\t= %d\n", input->nelem);
-    fputs("ATOM_TYPE\t=", fp);
-    for (i = 0; i < input->nelem; ++i) {
-        fprintf(fp, " %s", input->atom_type[i]);
-    }
-    fputs("\n", fp);
-    fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "CALC_CUTOFF\t= %f\n", input->calc_cutoff);
@@ -363,13 +346,23 @@ void write_input(Input *input)
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
+    fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
+    fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
+    fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
+    fputs("\n", fp);
+
+    fputs("# initial structure parameter #\n", fp);
+    fprintf(fp, "NELEMENT\t= %d\n", input->nelem);
+    fputs("ATOM_TYPE\t=", fp);
+    for (i = 0; i < input->nelem; ++i) {
+        fprintf(fp, " %s", input->atom_type[i]);
+    }
+    fputs("\n", fp);
+    fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
-    fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
-    fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
-    fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);
@@ -397,11 +390,6 @@ void write_input(Input *input)
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
     fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
     fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
-    fputs("\n", fp);
-
-    fputs("# system parameter #\n", fp);
-    fprintf(fp, "FREQUENCY\t= %f\n", input->frequency);
-    fprintf(fp, "TEMPERATURE\t= %f\n", input->temperature);
     fputs("\n", fp);
 
     fputs("# random parameter #\n", fp);

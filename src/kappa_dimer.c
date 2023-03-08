@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #ifdef LMP
 #include "lmp_calculator.h"
 #endif
@@ -584,6 +585,7 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         write_config(config0, filename, "w");
     }
 
+    clock_t start = clock();
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * local_num * 3);
     oneshot_local(config0, input, &energy0, force0, local_num, local_list, comm);
@@ -642,6 +644,8 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
             break;
         }
     }
+    clock_t end = clock();
+    double time = (double)(end - start) / CLOCKS_PER_SEC;
     free(force0);
     free(direction_old);
     free(cg_direction);
@@ -649,10 +653,13 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         sprintf(filename, "%s/SPS_%d.log",
                 input->output_dir, count);
         FILE *fp = fopen(filename, "a");
-        fputs("----------------------------------------------------------------------------\n", fp);
+        fputs("--------------------------------------------------------------------\n", fp);
+        fputs(" Saddle point   Barrier energy   Reaction energy   Elapsed time (s)\n", fp);
+        fputs("--------------------------------------------------------------------\n", fp);
         if (conv > 0) {
-            fputs(" Saddle state: unconverged\n", fp);
+            fprintf(fp, "  Unconverged   --------------   ---------------   %16f\n", time);
         }
+        fputs("--------------------------------------------------------------------\n", fp);
         fclose(fp);
     }
     if (conv > 0) {
@@ -691,7 +698,7 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
 
     /* postprocess */
     conv = postprocess(initial, saddle, input, Ea, eigenmode, count, index,
-                         global_num, global_list, comm);
+                         global_num, global_list, time, comm);
 
     free_config(config0);
     free(global_list);

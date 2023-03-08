@@ -107,15 +107,15 @@ int main(int argc, char *argv[])
         char filename[128];
         sprintf(filename, "%s/Statistics.log", input->output_dir);
         fp = fopen(filename, "w");
-        fputs("----------------------------------------------------------------\n", fp);
-        fputs(" Recycled events   New unique events   Relevant events   Trials\n", fp);    
-        fputs("----------------------------------------------------------------\n", fp);
+        fputs("------------------------------------------\n", fp);
+        fputs(" Unique events   Relevant events   Trials\n", fp);
+        fputs("------------------------------------------\n", fp);
         fclose(fp);
         sprintf(filename, "%s/Event.log", input->output_dir);
         fp = fopen(filename, "w");
-        fputs("----------------------------------------------------------------\n", fp);
-        fputs(" Reaction index   Reaction barrier   Reaction rate   Degeneracy\n", fp);
-        fputs("----------------------------------------------------------------\n", fp);
+        fputs("---------------------------------------------\n", fp);
+        fputs(" Reaction index   Barrier energy   Frequency\n", fp);
+        fputs("---------------------------------------------\n", fp);
         fclose(fp);
         sprintf(filename, "%s/POSCAR", input->output_dir);
         write_config(config, filename, "w");
@@ -151,11 +151,6 @@ int main(int argc, char *argv[])
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
                      MPI_COMM_WORLD, &global_redundant, &redundant_win);
 
-    MPI_Win recycle_win;
-    int *global_recycle;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     MPI_COMM_WORLD, &global_recycle, &recycle_win);
-
     MPI_Win conv_win;
     int *global_conv;
     MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
@@ -168,7 +163,6 @@ int main(int argc, char *argv[])
 
     #ifdef LMP
     *global_count = 0;
-    *global_recycle = 0;
     *global_conv = 0;
     *global_redundant = 0;
     *global_exit = 0;
@@ -178,17 +172,14 @@ int main(int argc, char *argv[])
     int one = 1;
     int mone = -1;
     int local_count = -1;
-    int local_recycle = 0;
     int local_conv = 0;
     int local_redundant = 0;
     int local_exit = 0;
     int local_reac_num = 0;
-    int local_dege_num = 0;
-    double local_rate_sum = 0.0;
+    int local_freq_num = 0;
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size);
-    int *local_dege_list = (int *)malloc(sizeof(int) * list_size);
+    int *local_freq_list = (int *)malloc(sizeof(int) * list_size);
     double *local_acti_list = (double *)malloc(sizeof(double) * list_size);
-    double *local_rate_list = (double *)malloc(sizeof(double) * list_size);
     /* all data in dataset are unique */
     /* do not have to count redundant search */
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
@@ -280,10 +271,6 @@ int main(int argc, char *argv[])
                 if (unique > 0) {
                     local_reac_list[local_reac_num] = local_count;
                     local_acti_list[local_reac_num] = Ea;
-                    double kT = 8.61733034e-5 * input->temperature;
-                    local_rate_list[local_reac_num] = input->frequency
-                                                    * exp(- Ea / kT);
-                    local_rate_sum += local_rate_list[local_reac_num];
                     local_reac_num++;
                     if (local_reac_num >= list_size) {
                         list_size = list_size << 1;
@@ -291,31 +278,26 @@ int main(int argc, char *argv[])
                                                  sizeof(int) * list_size);
                         local_acti_list = (double *)realloc(local_acti_list,
                                                     sizeof(double) * list_size);
-                        local_rate_list = (double *)realloc(local_rate_list,
-                                                    sizeof(double) * list_size);
-                    }
-                    if (data != NULL) {
-                        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
-                        MPI_Fetch_and_op(&one, &local_recycle, MPI_INT,
-                                         0, (MPI_Aint)0, MPI_SUM, recycle_win);
-                        MPI_Win_unlock(0, recycle_win);
                     }
                 } else {
-                    char tmp_filename[128];
-                    sprintf(tmp_filename, "%s/%d_Final_%d_%d.POSCAR",
+                    char old_filename[128];
+                    sprintf(old_filename, "%s/Final_%d_%d.POSCAR",
+                            input->output_dir, local_count, atom_index);
+                    char new_filename[128];
+                    sprintf(new_filename, "%s/%d_Final_%d_%d.POSCAR",
                             input->output_dir, -unique, local_count, atom_index);
-                    rename(filename, tmp_filename);
+                    rename(old_filename, new_filename);
                     if (data == NULL) {
                         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                         MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
                                          0, (MPI_Aint)0, MPI_SUM, redundant_win);
                         MPI_Win_unlock(0, redundant_win);
                     }
-                    local_dege_list[local_dege_num] = -unique;
-                    local_dege_num++;
-                    if (local_dege_num >= list_size) {
+                    local_freq_list[local_freq_num] = -unique;
+                    local_freq_num++;
+                    if (local_freq_num >= list_size) {
                         list_size = list_size << 1;
-                        local_dege_list = (int *)realloc(local_dege_list,
+                        local_freq_list = (int *)realloc(local_freq_list,
                                                  sizeof(int) * list_size);
                     }
                 }
@@ -331,14 +313,6 @@ int main(int argc, char *argv[])
         free_config(initial);
         free_config(saddle);
     }
-    int recycle_num = 0;
-    if (rank == 0) {
-        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, recycle_win);
-        MPI_Fetch_and_op(&zero, &local_recycle, MPI_INT,
-                         0, (MPI_Aint)0, MPI_SUM, recycle_win);
-        MPI_Win_unlock(0, recycle_win);
-        recycle_num = local_recycle;
-    }
     /* overestimated local_count */
     if (local_rank == 0) {
         MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
@@ -347,14 +321,11 @@ int main(int argc, char *argv[])
         MPI_Win_unlock(0, count_win);
     }
     int total_reac_num;
-    int total_dege_num;
-    double total_rate_sum;
+    int total_freq_num;
     if (local_rank == 0) {
-        MPI_Allreduce(&local_rate_sum, &total_rate_sum, 1, MPI_DOUBLE,
-                      MPI_SUM, group_comm);
         MPI_Allreduce(&local_reac_num, &total_reac_num, 1, MPI_INT,
                       MPI_SUM, group_comm);
-        MPI_Allreduce(&local_dege_num, &total_dege_num, 1, MPI_INT,
+        MPI_Allreduce(&local_freq_num, &total_freq_num, 1, MPI_INT,
                       MPI_SUM, group_comm);
     }
     MPI_Bcast(&total_reac_num, 1, MPI_INT, 0, local_comm);
@@ -373,18 +344,17 @@ int main(int argc, char *argv[])
         char filename[128];
         sprintf(filename, "%s/Statistics.log", input->output_dir);
         FILE *fp = fopen(filename, "a");
-        fprintf(fp, " %15d   %17d   %15d   %6d\n",
-                recycle_num, total_reac_num - recycle_num,
-                local_conv, local_count);
+        fprintf(fp, " %13d   %15d   %6d\n",
+                total_reac_num, local_conv, local_count);
+        fputs("------------------------------------------\n", fp);
         fclose(fp);
     }
 
     int *global_reac_num = (int *)malloc(sizeof(int) * group_size);
-    int *global_dege_num = (int *)malloc(sizeof(int) * group_size);
+    int *global_freq_num = (int *)malloc(sizeof(int) * group_size);
     int *global_reac_list = (int *)malloc(sizeof(int) * total_reac_num);
-    int *global_dege_list = (int *)malloc(sizeof(int) * total_dege_num);
+    int *global_freq_list = (int *)malloc(sizeof(int) * total_freq_num);
     double *global_acti_list = (double *)malloc(sizeof(double) * total_reac_num);
-    double *global_rate_list = (double *)malloc(sizeof(double) * total_reac_num);
     if (local_rank == 0) {
         /* reaction */
         MPI_Allgather(&local_reac_num, 1, MPI_INT,
@@ -399,35 +369,32 @@ int main(int argc, char *argv[])
         MPI_Gatherv(local_acti_list, local_reac_num, MPI_DOUBLE,
                     global_acti_list, global_reac_num, disp, MPI_DOUBLE,
                     0, group_comm);
-        MPI_Gatherv(local_rate_list, local_reac_num, MPI_DOUBLE,
-                    global_rate_list, global_reac_num, disp, MPI_DOUBLE,
-                    0, group_comm);
         MPI_Gatherv(local_reac_list, local_reac_num, MPI_INT,
                     global_reac_list, global_reac_num, disp, MPI_INT,
                     0, group_comm);
 
-        /* degeneracy */
-        MPI_Allgather(&local_dege_num, 1, MPI_INT,
-                      global_dege_num, 1, MPI_INT, group_comm);
+        /* frequency */
+        MPI_Allgather(&local_freq_num, 1, MPI_INT,
+                      global_freq_num, 1, MPI_INT, group_comm);
         disp[0] = 0;
         if (group_size > 1) {
             for (i = 1; i < group_size; ++i) {
-                disp[i] = disp[i - 1] + global_dege_num[i - 1];
+                disp[i] = disp[i - 1] + global_freq_num[i - 1];
             }
         }
-        MPI_Gatherv(local_dege_list, local_dege_num, MPI_INT,
-                    global_dege_list, global_dege_num, disp, MPI_INT,
+        MPI_Gatherv(local_freq_list, local_freq_num, MPI_INT,
+                    global_freq_list, global_freq_num, disp, MPI_INT,
                     0, group_comm);
         free(disp);
     }
 
     /* log */
     if (rank == 0) {
-        int *dege_num = (int *)calloc(total_reac_num, sizeof(int));
+        int *freq_num = (int *)calloc(total_reac_num, sizeof(int));
         for (i = 0; i < total_reac_num; ++i) {
-            for (j = 0; j < total_dege_num; ++j) {
-                if (global_dege_list[j] == global_reac_list[i]) {
-                    dege_num[i]++;
+            for (j = 0; j < total_freq_num; ++j) {
+                if (global_freq_list[j] == global_reac_list[i]) {
+                    freq_num[i]++;
                 }
             }
         }
@@ -436,24 +403,22 @@ int main(int argc, char *argv[])
         FILE *fp;
         fp = fopen(filename, "a");
         for (i = 0; i < total_reac_num; ++i) {
-            fprintf(fp, " %14d   %16f   %13e   %10d\n",
-                    global_reac_list[i], global_acti_list[i],
-                    global_rate_list[i], dege_num[i]);
+            fprintf(fp, " %14d   %14f   %9d\n",
+                    global_reac_list[i], global_acti_list[i], freq_num[i] + 1);
         }
+        fputs("---------------------------------------------\n", fp);
         fclose(fp);
-        free(dege_num);
+        free(freq_num);
     }
 
     free(target_list);
     free(local_reac_list);
     free(local_acti_list);
-    free(local_rate_list);
-    free(local_dege_list);
+    free(local_freq_list);
     free(global_reac_num);
     free(global_reac_list);
     free(global_acti_list);
-    free(global_rate_list);
-    free(global_dege_list);
+    free(global_freq_list);
 
     free_dataset(dataset);
     free_config(config);
@@ -461,7 +426,6 @@ int main(int argc, char *argv[])
 
     MPI_Win_free(&count_win);
     MPI_Win_free(&redundant_win);
-    MPI_Win_free(&recycle_win);
     MPI_Win_free(&conv_win);
     MPI_Win_free(&exit_win);
 

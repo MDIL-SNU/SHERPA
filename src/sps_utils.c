@@ -140,7 +140,7 @@ int check_unique(Config *config, Input *input, char *self)
             count = atoi(strtok(NULL, "_"));
             index = atoi(strtok(NULL, "_"));
             char filename[512];
-            sprintf(filename, "%s/Saddle_%d_%d_POSCAR",
+            sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
                     input->output_dir, count, index);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
             errno = read_config(tmp_config, input, filename);
@@ -329,7 +329,7 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 
 int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
                 double *eigenmode, int count, int index,
-                int global_num, int *global_list, MPI_Comm comm)
+                int global_num, int *global_list, double time, MPI_Comm comm)
 {
     int i, j, rank, size;
 
@@ -401,8 +401,8 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs(" Saddle state: disconnected\n", fp);
-            fprintf(fp, " Barrier energy: %f eV\n", *Ea);
+            fprintf(fp, " Disconnected   %14f   ---------------   %16f\n", *Ea, time);
+            fputs("--------------------------------------------------------------------\n", fp);
             fclose(fp);
         }
         free_config(config1);
@@ -417,8 +417,8 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
             sprintf(filename, "%s/SPS_%d.log",
                     input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs(" Saddle state: not splited\n", fp);
-            fprintf(fp, " Barrier energy: %f eV\n", *Ea);
+            fprintf(fp, "  Not splited   %14f   ---------------   %16f\n", *Ea, time);
+            fputs("--------------------------------------------------------------------\n", fp);
             fclose(fp);
         }
         free_config(config1);
@@ -429,15 +429,18 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
             char filename[128];
             sprintf(filename, "%s/Final_%d_%d.POSCAR",
                     input->output_dir, count, index);
+            double dE;
             if (diff1 == 0) {
                 write_config(config2, filename, "w");
+                dE = energy2 - initial_energy;
             } else {
                 write_config(config1, filename, "w");
+                dE = energy1 - initial_energy;
             }
             sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
-            fputs(" Saddle state: connected\n", fp);
-            fprintf(fp, " Barrier energy: %f eV\n", *Ea);
+            fprintf(fp, "    Connected   %14f   %15f   %16f\n", *Ea, dE, time);
+            fputs("--------------------------------------------------------------------\n", fp);
             fclose(fp);
         }
         free_config(config1);

@@ -1,7 +1,4 @@
 # general parameter #
-NELEMENT    = 2
-ATOM_TYPE   = O Pt
-INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
 CALC_CUTOFF = 12.0
@@ -10,13 +7,18 @@ F_TOL       = 0.01
 DIFF_TOL    = 0.02
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
+CONFIDENCE  = 0.9
+MAX_SEARCH  = 10
+WRITE_MODE  = 0
+
+# initial structure parameter #
+NELEMENT    = 2
+ATOM_TYPE   = O Pt
+INIT_CONFIG = ./POSCAR
 INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3.0
 DISP_STDDEV = 0.1
-CONFIDENCE  = 0.9
-MAX_SEARCH  = 10
-WRITE_MODE  = 0
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -40,10 +42,6 @@ LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
 ART_DELAY   = 0
 ART_MIXING  = 3
-
-# system parameter #
-FREQUENCY   = 1e12
-TEMPERATURE = 353
 
 # random parameter #
 RANDOM_SEED = -1

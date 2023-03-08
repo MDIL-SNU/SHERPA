@@ -26,9 +26,6 @@ cmake --build .
 ## INPUT
 ```text
 # general parameter #
-NELEMENT    = 2
-ATOM_TYPE   = O Pt
-INIT_CONFIG = ./POSCAR
 TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
 CALC_CUTOFF = 12.0
@@ -37,13 +34,18 @@ F_TOL       = 0.01
 DIFF_TOL    = 0.02
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
+CONFIDENCE  = 0.9
+MAX_SEARCH  = 10
+WRITE_MODE  = 0
+
+# initial structure parameter #
+NELEMENT    = 2
+ATOM_TYPE   = O Pt
+INIT_CONFIG = ./POSCAR
 INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3
 DISP_STDDEV = 0.1
-CONFIDENCE  = 0.9
-MAX_SEARCH  = 10
-WRITE_MODE  = 0
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -68,10 +70,6 @@ MAX_NUM_RLX = 4
 ART_DELAY   = 0
 ART_MIXING  = 3
 
-# system parameter #
-FREQUENCY   = 1e12
-TEMPERATURE = 353
-
 # random parameter #
 RANDOM_SEED = -1
 
@@ -84,12 +82,6 @@ RESTART_DIR = ./gen_0
 ```
 
 ### General parameter
-* **NELEMENT** [integer]
-  - The number of elements
-* **ATOM_TYPE** [strings]
-  - Atomic symbols of elements
-* **INIT_CONFIG** [strings]
-  - A path of file containing initial atomic positions
 * **TARGET_LIST** [strings]
   - A path of file containing target atoms
 * **FINITE_DIFF** [real]
@@ -106,6 +98,19 @@ RESTART_DIR = ./gen_0
   - A maximum step size of image movement (Angs)
 * **TRIAL_MOVE** [real]
   - A trial step size of image for cg optimization (Angs)
+* **CONFIDENCE** [real]
+  - A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
+* **MAX_SEARCH** [integer]
+  - A maximum number of saddle point searches
+* **WRITE_MODE** [integer]
+  - An eigenmode for each step
+### Initial structure parameter
+* **NELEMENT** [integer]
+  - The number of elements
+* **ATOM_TYPE** [strings]
+  - Atomic symbols of elements
+* **INIT_CONFIG** [strings]
+  - A path of file containing initial atomic positions
 * **INIT_RELAX** [integer]
   - An initial structure optimization
 * **INIT_DISP** [integer]
@@ -114,12 +119,6 @@ RESTART_DIR = ./gen_0
   - A cutoff radius of initial displacement (Angs)
 * **DISP_STDDEV** [real]
   - A standard deviation of gaussian displacement
-* **CONFIDENCE** [real]
-  - A confidence level of saddle point search (Ref. [1](https://doi.org/10.1063/1.2976010))
-* **MAX_SEARCH** [integer]
-  - A maximum number of saddle point searches
-* **WRITE_MODE** [integer]
-  - An eigenmode for each step
 ### LAMMPS parameter
 * **PAIR_STYLE** [strings]
   - Pair style in LAMMPS input
@@ -156,11 +155,6 @@ RESTART_DIR = ./gen_0
   - A number of initial steps without Lanczos method
 * **ART_MIXING** [integer]
   - A number of mixing steps above inflection points
-### System parameter
-* **FREQUENCY** [real]
-  - An attempt frequency of reaction (1/s)
-* **TEMPERATURE** [real]
-  - An system temperature (K)
 ### Random parameter
 * **RANDOM_SEED** [integer]
   - A seed for random number
