@@ -205,7 +205,7 @@ Otherwise, execute code with the command following:
 ### SPS_`count`.log
 It contains information such as steps, potential energy, eigenvalue, or curvature and so on.
 Its format depends on the algorithm you used.
-In addition, it says whether the saddle point is connected or not.
+In addition, the type of the saddle point, barrier energy, reaction energy, and elapsed time are written.
 
 ### SPS_`count`.XDATCAR
 The trajectory from the initial to the saddle point are appended into here.
@@ -213,7 +213,7 @@ The trajectory from the initial to the saddle point are appended into here.
 ### `count`.MODECAR
 The eigenvector at the saddle point is written as N x 3 array, where N is the number of all atoms.
 
-### Saddle_`count`.POSCAR
+### Saddle_`count`_ `atomic_index`.POSCAR
 The configuration of the saddle point is written as POSCAR format.
 
 ### Final_`count`_ `atomic_index`.POSCAR
