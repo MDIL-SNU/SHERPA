@@ -5,8 +5,8 @@ typedef struct _Input
 {
     char *target_list;
     double finite_diff;
-    double calc_cutoff;
     double acti_cutoff;
+    int acti_nevery;
     double f_tol;
     double max_move;
     double diff_tol;

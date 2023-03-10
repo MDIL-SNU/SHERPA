@@ -12,7 +12,7 @@ void *lmp_init(Config *config, Input *input, MPI_Comm comm)
     /* create LAMMPS instance */
     int i;
     void *lmp;
-    char cmd[1024];
+    char cmd[65536], tmp_cmd[65536];
     char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
 //    char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
@@ -55,6 +55,25 @@ void *lmp_init(Config *config, Input *input, MPI_Comm comm)
     }
     /* balance */
     lammps_command(lmp, "balance 1.0 shift xyz 20 1.0");
+    /* fix */
+    int fix = 0;
+    for (i = 0; i < config->tot_num; ++i) {
+        if (config->fix[i] > 0) {
+            fix++;
+            break;
+        }
+    }
+    if (fix > 0) {
+        sprintf(cmd, "group freeze id");
+        for (i = 0; i < config->tot_num; ++i) {
+            if (config->fix[i] > 0) {
+                sprintf(tmp_cmd, " %d", i + 1);
+                strcat(cmd, tmp_cmd);
+            }
+        }
+        lammps_command(lmp, cmd);
+        lammps_command(lmp, "fix int freeze setforce 0.0 0.0 0.0");
+    }
     return lmp;
 }
 
@@ -75,56 +94,12 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void oneshot_local(Config *config, Input *input, double *energy, double *force,
-                  int local_num, int *local_list, MPI_Comm comm)
+void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
 {
-    int i;
     char cmd[1024];
     void *lmp = NULL;
     /* create LAMMPS instance */
     lmp = lmp_init(config, input, comm);
-    /* oneshot */
-    lammps_command(lmp, "run 0");
-    *energy = lammps_get_thermo(lmp, "pe");
-    double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
-    lammps_gather_atoms(lmp, "f", 1, 3, tmp_force);
-    for (i = 0; i < local_num; ++i) {
-        force[i * 3 + 0] = tmp_force[local_list[i] * 3 + 0];
-        force[i * 3 + 1] = tmp_force[local_list[i] * 3 + 1];
-        force[i * 3 + 2] = tmp_force[local_list[i] * 3 + 2];
-    }
-    /* delete LAMMPS instance */
-    free(tmp_force);
-    lammps_close(lmp);
-}
-
-
-void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
-{
-    int i;
-    char tmp_cmd[64], cmd[1024];
-    void *lmp = NULL;
-    /* create LAMMPS instance */
-    lmp = lmp_init(config, input, comm);
-    /* fix */
-    int fix_num = 0;
-    for (i = 0; i < config->tot_num; ++i) {
-        if (config->fix[i] > 0) {
-            fix_num++;
-            break;
-        }
-    }
-    if (fix_num > 0) {
-        sprintf(cmd, "group freeze id");
-        for (i = 0; i < config->tot_num; ++i) {
-            if (config->fix[i] > 0) {
-                sprintf(tmp_cmd, " %d", i + 1);
-                strcat(cmd, tmp_cmd); 
-            }
-        }
-        lammps_command(lmp, cmd);
-        lammps_command(lmp, "fix 1 freeze setforce 0.0 0.0 0.0");
-    }
     /* minimize */
     sprintf(cmd, "minimize 0 %f 10000 100000", input->f_tol);
     lammps_command(lmp, cmd);

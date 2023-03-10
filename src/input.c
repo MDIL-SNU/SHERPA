@@ -156,11 +156,6 @@ int read_input(Input *input, char *filename)
         printf("FINITE_DIFF is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->calc_cutoff), "CALC_CUTOFF", filename);
-    if (errno) {
-        printf("CALC_CUTOFF is missing.\n");
-        return 1;
-    }
     errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
     if (errno) {
         printf("ACTI_CUTOFF is missing.\n");
@@ -340,7 +335,6 @@ void write_input(Input *input)
     fputs("# general parameter #\n", fp);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
-    fprintf(fp, "CALC_CUTOFF\t= %f\n", input->calc_cutoff);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);

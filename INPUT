@@ -1,7 +1,6 @@
 # general parameter #
 TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
-CALC_CUTOFF = 12.0
 ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
 DIFF_TOL    = 0.02

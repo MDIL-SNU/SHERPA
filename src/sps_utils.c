@@ -327,6 +327,14 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 }
 
 
+void set_active_region(Config *initial, Config *saddle, Input *input,
+                       double *eigenmode, int *global_num, int *global_list,
+                       int *local_list, int **tmp_list)
+{
+    int i, j;
+}
+
+
 int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
                 double *eigenmode, int count, int index,
                 int global_num, int *global_list, double time, MPI_Comm comm)

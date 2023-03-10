@@ -28,7 +28,6 @@ cmake --build .
 # general parameter #
 TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
-CALC_CUTOFF = 12.0
 ACTI_CUTOFF = 6.0
 F_TOL       = 0.01
 DIFF_TOL    = 0.02
@@ -86,8 +85,6 @@ RESTART_DIR = ./gen_0
   - A path of file containing target atoms
 * **FINITE_DIFF** [real]
   - A displacement for the finite difference method (Angs)
-* **CALC_CUTOFF** [real]
-  - A cutoff radius of sphere cluster (Angs)
 * **ACTI_CUTOFF** [real]
   - A cutoff radius of active volume (Angs)
 * **F_TOL** [real]
