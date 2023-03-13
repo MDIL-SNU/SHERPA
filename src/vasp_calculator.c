@@ -131,41 +131,6 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void oneshot_local(Config *config, Input *input, double *energy, double *force,
-                  int local_num, int *local_list, MPI_Comm comm)
-{
-    int i;
-    FILE *fp;
-    char cmd[1024], filename[256];
-    sprintf(filename, "%s_tmp", input->output_dir);
-    mkdir(filename, 0775);
-    sprintf(filename, "%s_tmp/INCAR", input->output_dir);
-    write_incar(input, filename, -1);
-    sprintf(filename, "%s_tmp/POSCAR", input->output_dir);
-    write_config(config, filename, "w");
-    sprintf(cmd, "cp POTCAR %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
-    pclose(fp);
-    sprintf(cmd, "cp KPOINTS %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
-    pclose(fp);
-    vasp_run(input);
-    double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
-    sprintf(filename, "%s_tmp/OUTCAR", input->output_dir);
-    read_outcar(filename, config->pos, energy, tmp_force);
-    for (i = 0; i < local_num; ++i) {
-        force[i * 3 + 0] = tmp_force[local_list[i] * 3 + 0];
-        force[i * 3 + 1] = tmp_force[local_list[i] * 3 + 1];
-        force[i * 3 + 2] = tmp_force[local_list[i] * 3 + 2];
-    }
-    free(tmp_force);
-    sprintf(cmd, "cat %s_tmp/OUTCAR >> %s/OUTCAR",
-            input->output_dir, input->output_dir);
-    fp = popen(cmd, "r");
-    pclose(fp);
-}
-
-
 void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
 {
     FILE *fp;

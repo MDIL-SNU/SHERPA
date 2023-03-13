@@ -161,6 +161,11 @@ int read_input(Input *input, char *filename)
         printf("ACTI_CUTOFF is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->acti_nevery), "ACTI_NEVERY", filename);
+    if (errno) {
+        printf("ACTI_NEVERY is missing.\n");
+        return 1;
+    }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
         printf("F_TOL is missing.\n");
@@ -336,6 +341,7 @@ void write_input(Input *input)
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
+    fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);

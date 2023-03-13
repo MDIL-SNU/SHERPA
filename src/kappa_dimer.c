@@ -46,13 +46,12 @@ static double *projected_force(double *force0, double *eigenmode,
 
 static void rotate(Config *config0, Input *input, int active_num, int *active_list,
                    double *eigenmode, double energy0, double *force0,
-                   int count, int dimer_step, MPI_Comm comm)
+                   int count, int sps_step, MPI_Comm comm)
 {
-    int i, rank, size;
+    int i, rank;
     double magnitude, cmin;
     char filename[128];
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
@@ -92,7 +91,7 @@ static void rotate(Config *config0, Input *input, int active_num, int *active_li
                 sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
                 FILE *fp = fopen(filename, "a");
                 fprintf(fp, " %8d   %8d   %16f   ---------   ---------   %9f\n",
-                        dimer_step, i, energy0, norm(f_rot_A, active_num));
+                        sps_step, i, energy0, norm(f_rot_A, active_num));
                 fclose(fp);
             }
             free(f_rot_A);
@@ -177,7 +176,7 @@ static void rotate(Config *config0, Input *input, int active_num, int *active_li
             sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             fprintf(fp, " %8d   %8d   %16f   %9f   %9f   %9f\n",
-                    dimer_step, rot_step + 1, energy0, cmin,
+                    sps_step, rot_step + 1, energy0, cmin,
                     rotangle * 180 / 3.1415926535897932384626,
                     norm(f_rot_A, active_num));
             fclose(fp);
@@ -350,7 +349,7 @@ static double constrained_rotate(Config *config0, Input *input,
 static void translate(Config *config0, Input *input, int active_num, int *active_list,
                       double *eigenmode, double *force0,
                       double *direction_old, double *cg_direction,
-                      int dimer_step, double kappa, MPI_Comm comm)
+                      int sps_step, double kappa, MPI_Comm comm)
 {
     int i;
     double magnitude;
@@ -498,11 +497,11 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
                 double *full_eigenmode, int count, int index, double *Ea,
                 MPI_Comm comm)
 {
-    int i, j, rank, size;
+    int i, j, rank;
     int conv = 1;
+    double kappa;
     char filename[128];
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
@@ -531,11 +530,11 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
     if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, config0->tot_num, comm);
     }
-    double *tmp_eigenmode = (double *)malloc(sizeof(double) * active_num * 3);
+    double *eigenmode = (double *)calloc(config0->tot_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
-        tmp_eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
-        tmp_eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
-        tmp_eigenmode[i * 3 + 2] = full_eigenmode[active_list[i] * 3 + 2];
+        eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
+        eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
+        eigenmode[i * 3 + 2] = full_eigenmode[active_list[i] * 3 + 2];
     }
     memset(full_eigenmode, 0, sizeof(double) * saddle->tot_num * 3);
 
@@ -546,9 +545,9 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         for (i = 0; i < active_num; ++i) {
             for (j = 0; j < tmp_num; ++j) {
                 if (active_list[i] == tmp_list[j]) {
-                    config0->pos[tmp_list[j] * 3 + 0] += tmp_eigenmode[i * 3 + 0];
-                    config0->pos[tmp_list[j] * 3 + 1] += tmp_eigenmode[i * 3 + 1];
-                    config0->pos[tmp_list[j] * 3 + 2] += tmp_eigenmode[i * 3 + 2];
+                    config0->pos[tmp_list[j] * 3 + 0] += eigenmode[i * 3 + 0];
+                    config0->pos[tmp_list[j] * 3 + 1] += eigenmode[i * 3 + 1];
+                    config0->pos[tmp_list[j] * 3 + 2] += eigenmode[i * 3 + 2];
                     break;
                 }
             }
@@ -556,22 +555,19 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         free(tmp_list);
     }
     /* normalize */
-    double *eigenmode = normalize(tmp_eigenmode, active_num);
-    free(tmp_eigenmode);
-    double *init_direction = (double *)malloc(sizeof(double) * active_num * 3);
+    double *tmp_eigenmode = normalize(eigenmode, active_num);
     for (i = 0; i < active_num; ++i) {
-        init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
-        init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
-        init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+        eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
+        eigenmode[i * 3 + 1] = tmp_eigenmode[i * 3 + 1];
+        eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
     }
+    free(tmp_eigenmode);
 
     /* cg optimization */
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(active_num * 3, sizeof(double));
 
     /* run */
-    double kappa;
-    int dimer_step;
     if (local_rank == 0) {
         sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
         FILE *fp = fopen(filename, "w");
@@ -579,14 +575,13 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         fputs(" Opt step   Rot step   Potential energy   Curvature   Rot angle   Rot force\n", fp);
         fputs("----------------------------------------------------------------------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/SPS_%d.XDATCAR",
-                input->output_dir, count);
+        sprintf(filename, "%s/SPS_%d.XDATCAR", input->output_dir, count);
         write_config(config0, filename, "w");
     }
 
     clock_t start = clock();
     double energy0;
-    double *force0 = (double *)malloc(sizeof(double) * active_num * 3);
+    double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     oneshot(config0, input, &energy0, full_force, comm);
     for (i = 0; i < active_num; ++i) {
@@ -594,9 +589,11 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
         force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
     }
-    for (dimer_step = 1; dimer_step <= input->max_num_tls; ++dimer_step) {
+    int sps_step;
+    int max_index = -1;
+    for (sps_step = 1; sps_step <= input->max_num_tls; ++sps_step) {
         rotate(config0, input, active_num, active_list,
-               eigenmode, energy0, force0, count, dimer_step, comm);
+               eigenmode, energy0, force0, count, sps_step, comm);
         /* test */
         if ((local_rank == 0) && (input->write_mode)) {
             for (i = 0; i < active_num; ++i) {
@@ -604,7 +601,7 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
                 full_eigenmode[active_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
                 full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
             }
-            sprintf(filename, "%s/%d_%d.MODECAR", input->output_dir, count, dimer_step);
+            sprintf(filename, "%s/%d_%d.MODECAR", input->output_dir, count, sps_step);
             FILE *fp = fopen(filename, "w");
             for (i = 0; i < saddle->tot_num; ++i) {
                 fprintf(fp, "%f %f %f\n",
@@ -625,7 +622,7 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
                                    tmp_eigenmode, force0, comm);
         free(tmp_eigenmode);
         translate(config0, input, active_num, active_list, eigenmode, force0,
-                  direction_old, cg_direction, dimer_step, kappa, comm);
+                  direction_old, cg_direction, sps_step, kappa, comm);
 
         /* trajectory */
         if (local_rank == 0) {
@@ -634,6 +631,7 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         }
 
         /* force criteria */
+        /* this force will be reused at next step */
         oneshot(config0, input, &energy0, full_force, comm);
         double fmax = 0.0;
         for (i = 0; i < active_num; ++i) {
@@ -651,6 +649,19 @@ int kappa_dimer(Config *initial, Config *saddle, Input *input,
         if (fmax < input->f_tol) {
             conv = 0;
             break;
+        }
+
+        /* change active volume */
+        if ((sps_step > input->acti_nevery) &&
+            ((sps_step - 1) % input->acti_nevery == 0)) {
+            expand_active_volume(initial, config0, input,
+                                 &active_num, active_list, &max_index, comm);
+            /* this force will be reused at next step */
+            for (i = 0; i < active_num; ++i) {
+                force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
+                force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
+                force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
+            }
         }
     }
     clock_t end = clock();

@@ -12,8 +12,8 @@
 #include "sps_utils.h"
 
 
-inline void get_minimum_image(double *del, double *boxlo, double *boxhi,
-                              double xy, double yz, double xz)
+void get_minimum_image(double *del, double *boxlo, double *boxhi,
+                       double xy, double yz, double xz)
 {
     double xprd, yprd, zprd;
     double xprd_half, yprd_half, zprd_half;
@@ -231,10 +231,9 @@ void get_cg_direction(double *direction, double *direction_old,
 /* not normalized */
 double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 {
-    int i, rank, size;
+    int i, rank;
     double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
@@ -271,10 +270,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
 void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
                      int *atom_num, int **atom_list, MPI_Comm comm)
 {
-    int i, rank, size;
+    int i, rank;
     double del[3];
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
@@ -293,10 +291,7 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
         del[2] = config->pos[i * 3 + 2] - center[2];
         get_minimum_image(del, config->boxlo, config->boxhi,
                           config->xy, config->yz, config->xz);
-        double dist = sqrt(del[0] * del[0]
-                         + del[1] * del[1]
-                         + del[2] * del[2]);
-        if (dist < cutoff) {
+        if (norm(del, 1) < cutoff) {
             tmp_list[tmp_num] = i;
             tmp_num++;
         }
@@ -317,31 +312,74 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
     }
     MPI_Allgatherv(tmp_list, tmp_num, MPI_INT,
                    *atom_list, counts, disp, MPI_INT, comm);
-
     free(tmp_list);
     free(counts);
     free(disp);
-
-    /* sort */
-    int_sort_increase(*atom_num, *atom_list);
 }
 
 
-void set_active_region(Config *initial, Config *saddle, Input *input,
-                       double *eigenmode, int *global_num, int *global_list,
-                       int *local_list, int **tmp_list)
+void expand_active_volume(Config *initial, Config *saddle, Input *input,
+                          int *active_num, int *active_list, int *max_index,
+                          MPI_Comm comm)
 {
-    int i, j;
+    int i, j, tmp_index;
+    double del[3], center[3];
+
+    /* the most displaced atom */
+    double dmax = 0.0;
+    for (i = 0; i < (*active_num); ++i) {
+        del[0] = saddle->pos[active_list[i] * 3 + 0]
+               - initial->pos[active_list[i] * 3 + 0];
+        del[1] = saddle->pos[active_list[i] * 3 + 1]
+               - initial->pos[active_list[i] * 3 + 1];
+        del[2] = saddle->pos[active_list[i] * 3 + 2]
+               - initial->pos[active_list[i] * 3 + 2];
+        get_minimum_image(del, saddle->boxlo, saddle->boxhi,
+                          saddle->xy, saddle->yz, saddle->xz);
+        if (norm(del, 1) > dmax) {
+            dmax = norm(del, 1);
+            tmp_index = active_list[i];
+        }
+    }
+    if (tmp_index == (*max_index)) {
+        return;
+    } else {
+        *max_index = tmp_index;
+    }
+
+    /* generate lists */
+    center[0] = saddle->pos[(*max_index) * 3 + 0];
+    center[1] = saddle->pos[(*max_index) * 3 + 1];
+    center[2] = saddle->pos[(*max_index) * 3 + 2];
+    int tmp_num;
+    int *tmp_list;
+    get_sphere_list(saddle, input, center, input->acti_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    /* append active_list */
+    int tmp_active_num = *active_num;
+    for (i = 0; i < tmp_num; ++i) {
+        int new = 1;
+        for (j = 0; j < tmp_active_num; ++j) {
+            if (active_list[j] == tmp_list[i]) {
+                new = 0;
+                break;
+            }
+        }
+        if ((new == 1) && (saddle->fix[tmp_list[i]] == 0)) {
+            active_list[*active_num] = tmp_list[i];
+            (*active_num)++;
+        }
+    }
+    free(tmp_list);
 }
 
 
 int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
                 double *eigenmode, int count, int index,
-                int global_num, int *global_list, double time, MPI_Comm comm)
+                int active_num, int *active_list, double time, MPI_Comm comm)
 {
-    int i, j, rank, size;
+    int i, j, rank;
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
@@ -362,10 +400,10 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     for (i = 0; i < 10; ++i) {
-        for (j = 0; j < global_num; ++j) {
-            config1->pos[global_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
-            config1->pos[global_list[j] * 3 + 1] += 0.1 * eigenmode[j * 3 + 1];
-            config1->pos[global_list[j] * 3 + 2] += 0.1 * eigenmode[j * 3 + 2];
+        for (j = 0; j < active_num; ++j) {
+            config1->pos[active_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
+            config1->pos[active_list[j] * 3 + 1] += 0.1 * eigenmode[j * 3 + 1];
+            config1->pos[active_list[j] * 3 + 2] += 0.1 * eigenmode[j * 3 + 2];
         }
         oneshot(config1, input, &energy1, force1, comm);
         if (energy1 < energy0) {
@@ -382,10 +420,10 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
     double energy2;
     double *force2 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     for (i = 0; i < 10; ++i) {
-        for (j = 0; j < global_num; ++j) {
-            config2->pos[global_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
-            config2->pos[global_list[j] * 3 + 1] -= 0.1 * eigenmode[j * 3 + 1];
-            config2->pos[global_list[j] * 3 + 2] -= 0.1 * eigenmode[j * 3 + 2];
+        for (j = 0; j < active_num; ++j) {
+            config2->pos[active_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
+            config2->pos[active_list[j] * 3 + 1] -= 0.1 * eigenmode[j * 3 + 1];
+            config2->pos[active_list[j] * 3 + 2] -= 0.1 * eigenmode[j * 3 + 2];
         }
         oneshot(config2, input, &energy2, force2, comm);
         if (energy2 < energy0) {

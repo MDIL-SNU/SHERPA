@@ -29,12 +29,13 @@ cmake --build .
 TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
 ACTI_CUTOFF = 6.0
+ACTI_NEVERY = 3
 F_TOL       = 0.01
 DIFF_TOL    = 0.02
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 CONFIDENCE  = 0.9
-MAX_SEARCH  = 10
+MAX_SEARCH  = 100
 WRITE_MODE  = 0
 
 # initial structure parameter #
@@ -87,6 +88,8 @@ RESTART_DIR = ./gen_0
   - A displacement for the finite difference method (Angs)
 * **ACTI_CUTOFF** [real]
   - A cutoff radius of active volume (Angs)
+* **ACTI_NEVERY** [int]
+  - Active volume is expanded at every `ACTI_NEVERY` step
 * **F_TOL** [real]
   - A force tolerance for dimer method (eV/Angs)
 * **DIFF_TOL** [real]
