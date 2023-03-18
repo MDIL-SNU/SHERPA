@@ -150,9 +150,7 @@ SPS_VASP
 , where `${numproc}` stands for the number of processors.
 
 
-## Outputs
-All outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of saddle point searches trials and the index of target atom, respectively. 
-
+## Outputs (will be updated soon)
 ||Unconverged|Not splited|Disconnected|Connected|
 |:---|:---:|:---:|:---:|:---:|
 |SPS.log|O|O|O|O|
@@ -162,6 +160,7 @@ All outputs have header like `{count}_{index}`, meaning that `{count}` and `{ind
 |Final.POSCAR|X|X|X|O|
 
 
+All outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of saddle point searches trials and the index of target atom, respectively. 
 `EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs.
 ```bash
 EXTRACTOR ${output} ${count}
