@@ -1,12 +1,11 @@
+#include "calculator.h"
+#include "my_mpi.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "config.h"
-#include "my_mpi.h"
-#include "vasp_calculator.h"
 
 
 void vasp_run(Input *input)
@@ -114,7 +113,7 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
     sprintf(filename, "%s_tmp/INCAR", input->output_dir);
     write_incar(input, filename, -1);
     sprintf(filename, "%s_tmp/POSCAR", input->output_dir);
-    write_config(config, filename, "w");
+    write_config(config, filename, "poscar", "w");
     sprintf(cmd, "cp POTCAR %s_tmp", input->output_dir);
     fp = popen(cmd, "r");
     pclose(fp);
@@ -140,7 +139,7 @@ void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
     sprintf(filename, "%s_tmp/INCAR", input->output_dir);
     write_incar(input, filename, 2);
     sprintf(filename, "%s_tmp/POSCAR", input->output_dir);
-    write_config(config, filename, "w");
+    write_config(config, filename, "poscar", "w");
     sprintf(cmd, "cp POTCAR %s_tmp", input->output_dir);
     fp = popen(cmd, "r");
     pclose(fp);

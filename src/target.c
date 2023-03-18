@@ -1,10 +1,8 @@
-#include <math.h>
+#include "target.h"
+#include "linalg.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "alg_utils.h"
-#include "my_mpi.h"
-#include "target.h"
 
 
 int read_target(Config *config, Input *input,
@@ -73,14 +71,15 @@ int read_target(Config *config, Input *input,
                     (*target_num)++;
                 }
             } else {
+                fclose(fp);
                 return 1;
             }
             if (random > 0) {
                 int_shuffle(*target_num, *target_list);
-                MPI_Bcast(*target_list, *target_num, MPI_INT, 0, MPI_COMM_WORLD);
             }
         }
     }
+    fclose(fp);
     return 0;
 }
 

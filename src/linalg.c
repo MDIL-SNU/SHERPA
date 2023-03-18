@@ -1,7 +1,7 @@
+#include "linalg.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "alg_utils.h"
 
 
 void int_shuffle(int list_len, int *int_list)

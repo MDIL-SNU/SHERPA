@@ -1,7 +1,3 @@
-#ifdef LMP
-#include <mpi.h>
-#endif
-#ifdef VASP
 #include "my_mpi.h"
 #include "string.h"
 
@@ -238,4 +234,3 @@ int MPI_Win_unlock(int target_rank, MPI_Win win)
     ierror = MPI_SUCCESS;
     return ierror;
 }
-#endif

@@ -1,10 +1,9 @@
+#include "calculator.h"
+#define LAMMPS_LIB_MPI
+#include "library.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lmp_calculator.h"
-#define LAMMPS_LIB_MPI
-#include "library.h"
-#include "sps_utils.h"
 
 
 void *lmp_init(Config *config, Input *input, MPI_Comm comm)

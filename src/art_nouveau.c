@@ -1,19 +1,14 @@
+#include "art_nouveau.h"
+#include "calculator.h"
+#include "config.h"
+#include "linalg.h"
+#include "utils.h"
 #include <math.h>
 #include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "art_nouveau.h"
-#ifdef LMP
-#include "lmp_calculator.h"
-#endif
-#ifdef VASP
-#include "vasp_calculator.h"
-#endif
-#include "alg_utils.h"
-#include "config.h"
-#include "sps_utils.h"
 
 
 static int lanczos(Config *config, Input *input, int active_num, int *active_list,
@@ -239,8 +234,8 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
 
 
 static void perp_relax(Config *config0, Input *input, int active_num, int *active_list,
-                       double eigenvalue, double *push_direction,
-                       int count, int sps_step, int lanczos_step, MPI_Comm comm)
+                       double eigenvalue, double *push_direction, int count, int index,
+                       int sps_step, int lanczos_step, MPI_Comm comm)
 {
     int i, rank;
     char filename[128];
@@ -267,23 +262,25 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-        double *perp_force0 = perpendicular_vector(force0, push_direction, active_num);
-
+        /* trajectory */
         if (local_rank == 0) {
-            sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
+            sprintf(filename, "%s/%d.log", input->output_dir, count);
             FILE *fp = fopen(filename, "a");
             if (sps_step > input->art_delay) {
-                fprintf(fp, " %8d   %8d   %12d   %16f   %10f\n",
+                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
                         sps_step, relax_step, lanczos_step, energy0, eigenvalue);
             } else {
-                fprintf(fp, " %8d   %8d   %12d   %16f   ----------\n",
+                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
                         sps_step, relax_step, lanczos_step, energy0);
             }
             fclose(fp);
-            sprintf(filename, "%s/SPS_%d.XDATCAR", input->output_dir, count);
-            write_config(config0, filename, "a");
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, sps_step);
+            sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+            write_config(config0, filename, header, "a");
         }
     
+        double *perp_force0 = perpendicular_vector(force0, push_direction, active_num);
         if (eigenvalue < input->lambda_crit) {
             double *parallel_force0 = parallel_vector(force0, push_direction, active_num);
             if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
@@ -291,6 +288,7 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
                 free(parallel_force0);
                 break;
             }
+            free(parallel_force0);
         }
 
         /* cg direction */
@@ -387,12 +385,12 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
 }
 
 
-int art_nouveau(Config *initial, Config *saddle, Input *input,
+int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 double *full_eigenmode, int count, int index, double *Ea,
                 MPI_Comm comm)
 {
     int i, j, rank;
-    int conv = 1;
+    int conv = -1;
     char filename[128];
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -462,105 +460,82 @@ int art_nouveau(Config *initial, Config *saddle, Input *input,
         init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
     }
 
-    int lanczos_step = 0;
-    double eigenvalue = 1;
     if (local_rank == 0) {
-        sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
+        sprintf(filename, "%s/%d.log", input->output_dir, count);
         FILE *fp = fopen(filename, "w");
-        fputs("--------------------------------------------------------------------\n", fp);
-        fputs(" Art step   Opt step   Lanczos step   Potential energy   Eigenvalue\n", fp);
-        fputs("--------------------------------------------------------------------\n", fp);
+        fprintf(fp, " %d_%d\n", count, index);
+        fputs("-----------------------------------------------------------------------\n", fp);
+        fputs(" Push step   Relax step   Lanczos step   Potential energy   Eigenvalue\n", fp);
+        fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/SPS_%d.XDATCAR", input->output_dir, count);
-        write_config(config0, filename, "w");
+        char header[128];
+        sprintf(header, "%d_%d %d", count, index, 0);
+        sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+        write_config(config0, filename, header, "w");
     }
 
-    clock_t start = clock();
+    int sps_step;
+    int max_index = index;
+    double eigenvalue = 1.0;
+    int negative = 0;
+    int lanczos_step = 0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
-    oneshot(config0, input, &energy0, full_force, comm);
-    for (i = 0; i < active_num; ++i) {
-        force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
-        force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
-        force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
-    }
-    int sps_step;
-    int negative = 0;
-    int max_index = index;
+    clock_t start = clock();
     for (sps_step = 1; sps_step <= 500; ++sps_step) {
+        oneshot(config0, input, &energy0, full_force, comm);
+        for (i = 0; i < active_num; ++i) {
+            force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
+            force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
+            force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
+        }
         /* lanczos */
         if (sps_step > input->art_delay) {
             lanczos_step = lanczos(config0, input, active_num, active_list,
                                    &eigenvalue, eigenmode, force0, comm);
         }
-        /* test */
-        if ((local_rank == 0) && (input->write_mode)) {
+        if (eigenvalue < input->lambda_crit) {
+            /* force criteria */
+            double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
-                full_eigenmode[active_list[i] * 3 + 0] = eigenmode[i * 3 + 0];
-                full_eigenmode[active_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
-                full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
+                force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
+                force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
+                force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
+                double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
+                            + force0[i * 3 + 1] * force0[i * 3 + 1]
+                            + force0[i * 3 + 2] * force0[i * 3 + 2];
+                tmpf = sqrt(tmpf);
+                if (tmpf > fmax) {
+                    fmax = tmpf;
+                }
             }
-            sprintf(filename, "%s/%d_%d.MODECAR", input->output_dir, count, sps_step);
-            FILE *fp = fopen(filename, "w");
-            for (i = 0; i < config0->tot_num; ++i) {
-                fprintf(fp, "%f %f %f\n",
-                        full_eigenmode[i * 3 + 0],
-                        full_eigenmode[i * 3 + 1],
-                        full_eigenmode[i * 3 + 2]);
+            if (fmax < input->f_tol) {
+                conv = 0;
+                break;
+            } else {
+                /* mixing */
+                negative++;
             }
-            fclose(fp);
-        }
-        /* mixing */
-        if (eigenvalue < 0) {
-            negative++;
         } else {
             negative = 0;
         }
-
         /* uphill push */
         double *push_vector = (double *)malloc(sizeof(double) * active_num * 3);
         uphill_push(config0, input, active_num, active_list, eigenvalue,
                     eigenmode, push_vector, init_direction, force0, negative, comm);
         double *push_direction = normalize(push_vector, active_num);
         free(push_vector);
-
         /* normal relax */
         perp_relax(config0, input, active_num, active_list, eigenvalue,
-                   push_direction, count, sps_step, lanczos_step, comm);
+                   push_direction, count, index, sps_step, lanczos_step, comm);
         free(push_direction);
-
-        /* force criteria */
-        oneshot(config0, input, &energy0, full_force, comm);
-        double fmax = 0.0;
-        for (i = 0; i < active_num; ++i) {
-            force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
-            force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
-            force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
-            double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
-                        + force0[i * 3 + 1] * force0[i * 3 + 1]
-                        + force0[i * 3 + 2] * force0[i * 3 + 2];
-            tmpf = sqrt(tmpf);
-            if (tmpf > fmax) {
-                fmax = tmpf;
-            }
-        }
-        if (fmax < input->f_tol) {
-            conv = 0;
-            break;
-        }
 
         /* change active volume */
         if ((sps_step > input->acti_nevery) &&
             ((sps_step - 1) % input->acti_nevery == 0)) {
             expand_active_volume(initial, config0, input,
                                  &active_num, active_list, &max_index, comm);
-            /* this force will be reused at next step */
-            for (i = 0; i < active_num; ++i) {
-                force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
-                force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
-                force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
-            }
         }
     }
     clock_t end = clock();
@@ -568,18 +543,18 @@ int art_nouveau(Config *initial, Config *saddle, Input *input,
     free(force0);
     free(init_direction);
     if (local_rank == 0) {
-        sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
+        sprintf(filename, "%s/%d.log", input->output_dir, count);
         FILE *fp = fopen(filename, "a");
-        fputs("--------------------------------------------------------------------\n", fp);
-        fputs(" Saddle point   Barrier energy   Reaction energy   Elapsed time (s)\n", fp);
-        fputs("--------------------------------------------------------------------\n", fp);
-        if (conv > 0) {
-            fprintf(fp, "  Unconverged   --------------   ---------------   %16f\n", time);
-            fputs("--------------------------------------------------------------------\n", fp);
+        fputs("-----------------------------------------------------------------------\n", fp);
+        fputs(" State of the saddle   Barrier energy   Reaction energy   Elapsed time\n", fp);
+        fputs("-----------------------------------------------------------------------\n", fp);
+        if (conv < 0) {
+            fprintf(fp, "         Unconverged   --------------   ---------------   %12f\n", time);
+            fputs("-----------------------------------------------------------------------\n", fp);
         }
         fclose(fp);
     }
-    if (conv > 0) {
+    if (conv < 0) {
         free_config(config0);
         free(active_list);
         free(full_eigenmode);
@@ -597,26 +572,36 @@ int art_nouveau(Config *initial, Config *saddle, Input *input,
         full_eigenmode[active_list[i] * 3 + 1] = eigenmode[i * 3 + 1];
         full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
-
+    double dE;
+    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
+                        count, index, active_num, active_list, comm);
     if (local_rank == 0) {
-        /* saddle configuration */
-        sprintf(filename, "%s/Saddle_%d_%d.POSCAR", input->output_dir, count, index);
-        write_config(saddle, filename, "w");
-        /* eigenmode */
+        char filename[128];
+        /* modecar */
         sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
         FILE *fp = fopen(filename, "w");
-        for (i = 0; i < saddle->tot_num; ++i) {
+        fprintf(fp, "%d_%d\n", count, index);
+        for (i = 0; i < config0->tot_num; ++i) {
             fprintf(fp, "%f %f %f\n",
                     full_eigenmode[i * 3 + 0],
                     full_eigenmode[i * 3 + 1],
                     full_eigenmode[i * 3 + 2]);
         }
         fclose(fp);
+        /* log */
+        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        fp = fopen(filename, "a");
+        if (conv == 0) {
+            fprintf(fp, "           Connected   %14f   %15f   %12f\n", *Ea, dE, time);
+        } else if (conv == 1) {
+            fprintf(fp, "        Disconnected   %14f   ---------------   %12f\n", *Ea, time);
+        } else if (conv == 2) {
+            fprintf(fp, "         Not splited   %14f   ---------------   %12f\n", *Ea, time);
+        } else {
+        }
+        fputs("-----------------------------------------------------------------------\n", fp);
+        fclose(fp);
     }
-
-    /* postprocess */
-    conv = postprocess(initial, saddle, input, Ea, eigenmode, count, index,
-                       active_num, active_list, time, comm);
 
     free_config(config0);
     free(active_list);

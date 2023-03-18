@@ -4,12 +4,11 @@ FINITE_DIFF = 0.01
 ACTI_CUTOFF = 6.0
 ACTI_NEVERY = 3
 F_TOL       = 0.01
-DIFF_TOL    = 0.02
+DIFF_TOL    = 0.3
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 100
-WRITE_MODE  = 0
 
 # initial structure parameter #
 NELEMENT    = 2
@@ -19,6 +18,8 @@ INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3.0
 DISP_STDDEV = 0.1
+INIT_MODE   = 0
+MODE_LIST   = ./SPS.MODECAR
 
 # LAMMPS parameter #
 PAIR_STYLE  = nn
@@ -43,12 +44,8 @@ MAX_NUM_RLX = 4
 ART_DELAY   = 0
 ART_MIXING  = 3
 
-# random parameter #
-RANDOM_SEED = -1
-
 # directory parameter #
 OUTPUT_DIR  = ./gen_1
 
-# restart parameter #
-RESTART     = 0
-RESTART_DIR = ./gen_0
+# random parameter #
+RANDOM_SEED = -1

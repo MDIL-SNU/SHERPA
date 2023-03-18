@@ -8,12 +8,11 @@ typedef struct _Input
     double acti_cutoff;
     int acti_nevery;
     double f_tol;
-    double max_move;
     double diff_tol;
+    double max_move;
     double trial_move;
     double confidence;
     int max_search;
-    int write_mode;
 
     int nelem;
     char **atom_type;
@@ -22,6 +21,8 @@ typedef struct _Input
     int init_disp;
     double disp_cutoff;
     double disp_stddev;
+    int init_mode;
+    char *mode_list;
 
     char *pair_style;
     char *pair_coeff;
@@ -42,12 +43,9 @@ typedef struct _Input
     int art_delay;
     int art_mixing;
 
-    int random_seed;
-
     char *output_dir;
 
-    int restart;
-    char *restart_dir;
+    int random_seed;
 
     int nredundant;
 } Input;

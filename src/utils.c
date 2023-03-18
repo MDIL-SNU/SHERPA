@@ -1,15 +1,11 @@
+#include "utils.h"
+#include "calculator.h"
+#include "linalg.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef LMP
-#include "lmp_calculator.h"
-#endif
-#ifdef VASP
-#include "vasp_calculator.h"
-#endif
-#include "alg_utils.h"
-#include "sps_utils.h"
+#include <unistd.h>
 
 
 void get_minimum_image(double *del, double *boxlo, double *boxhi,
@@ -54,120 +50,65 @@ void get_minimum_image(double *del, double *boxlo, double *boxhi,
 }
 
 
-int get_atom_num(char *symbol)
+/* -1: unique, nonnegative: degenerate */
+int check_unique(Config *config, Input *input)
 {
-    int i;
-    const char *name[92] = {"H", "He", "Li", "Be", "B",
-    "C", "N", "O", "F", "Ne", "Na", "Mg", "Al",
-    "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc",
-    "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu",
-    "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb",
-    "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
-    "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I",
-    "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm",
-    "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm",
-    "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir",
-    "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At",
-    "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U"};
-    for (i = 0; i < 92; ++i) {
-        if (strncmp(symbol, name[i], strlen(symbol)) == 0) {
-            return i + 1;
-        }
-    }
-    return 0;
-}
-
-
-double get_mass(int atom_num)
-{
-  const double mass[92] = {1.0079, 4.0026, 6.941, 9.0122, 10.811,
-  12.011, 14.007, 15.999, 18.998, 20.180, 22.990, 24.305, 26.982,
-  28.086, 30.974, 32.065, 35.453, 39.948, 39.098, 40.078, 44.956,
-  47.867, 50.942, 51.996, 54.938, 55.845, 58.933, 58.693, 63.546,
-  65.380, 69.723, 72.640, 74.922, 78.960, 79.904, 83.798, 85.468,
-  87.620, 88.906, 91.224, 92.906, 95.960, 98.000, 101.07, 102.91,
-  106.42, 107.87, 112.41, 114.82, 118.71, 121.76, 127.60, 126.90,
-  131.29, 132.91, 137.33, 138.91, 140.12, 140.91, 144.24, 145.00,
-  150.36, 151.96, 157.25, 158.93, 162.50, 164.93, 167.26, 168.93,
-  173.05, 174.97, 178.49, 180.95, 183.84, 186.21, 190.23, 192.22,
-  195.08, 196.97, 200.59, 204.38, 207.20, 208.98, 209.00, 210.00,
-  222.00, 223.00, 226.00, 227.00, 232.04, 231.04, 238.03};
-  return mass[atom_num - 1];
-}
-
-
-char *get_symbol(int atom_num)
-{
-    char *name[92] = {"H", "He", "Li", "Be", "B",
-    "C", "N", "O", "F", "Ne", "Na", "Mg", "Al",
-    "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc",
-    "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu",
-    "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb",
-    "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
-    "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I",
-    "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm",
-    "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm",
-    "Yb", "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir",
-    "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At",
-    "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U"};
-    return name[atom_num - 1];
-}
-
-
-int name_filter(const struct dirent *info)
-{
-    if (strncmp(info->d_name, "Final", 5) == 0) {
-        return 1;
+    int i, j, unique, count, errno;
+    char filename[128];
+    sprintf(filename, "%s/Saddle.POSCAR", input->output_dir);
+    FILE *rp = fopen(filename, "r");
+    /* first open */
+    if (rp == NULL) {
+        return -1;
     } else {
-        return 0;
-    }
-}
-
-
-/* nonpositive: not unique, positive: unique */
-int check_unique(Config *config, Input *input, char *self)
-{
-    int i, j, unique, count, index, errno;
-    struct dirent **namelist;
-
-    int ncount = scandir(input->output_dir, &namelist, name_filter, NULL);
-    if (ncount > 0) {
-        for (i = 0; i < ncount; ++i) {
-            if (strcmp(self, namelist[i]->d_name) == 0) {
-                continue;
+        char tmp_filename[128];
+        char line[1024], header[128], *ptr;
+        sprintf(tmp_filename, "%s/tmp_Saddle.POSCAR", input->output_dir);
+        while (1) {
+            if (fgets(header, 128, rp) == NULL) {
+                break;
             }
-            strtok(namelist[i]->d_name, "_");
-            count = atoi(strtok(NULL, "_"));
-            index = atoi(strtok(NULL, "_"));
-            char filename[512];
-            sprintf(filename, "%s/Saddle_%d_%d.POSCAR",
-                    input->output_dir, count, index);
+            FILE *wp = fopen(tmp_filename, "w");
+            fputs(header, wp);
+            for (i = 0; i < 8; ++i) {
+                fgets(line, 1024, rp);
+                fputs(line, wp);
+            }
+            for (i = 0; i < config->tot_num; ++i) {
+                fgets(line, 1024, rp);
+                fputs(line, wp);
+            }
+            fclose(wp);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
-            errno = read_config(tmp_config, input, filename);
-            /* already deleted */
-            if (errno > 0) {
-                free(tmp_config);
-                continue;
+            read_config(tmp_config, input, tmp_filename);
+            int diff = diff_config(config, tmp_config, input->diff_tol);
+            /* 0: identical */
+            if (diff == 0) {
+                fclose(rp);
+                remove(tmp_filename);
+                free_config(tmp_config);
+                return atoi(strtok(header, "_"));
             }
-            /* 0: identical, 1: different */
-            unique = diff_config(tmp_config, config, input->diff_tol);
             free_config(tmp_config);
-            if (unique == 0) {
-                for (j = 0; j < ncount; ++j) {
-                    free(namelist[j]);
-                }
-                free(namelist);
-                return -count;
-            }
         }
-        for (j = 0; j < ncount; ++j) {
-            free(namelist[j]);
-        }
-        free(namelist);
-        return 1;
-    } else {
-        return 1;
+        fclose(rp);
+        remove(tmp_filename);
+        return -1;
     }
+}
+
+
+/* filename1 <- filename2 */
+void concat_files(char *filename1, char *filename2)
+{
+    FILE *wp = fopen(filename1, "a");
+    FILE *rp = fopen(filename2, "r");
+    char line[1024];
+    while (fgets(line, 1024, rp) != NULL) {
+        fputs(line, wp);
+    }
+    fclose(wp);
+    fclose(rp);
 }
 
 
@@ -319,14 +260,13 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 
 
 void expand_active_volume(Config *initial, Config *saddle, Input *input,
-                          int *active_num, int *active_list, int *max_index,
-                          MPI_Comm comm)
+                          int *active_num, int *active_list,
+                          int *max_index, MPI_Comm comm)
 {
     int i, j, tmp_index;
-    double del[3], center[3];
-
-    /* the most displaced atom */
+    double del[3];
     double dmax = 0.0;
+    /* maximally displaced atom */
     for (i = 0; i < (*active_num); ++i) {
         del[0] = saddle->pos[active_list[i] * 3 + 0]
                - initial->pos[active_list[i] * 3 + 0];
@@ -334,8 +274,6 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                - initial->pos[active_list[i] * 3 + 1];
         del[2] = saddle->pos[active_list[i] * 3 + 2]
                - initial->pos[active_list[i] * 3 + 2];
-        get_minimum_image(del, saddle->boxlo, saddle->boxhi,
-                          saddle->xy, saddle->yz, saddle->xz);
         if (norm(del, 1) > dmax) {
             dmax = norm(del, 1);
             tmp_index = active_list[i];
@@ -348,6 +286,7 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
     }
 
     /* generate lists */
+    double center[3];
     center[0] = saddle->pos[(*max_index) * 3 + 0];
     center[1] = saddle->pos[(*max_index) * 3 + 1];
     center[2] = saddle->pos[(*max_index) * 3 + 2];
@@ -374,9 +313,31 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
 }
 
 
-int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
-                double *eigenmode, int count, int index,
-                int active_num, int *active_list, double time, MPI_Comm comm)
+/* 0: identical, 1: different */
+int diff_config(Config *config1, Config *config2, double tol)
+{
+    int i;
+    double del[3];
+    for (i = 0; i < config1->tot_num; ++i) {
+        if (config1->type[i] != config2->type[i]) {
+            return 1;
+        };
+        del[0] = config2->pos[i * 3 + 0] - config1->pos[i * 3 + 0];
+        del[1] = config2->pos[i * 3 + 1] - config1->pos[i * 3 + 1];
+        del[2] = config2->pos[i * 3 + 2] - config1->pos[i * 3 + 2];
+        get_minimum_image(del, config1->boxlo, config1->boxhi,
+                          config1->xy, config1->yz, config1->xz);
+        if (norm(del, 1) > tol) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+int split_config(Config *initial, Config *saddle, Config *final, Input *input,
+                double *Ea, double *dE, double *eigenmode, int count, int index,
+                int active_num, int *active_list, MPI_Comm comm)
 {
     int i, j, rank;
 
@@ -436,58 +397,28 @@ int postprocess(Config *initial, Config *saddle, Input *input, double *Ea,
 
     /* log */
     if ((diff1 == 1) && (diff2 == 1)) {
-        if (local_rank == 0) {
-            char filename[128];
-            sprintf(filename, "%s/x1_Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            write_config(config1, filename, "w");
-            sprintf(filename, "%s/x2_Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            write_config(config2, filename, "w");
-            sprintf(filename, "%s/SPS_%d.log",
-                    input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            fprintf(fp, " Disconnected   %14f   ---------------   %16f\n", *Ea, time);
-            fputs("--------------------------------------------------------------------\n", fp);
-            fclose(fp);
-        }
         free_config(config1);
         free_config(config2);
         return 1;
     } else if ((diff1  == 0) && (diff2 == 0)) {
-        if (local_rank == 0) {
-            char filename[128];
-            sprintf(filename, "%s/x0_Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            write_config(config1, filename, "w");
-            sprintf(filename, "%s/SPS_%d.log",
-                    input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            fprintf(fp, "  Not splited   %14f   ---------------   %16f\n", *Ea, time);
-            fputs("--------------------------------------------------------------------\n", fp);
-            fclose(fp);
-        }
         free_config(config1);
         free_config(config2);
-        return 1;
+        return 2;
     } else {
-        if (local_rank == 0) {
-            char filename[128];
-            sprintf(filename, "%s/Final_%d_%d.POSCAR",
-                    input->output_dir, count, index);
-            double dE;
-            if (diff1 == 0) {
-                write_config(config2, filename, "w");
-                dE = energy2 - initial_energy;
-            } else {
-                write_config(config1, filename, "w");
-                dE = energy1 - initial_energy;
+        if (diff1 == 0) {
+            *dE = energy2 - initial_energy;
+            for (i = 0; i < final->tot_num; ++i) {
+                final->pos[i * 3 + 0] = config2->pos[i * 3 + 0];
+                final->pos[i * 3 + 1] = config2->pos[i * 3 + 1];
+                final->pos[i * 3 + 2] = config2->pos[i * 3 + 2];
             }
-            sprintf(filename, "%s/SPS_%d.log", input->output_dir, count);
-            FILE *fp = fopen(filename, "a");
-            fprintf(fp, "    Connected   %14f   %15f   %16f\n", *Ea, dE, time);
-            fputs("--------------------------------------------------------------------\n", fp);
-            fclose(fp);
+        } else {
+            *dE = energy1 - initial_energy;
+            for (i = 0; i < final->tot_num; ++i) {
+                final->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
+                final->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
+                final->pos[i * 3 + 2] = config1->pos[i * 3 + 2];
+            }
         }
         free_config(config1);
         free_config(config2);

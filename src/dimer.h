@@ -5,6 +5,7 @@
 #include "my_mpi.h"
 
 
-int dimer(Config *initial, Config *final, Input *input, double *full_eigenmode,
-          int count, int index, double *Ea, MPI_Comm comm);
+int dimer(Config *initial, Config *saddle, Config *final, Input *input,
+          double *full_eigenmode, int count, int index, double *Ea,
+          MPI_Comm comm);
 #endif

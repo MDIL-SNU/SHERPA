@@ -1,10 +1,6 @@
 #ifndef __MY_MPI_H__
 #define __MY_MPI_H__
 
-#ifdef LMP
-#include <mpi.h>
-#endif
-#ifdef VASP
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,6 +19,7 @@
 #define MPI_DOUBLE 2
 
 #define MPI_SUM 1
+#define MPI_MIN 0
 
 int MPI_Allgather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                   void *recvbuf, int recvcount, MPI_Datatype recvtype,
@@ -47,7 +44,6 @@ int MPI_Gatherv(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                 MPI_Datatype recvtype, int root, MPI_Comm comm);
 int MPI_Init(int *argc, char **argv[]);
 
-
 #define MPI_Win int
 #define MPI_Aint int
 #define MPI_Info int
@@ -62,6 +58,4 @@ int MPI_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
 int MPI_Win_free(MPI_Win *win);
 int MPI_Win_lock(int lock_type, int rank, int assert, MPI_Win win);
 int MPI_Win_unlock(int target_rank, MPI_Win win);
-
-#endif
 #endif

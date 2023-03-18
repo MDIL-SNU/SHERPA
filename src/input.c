@@ -1,9 +1,9 @@
+#include "input.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "input.h"
 
 
 int input_int(int *var, char *tag, char *filename)
@@ -131,21 +131,6 @@ int input_char_arr(char ***var, char *tag, int n, char *filename)
 int read_input(Input *input, char *filename)
 {
     int errno;
-    errno = input_int(&(input->nelem), "NELEMENT", filename);
-    if (errno) {
-        printf("NELEMENT is missing.\n");
-        return 1;
-    }
-    errno = input_char_arr(&(input->atom_type), "ATOM_TYPE", input->nelem, filename);
-    if (errno) {
-        printf("ATOM_TYPE is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->init_config), "INIT_CONFIG", filename);
-    if (errno) {
-        printf("INIT_CONFIG is missing.\n");
-        return 1;
-    }
     errno = input_char(&(input->target_list), "TARGET_LIST", filename);
     if (errno) {
         printf("TARGET_LIST is missing.\n");
@@ -186,6 +171,31 @@ int read_input(Input *input, char *filename)
         printf("TRIAL_MOVE is missing.\n");
         return 1;
     }
+    errno = input_double(&(input->confidence), "CONFIDENCE", filename);
+    if (errno) {
+        printf("CONFIDENCE is missing.\n");
+        return 1;
+    }
+    errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
+    if (errno) {
+        printf("MAX_SEARCH is missing.\n");
+        return 1;
+    }
+    errno = input_int(&(input->nelem), "NELEMENT", filename);
+    if (errno) {
+        printf("NELEMENT is missing.\n");
+        return 1;
+    }
+    errno = input_char_arr(&(input->atom_type), "ATOM_TYPE", input->nelem, filename);
+    if (errno) {
+        printf("ATOM_TYPE is missing.\n");
+        return 1;
+    }
+    errno = input_char(&(input->init_config), "INIT_CONFIG", filename);
+    if (errno) {
+        printf("INIT_CONFIG is missing.\n");
+        return 1;
+    }
     errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
     if (errno) {
         printf("INIT_RELAX is missing.\n");
@@ -206,19 +216,14 @@ int read_input(Input *input, char *filename)
         printf("DISP_STDDEV is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->confidence), "CONFIDENCE", filename);
+    errno = input_int(&(input->init_mode), "INIT_MODE", filename);
     if (errno) {
-        printf("CONFIDENCE is missing.\n");
+        printf("INIT_MODE is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
+    errno = input_char(&(input->mode_list), "MODE_LIST", filename);
     if (errno) {
-        printf("MAX_SEARCH is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->write_mode), "WRITE_MODE", filename);
-    if (errno) {
-        printf("WRITE_MODE is missing.\n");
+        printf("MODE_LIST is missing.\n");
         return 1;
     }
     errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
@@ -296,24 +301,14 @@ int read_input(Input *input, char *filename)
         printf("ART_MIXING is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
-    if (errno) {
-        printf("RANDOM_SEED is missing.\n");
-        return 1;
-    }
     errno = input_char(&(input->output_dir), "OUTPUT_DIR", filename);
     if (errno) {
         printf("OUTPUT_DIR is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->restart), "RESTART", filename);
+    errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
     if (errno) {
-        printf("RESTART is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->restart_dir), "RESTART_DIR", filename);
-    if (errno) {
-        printf("RESTART_DIR is missing.\n");
+        printf("RANDOM_SEED is missing.\n");
         return 1;
     }
     if (input->random_seed == -1) {
@@ -324,6 +319,7 @@ int read_input(Input *input, char *filename)
     #endif
     input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->art_nouveau > 1) {
+        printf("Choose only one algirhtm.\n");
         return 1;
     }
     return 0;
@@ -348,7 +344,6 @@ void write_input(Input *input)
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
-    fprintf(fp, "WRITE_MODE\t= %d\n", input->write_mode);
     fputs("\n", fp);
 
     fputs("# initial structure parameter #\n", fp);
@@ -363,6 +358,8 @@ void write_input(Input *input)
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
+    fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
+    fprintf(fp, "MODE_LIST\t= %s\n", input->mode_list);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);
@@ -392,18 +389,14 @@ void write_input(Input *input)
     fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
     fputs("\n", fp);
 
-    fputs("# random parameter #\n", fp);
-    fprintf(fp, "RANDOM_SEED\t= %d\n", input->random_seed);
-    fputs("\n", fp);
-
     fputs("# directory parameter #\n", fp);
     fprintf(fp, "OUTPUT_DIR\t= %s\n", input->output_dir);
     fputs("\n", fp);
 
-    fputs("# restart parameter #\n", fp);
-    fprintf(fp, "RESTART\t\t= %d\n", input->restart);
-    fprintf(fp, "RESTART_DIR\t= %s\n", input->restart_dir);
+    fputs("# random parameter #\n", fp);
+    fprintf(fp, "RANDOM_SEED\t= %d\n", input->random_seed);
     fputs("\n", fp);
+
     fclose(fp);
 }
 
@@ -420,6 +413,6 @@ void free_input(Input *input)
     free(input->pair_coeff);
     free(input->vasp_cmd);
     free(input->output_dir);
-    free(input->restart_dir);
+    free(input->mode_list);
     free(input);
 }

@@ -1,42 +1,25 @@
-CMAKE_MINIMUM_REQUIRED ( VERSION 3.13 )
-PROJECT ( Saddle_point_search )
-ENABLE_LANGUAGE ( C )
+cmake_minimum_required ( VERSION 3.13 )
+project ( Saddle_point_search )
+enable_language ( C )
 
-FIND_PACKAGE ( MKL CONFIG REQUIRED )
+find_package ( MKL CONFIG REQUIRED )
+set ( CMAKE_C_COMPILER "mpiicc" )
+set ( CMAKE_VERBOSE_MAKEFILE TRUE )
+add_compile_options ( -O3 -g -Wall )
 
-SET ( CMAKE_VERBOSE_MAKEFILE TRUE )
-SET ( COMMON_SRC_FILES 
-        main.c 
-        config.c
-        dataset.c
-        art_nouveau.c
-        dimer.c
-        kappa_dimer.c
-        input.c
-        my_mpi.c
-        target.c
-        alg_utils.c
-        sps_utils.c )
-ADD_COMPILE_OPTIONS ( -O3 -g -Wall )
-SET ( CMAKE_C_COMPILER "mpiicc" )
-LINK_LIBRARIES ( m )
+add_executable ( EXTRACTOR extractor.c )
 
-SET ( LAMMPS_SRC_DIRECTORY "" CACHE PATH "Path for lammps source" )
-IF ( NOT LAMMPS_SRC_DIRECTORY STREQUAL "" AND EXISTS ${LAMMPS_SRC_DIRECTORY}/cmake/CMakeLists.txt )
-  OPTION( BUILD_LIB "Build LAMMPS library" ON )
-  ADD_SUBDIRECTORY ( ${LAMMPS_SRC_DIRECTORY}/cmake lammps )
-ELSE()
-  FIND_PACKAGE( LAMMPS REQUIRED )
-ENDIF()
+set ( SPS_SRC_FILES config.c dataset.c input.c linalg.c target.c )
+add_library ( SPS config.c dataset.c input.c linalg.c target.c )
 
-ADD_EXECUTABLE ( SPS_LMP ${COMMON_SRC_FILES} lmp_calculator.c )
-TARGET_COMPILE_DEFINITIONS( SPS_LMP PRIVATE LMP )
-TARGET_COMPILE_OPTIONS ( SPS_LMP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS> )
-TARGET_INCLUDE_DIRECTORIES ( SPS_LMP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES> )
-TARGET_LINK_LIBRARIES ( SPS_LMP PUBLIC $<LINK_ONLY:MKL::MKL> LAMMPS::lammps )
+set ( MAIN_SRC_FILES art_nouveau.c kappa_dimer.c dimer.c )
 
-ADD_EXECUTABLE ( SPS_VASP ${COMMON_SRC_FILES} vasp_calculator.c )
-TARGET_COMPILE_DEFINITIONS( SPS_VASP PRIVATE VASP )
-TARGET_COMPILE_OPTIONS ( SPS_VASP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS> )
-TARGET_INCLUDE_DIRECTORIES ( SPS_VASP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES> )
-TARGET_LINK_LIBRARIES ( SPS_VASP PUBLIC $<LINK_ONLY:MKL::MKL> )
+add_subdirectory ( LMP )
+add_executable ( SPS_LMP main.c utils.c ${MAIN_SRC_FILES} )
+target_include_directories ( SPS_LMP PRIVATE LMP )
+target_link_libraries ( SPS_LMP LMP )
+
+add_subdirectory ( VASP )
+add_executable ( SPS_VASP main.c utils.c ${MAIN_SRC_FILES} )
+target_include_directories ( SPS_VASP PRIVATE VASP )
+target_link_libraries ( SPS_VASP VASP )

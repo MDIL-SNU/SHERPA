@@ -1,5 +1,5 @@
-#ifndef __ALG_UTILS_H__
-#define __ALG_UTILS_H__
+#ifndef __LINALG_H__
+#define __LINALG_H__
 #include "config.h"
 #include "input.h"
 
