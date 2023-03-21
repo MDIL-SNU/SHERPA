@@ -8,6 +8,7 @@ set ( CMAKE_VERBOSE_MAKEFILE TRUE )
 add_compile_options ( -O3 -g -Wall )
 
 add_executable ( EXTRACTOR extractor.c )
+add_executable ( KMC kmc.c )
 
 set ( SPS_SRC_FILES config.c dataset.c input.c linalg.c target.c )
 add_library ( SPS config.c dataset.c input.c linalg.c target.c )

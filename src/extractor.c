@@ -6,26 +6,31 @@
 int main(int argc, char *argv[])
 {
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {
-        printf("Usage: EXTRACTOR {FILENAME} {COUNT}\n");
+        printf("Usage: EXTRACTOR {OUTPUT} {COUNT}\n");
         return 0;
     }
     FILE *rp = fopen(argv[1], "r");
     if (rp == NULL) {
-        printf("Check input filename.");
+        printf("Check output filename.");
         return 1;
     }
-    char filename[1024], line[1024], tmp_line[1024], *ptr;
-    char *format1 = strtok(argv[1],".");
-    char *format2 = strtok(NULL, "\n");
+    char filename[1024], line[1024], tmp_line[1024];
+    char *ptr = strrchr(argv[1], '/');
+    char *format1, *format2;
+    if (ptr == NULL) {
+        format1 = strtok(argv[1], ".");
+    } else {
+        format1 = strtok(ptr + 1, ".");
+    }
+    format2 = strtok(NULL, "\n");
     int count = atoi(argv[2]);
     sprintf(filename, "%s_%d.%s", format1, count, format2);
     FILE *wp = fopen(filename, "w");
     int flag = 0;
     while (fgets(tmp_line, 1024, rp) != NULL) {
-        memcpy(line, tmp_line, sizeof(char) * 1024);
+        strcpy(line, tmp_line);
         if ((strchr(line, '_')) != NULL) {
-            int tmp_count = atoi(strtok(tmp_line, "_"));
-            if (count == tmp_count) {
+            if (count == atoi(strtok(tmp_line, "_"))) {
                 flag = 1;
             } else {
                 if (flag > 0) {
