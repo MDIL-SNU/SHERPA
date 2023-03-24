@@ -276,11 +276,6 @@ int read_input(Input *input, char *filename)
         printf("ART_NOUVEAU is missing.\n");
         return 1;
     }
-    errno = input_double(&(input->lambda_crit), "LAMBDA_CRIT", filename);
-    if (errno) {
-        printf("LAMBDA_CRIT is missing.\n");
-        return 1;
-    }
     errno = input_double(&(input->lambda_conv), "LAMBDA_CONV", filename);
     if (errno) {
         printf("LAMBDA_CONV is missing.\n");
@@ -301,6 +296,11 @@ int read_input(Input *input, char *filename)
         printf("ART_MIXING is missing.\n");
         return 1;
     }
+    errno = input_int(&(input->hyper_rlx), "HYPER_RLX", filename);
+    if (errno) {
+        printf("HYPER_RLX is missing.\n");
+        return 1;
+    }
     errno = input_char(&(input->output_dir), "OUTPUT_DIR", filename);
     if (errno) {
         printf("OUTPUT_DIR is missing.\n");
@@ -314,9 +314,6 @@ int read_input(Input *input, char *filename)
     if (input->random_seed == -1) {
         input->random_seed = (unsigned int)time(NULL);
     }
-    #ifdef VASP
-    input->ncore = 1;
-    #endif
     input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->art_nouveau > 1) {
         printf("Choose only one algirhtm.\n");
@@ -382,11 +379,11 @@ void write_input(Input *input)
 
     fputs("# art_nouveau parameter #\n", fp);
     fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
-    fprintf(fp, "LAMBDA_CRIT\t= %f\n", input->lambda_crit);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
     fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
     fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
+    fprintf(fp, "HYPER_RLX\t= %d\n", input->hyper_rlx);
     fputs("\n", fp);
 
     fputs("# directory parameter #\n", fp);

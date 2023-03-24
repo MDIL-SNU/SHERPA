@@ -35,6 +35,9 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
+    if (size == 1) {
+        input->ncore = 1;
+    }
     /* make directory */
     if (rank == 0) {
         errno = mkdir(input->output_dir, 0775);
@@ -49,7 +52,6 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
-
     /* write_input */
     if (rank == 0) {
         write_input(input);
