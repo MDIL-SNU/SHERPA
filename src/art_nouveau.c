@@ -11,8 +11,9 @@
 #include <time.h>
 
 
-static int lanczos(Config *config, Input *input, int active_num, int *active_list,
-                   double *eigenvalue, double *eigenmode, double *force0, MPI_Comm comm)
+static void lanczos(Config *config, Input *input, int active_num, int *active_list,
+                    double *eigenvalue, double *eigenmode, int *lanczos_step,
+                    double *force0, MPI_Comm comm)
 {
     int i, j;
     int size = 32;
@@ -159,6 +160,7 @@ static int lanczos(Config *config, Input *input, int active_num, int *active_lis
     }
 
     *eigenvalue = lambda_new;
+    *lanczos_step = k;
     double *y = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         for (j = 0; j < k; ++j) {
@@ -179,8 +181,6 @@ static int lanczos(Config *config, Input *input, int active_num, int *active_lis
     free(V);
     free(HL);
     free(y);
-
-    return k;
 }
 
 
@@ -189,12 +189,10 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
                         double *init_direction, double *force, int negative, MPI_Comm comm)
 {
     int i;
-    if (eigenvalue < input->lambda_crit) {
+    if (eigenvalue < 0) {
         double *parallel_force = parallel_vector(force, eigenmode, active_num);
         double f_norm = norm(parallel_force, active_num);
-        double divisor = fabs(eigenvalue) > fabs(input->lambda_crit) ?
-                         fabs(eigenvalue) : fabs(input->lambda_crit);
-        double alpha = f_norm / divisor;
+        double alpha = f_norm / fabs(eigenvalue);
         double dr = input->max_move < alpha ? input->max_move : alpha;
         double ratio = negative > input->art_mixing ?
                        1.0 : (double)negative / input->art_mixing;
@@ -233,9 +231,10 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
 }
 
 
-static void perp_relax(Config *config0, Input *input, int active_num, int *active_list,
-                       double eigenvalue, double *push_direction, int count, int index,
-                       int sps_step, int lanczos_step, MPI_Comm comm)
+static void perp_relax(Config *initial, Config *config0, Input *input,
+                       int active_num, int *active_list, double eigenvalue,
+                       double *push_direction, int count, int index,
+                       int sps_step, int lanczos_step, int negative, MPI_Comm comm)
 {
     int i, rank;
     char filename[128];
@@ -249,12 +248,26 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
     double *force1 = (double *)malloc(sizeof(double) * active_num * 3);
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
 
+    double *disp_vector = (double *)malloc(sizeof(double) * active_num * 3);
+    for (i = 0; i < active_num; ++i) {
+        disp_vector[i * 3 + 0] = config0->pos[active_list[i] * 3 + 0]
+                               - initial->pos[active_list[i] * 3 + 0];
+        disp_vector[i * 3 + 1] = config0->pos[active_list[i] * 3 + 1]
+                               - initial->pos[active_list[i] * 3 + 1];
+        disp_vector[i * 3 + 2] = config0->pos[active_list[i] * 3 + 2]
+                               - initial->pos[active_list[i] * 3 + 2];
+    }
+    double *perp_disp = perpendicular_vector(disp_vector, push_direction, active_num);
+    free(disp_vector);
+    double *disp_direction = normalize(perp_disp, active_num);
+    free(perp_disp);
+
     /* cg optimization */
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(active_num * 3, sizeof(double));
 
     int relax_step;
-    int end_step = eigenvalue < input->lambda_crit ? 500 : input->max_num_rlx;
+    int end_step = eigenvalue < 0 ? 500 : input->max_num_rlx;
     for (relax_step = 0; relax_step < end_step; ++relax_step) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
@@ -280,11 +293,35 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
             write_config(config0, filename, header, "a");
         }
     
-        double *perp_force0 = perpendicular_vector(force0, push_direction, active_num);
-        if (eigenvalue < input->lambda_crit) {
-            double *parallel_force0 = parallel_vector(force0, push_direction, active_num);
+        double *perp_force0;
+        if (negative > input->hyper_rlx) {
+            perp_force0 = perpendicular_vector(force0, push_direction, active_num);
+        } else {
+            double *push_parallel_force0 = parallel_vector(force0, push_direction, active_num);
+            double *disp_parallel_force0 = parallel_vector(force0, disp_direction, active_num);
+            perp_force0 = (double *)malloc(sizeof(double) * active_num * 3);
+            for (i = 0; i < active_num; ++i) {
+                perp_force0[i * 3 + 0] = force0[i * 3 + 0]
+                                       - push_parallel_force0[i * 3 + 0]
+                                       - disp_parallel_force0[i * 3 + 0];
+                perp_force0[i * 3 + 1] = force0[i * 3 + 1]
+                                       - push_parallel_force0[i * 3 + 1]
+                                       - disp_parallel_force0[i * 3 + 1];
+                perp_force0[i * 3 + 2] = force0[i * 3 + 2]
+                                       - push_parallel_force0[i * 3 + 2]
+                                       - disp_parallel_force0[i * 3 + 2];
+            }
+            free(push_parallel_force0);
+            free(disp_parallel_force0);
+        }
+        if (eigenvalue < 0) {
+            double *parallel_force0 = (double *)malloc(sizeof(double) * active_num * 3);
+            for (i = 0; i < active_num; ++i) {
+                parallel_force0[i * 3 + 0] = force0[i * 3 + 0] - perp_force0[i * 3 + 0];
+                parallel_force0[i * 3 + 1] = force0[i * 3 + 1] - perp_force0[i * 3 + 1];
+                parallel_force0[i * 3 + 2] = force0[i * 3 + 2] - perp_force0[i * 3 + 2];
+            }
             if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
-                free(perp_force0);
                 free(parallel_force0);
                 break;
             }
@@ -312,7 +349,28 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force1[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-        double *perp_force1 = perpendicular_vector(force1, push_direction, active_num);
+
+        double *perp_force1;
+        if (negative > input->hyper_rlx) {
+            perp_force1 = perpendicular_vector(force1, push_direction, active_num);
+        } else {
+            double *push_parallel_force1 = parallel_vector(force1, push_direction, active_num);
+            double *disp_parallel_force1 = parallel_vector(force1, disp_direction, active_num);
+            perp_force1 = (double *)malloc(sizeof(double) * active_num * 3);
+            for (i = 0; i < active_num; ++i) {
+                perp_force1[i * 3 + 0] = force1[i * 3 + 0]
+                                       - push_parallel_force1[i * 3 + 0]
+                                       - disp_parallel_force1[i * 3 + 0];
+                perp_force1[i * 3 + 1] = force1[i * 3 + 1]
+                                       - push_parallel_force1[i * 3 + 1]
+                                       - disp_parallel_force1[i * 3 + 1];
+                perp_force1[i * 3 + 2] = force1[i * 3 + 2]
+                                       - push_parallel_force1[i * 3 + 2]
+                                       - disp_parallel_force1[i * 3 + 2];
+            }
+            free(push_parallel_force1);
+            free(disp_parallel_force1);
+        }
 
         double *tmp_force = (double *)malloc(sizeof(double) * active_num * 3);
         for (i = 0; i < active_num; ++i) {
@@ -382,6 +440,7 @@ static void perp_relax(Config *config0, Input *input, int active_num, int *activ
     free(full_force);
     free(direction_old);
     free(cg_direction);
+    free(disp_direction);
 }
 
 
@@ -492,10 +551,10 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         }
         /* lanczos */
         if (sps_step > input->art_delay) {
-            lanczos_step = lanczos(config0, input, active_num, active_list,
-                                   &eigenvalue, eigenmode, force0, comm);
+            lanczos(config0, input, active_num, active_list,
+                    &eigenvalue, eigenmode, &lanczos_step, force0, comm);
         }
-        if (eigenvalue < input->lambda_crit) {
+        if (eigenvalue < 0) {
             /* force criteria */
             double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
@@ -527,8 +586,8 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         double *push_direction = normalize(push_vector, active_num);
         free(push_vector);
         /* normal relax */
-        perp_relax(config0, input, active_num, active_list, eigenvalue,
-                   push_direction, count, index, sps_step, lanczos_step, comm);
+        perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
+                   push_direction, count, index, sps_step, lanczos_step, negative, comm);
         free(push_direction);
 
         /* change active volume */

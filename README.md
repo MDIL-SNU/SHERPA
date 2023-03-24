@@ -104,8 +104,6 @@ cmake --build . --target EXTRACTOR
 ### ART nouveau parameter
 * **ART_NOUVEAU** [0/1]
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
-* **LAMBDA_CRIT** [real]
-  - *LAMBDA_CRIT* sets the criteria value of inflection points (in eV/Angst^2).
 * **LAMBDA_CONV** [real]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
 * **MAX_NUM_RLX** [integer]
@@ -114,6 +112,8 @@ cmake --build . --target EXTRACTOR
   - *ART_DELAY* sets the number of initial steps without Lanczos method.
 * **ART_MIXING** [integer]
   - *ART_MIXING* sets the number of mixing steps above inflection points.
+* **HYPER_RLX** [integer]
+  - *HYPER_RLX* sets the number of relaxation steps, where the configuration is on the hyperplane that is spanned by eigenmode and displacement vector.
 ### Random parameter
 * **RANDOM_SEED** [-1/nonnegative integer]
   - *RANDOM_SEED* sets the seed for random number generation. *RANDOM_SEED* is generated automatically when provided -1.

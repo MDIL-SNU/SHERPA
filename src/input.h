@@ -1,5 +1,5 @@
-#ifndef __INITIAL_H__
-#define __INITIAL_H__
+#ifndef __INPUT_H__
+#define __INPUT_H__
 
 typedef struct _Input
 {
@@ -37,11 +37,11 @@ typedef struct _Input
     int max_num_tls;
 
     int art_nouveau;
-    double lambda_crit;
     double lambda_conv;
     int max_num_rlx;
     int art_delay;
     int art_mixing;
+    int hyper_rlx;
 
     char *output_dir;
 

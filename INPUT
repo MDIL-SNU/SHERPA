@@ -38,11 +38,11 @@ MAX_NUM_TLS = 500
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
-LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
 ART_DELAY   = 0
-ART_MIXING  = 3
+ART_MIXING  = 0
+HYPER_RLX   = 3
 
 # directory parameter #
 OUTPUT_DIR  = ./gen_1
