@@ -203,8 +203,8 @@ int MPI_Fetch_and_op(void *origin_addr, void *result_addr,
 }
 
 
-int MPI_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
-                     MPI_Comm comm, void *baseptr, MPI_Win *win)
+int MPI_Win_create(void *baseptr, MPI_Aint size, int disp_unit,
+                   MPI_Info info, MPI_Comm comm, MPI_Win *win)
 {
     int ierror;
     ierror = MPI_SUCCESS;

@@ -136,47 +136,39 @@ int main(int argc, char *argv[])
 
     /* one-sided communication */
     MPI_Win count_win;
-    int global_count;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_count, &count_win);
+    int global_count = 0;
+    MPI_Win_create(&global_count, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &count_win);
 
     MPI_Win redundant_win;
-    int global_redundant;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_redundant, &redundant_win);
+    int global_redundant = 0;
+    MPI_Win_create(&global_redundant, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &redundant_win);
 
     MPI_Win done_win;
-    int global_done;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_done, &done_win);
+    int global_done = 0;
+    MPI_Win_create(&global_done, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &done_win);
 
     MPI_Win conv_win;
-    int global_conv;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_conv, &conv_win);
+    int global_conv = 0;
+    MPI_Win_create(&global_conv, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &conv_win);
 
     MPI_Win unique_win;
-    int global_unique;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_unique, &unique_win);
+    int global_unique = 0;
+    MPI_Win_create(&global_unique, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &unique_win);
 
     MPI_Win write_win;
-    int global_write;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_write, &write_win);
+    int global_write = 0;
+    MPI_Win_create(&global_write, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &write_win);
 
     MPI_Win exit_win;
-    int global_exit;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_exit, &exit_win);
-
-    global_count = 0;
-    global_redundant = 0;
-    global_done = 0;
-    global_conv = 0;
-    global_unique = 0;
-    global_write = 0;
-    global_exit = 0;
+    int global_exit = 0;
+    MPI_Win_create(&global_exit, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &exit_win);
 
     int zero = 0;
     int one = 1;
@@ -308,6 +300,10 @@ int main(int argc, char *argv[])
                                     local_acti_list = (double *)realloc(local_acti_list,
                                                                 sizeof(double) * list_size);
                                 }
+                                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
+                                MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
+                                                 0, (MPI_Aint)0, MPI_REPLACE, redundant_win);
+                                MPI_Win_unlock(0, redundant_win);
                             } else {
                                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                                 MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
@@ -372,7 +368,7 @@ int main(int argc, char *argv[])
                     /* write done */
                     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, write_win);
                     MPI_Fetch_and_op(&zero, &local_write, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_MIN, write_win);
+                                     0, (MPI_Aint)0, MPI_REPLACE, write_win);
                     MPI_Win_unlock(0, write_win);
                     break;
                 } else {
