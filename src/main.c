@@ -35,21 +35,6 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
-    /* make directory */
-    if (rank == 0) {
-        errno = mkdir(input->output_dir, 0775);
-    }
-    MPI_Bcast(&errno, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    if (errno != 0) {
-        if (rank == 0) {
-            printf("OUTPUT_DIR exists!\n");
-            printf("We will not overwrite your data.\n");
-        }
-        free_input(input);
-        MPI_Finalize();
-        return 1;
-    }
-
     /* write_input */
     if (rank == 0) {
         write_input(input);
@@ -60,7 +45,7 @@ int main(int argc, char *argv[])
 
     /* read config */
     Config *config = (Config *)malloc(sizeof(Config));
-    errno = read_config(config, input, input->init_config);
+    errno = read_config(config, "./POSCAR");
     if (errno > 0) {
         printf("ERROR in INIT_CONFIG FILE!\n");
         free_input(input);
@@ -73,7 +58,7 @@ int main(int argc, char *argv[])
     int target_num = 0;
     int list_size = 64;
     int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = read_target(config, input, &target_num, &target_list, &list_size);
+    errno = read_target(config, &target_num, &target_list, &list_size);
     MPI_Bcast(target_list, target_num, MPI_INT, 0, MPI_COMM_WORLD);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
@@ -83,7 +68,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (rank == 0) {
-        write_target(input, target_num, target_list);
+        write_target(target_num, target_list);
     }
 
     /* initial relax */
@@ -94,27 +79,22 @@ int main(int argc, char *argv[])
 
     /* log */
     if (rank == 0) {
-        char filename[128];
-        sprintf(filename, "%s/Redundancy.log", input->output_dir);
-        fp = fopen(filename, "w");
+        fp = fopen("./Redundancy.log", "w");
         fputs("-----------------\n", fp);
         fputs(" Earlier   Later\n", fp);
         fputs("-----------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/Statistics.log", input->output_dir);
-        fp = fopen(filename, "w");
+        fp = fopen("./Statistics.log", "w");
         fputs("------------------------------------------\n", fp);
         fputs(" Unique events   Relevant events   Trials\n", fp);
         fputs("------------------------------------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/Event.log", input->output_dir);
-        fp = fopen(filename, "w");
+        fp = fopen("./Event.log", "w");
         fputs("---------------------------------------------\n", fp);
         fputs(" Reaction index   Barrier energy   Frequency\n", fp);
         fputs("---------------------------------------------\n", fp);
         fclose(fp);
-        sprintf(filename, "%s/POSCAR", input->output_dir);
-        write_config(config, filename, "INIT_CONFIG", "w");
+        write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -134,47 +114,39 @@ int main(int argc, char *argv[])
 
     /* one-sided communication */
     MPI_Win count_win;
-    int global_count;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_count, &count_win);
+    int global_count = 0;
+    MPI_Win_create(&global_count, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &count_win);
 
     MPI_Win redundant_win;
-    int global_redundant;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_redundant, &redundant_win);
+    int global_redundant = 0;
+    MPI_Win_create(&global_redundant, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &redundant_win);
 
     MPI_Win done_win;
-    int global_done;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_done, &done_win);
+    int global_done = 0;
+    MPI_Win_create(&global_done, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &done_win);
 
     MPI_Win conv_win;
-    int global_conv;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_conv, &conv_win);
+    int global_conv = 0;
+    MPI_Win_create(&global_conv, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &conv_win);
 
     MPI_Win unique_win;
-    int global_unique;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_unique, &unique_win);
+    int global_unique = 0;
+    MPI_Win_create(&global_unique, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &unique_win);
 
     MPI_Win write_win;
-    int global_write;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_write, &write_win);
+    int global_write = 0;
+    MPI_Win_create(&global_write, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &write_win);
 
     MPI_Win exit_win;
-    int global_exit;
-    MPI_Win_allocate((MPI_Aint)sizeof(int), sizeof(int), MPI_INFO_NULL,
-                     group_comm, &global_exit, &exit_win);
-
-    global_count = 0;
-    global_redundant = 0;
-    global_done = 0;
-    global_conv = 0;
-    global_unique = 0;
-    global_write = 0;
-    global_exit = 0;
+    int global_exit = 0;
+    MPI_Win_create(&global_exit, (MPI_Aint)sizeof(int), sizeof(int),
+                   MPI_INFO_NULL, group_comm, &exit_win);
 
     int zero = 0;
     int one = 1;
@@ -196,7 +168,7 @@ int main(int argc, char *argv[])
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
     dataset->head = NULL;
     if (input->init_mode > 0) {
-        build_dataset(dataset, input, config->tot_num);
+        build_dataset(dataset, config->tot_num);
     }
 
     int conv, unique;
@@ -281,7 +253,7 @@ int main(int argc, char *argv[])
                     MPI_Fetch_and_op(&one, &local_done, MPI_INT,
                                      0, (MPI_Aint)0, MPI_SUM, done_win);
                     MPI_Win_unlock(0, done_win);
-                    char filename[128], tmp_filename[128], header[128];
+                    char filename[128], header[128];
                     sprintf(header, "%d_%d", local_count, atom_index);
                     if (conv >= 0) {
                         if (conv == 0) {
@@ -306,6 +278,10 @@ int main(int argc, char *argv[])
                                     local_acti_list = (double *)realloc(local_acti_list,
                                                                 sizeof(double) * list_size);
                                 }
+                                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
+                                MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
+                                                 0, (MPI_Aint)0, MPI_REPLACE, redundant_win);
+                                MPI_Win_unlock(0, redundant_win);
                             } else {
                                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                                 MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
@@ -318,37 +294,28 @@ int main(int argc, char *argv[])
                                     local_freq_list = (int *)realloc(local_freq_list,
                                                              sizeof(int) * list_size);
                                 }
-                                sprintf(filename, "%s/Redundancy.log", input->output_dir);
-                                fp = fopen(filename, "a");
+                                fp = fopen("./Redundancy.log", "a");
                                 fprintf(fp, " %7d   %5d\n", unique, local_count);
                                 fclose(fp);
                             }
                             /* Final */
-                            sprintf(filename, "%s/Final.POSCAR", input->output_dir);
-                            write_config(final, filename, header, "a");
+                            write_config(final, "./Final.POSCAR", header, "a");
                         }
                         /* Saddle */
-                        sprintf(filename, "%s/Saddle.POSCAR", input->output_dir);
-                        write_config(saddle, filename, header, "a");
+                        write_config(saddle, "./Saddle.POSCAR", header, "a");
                         /* MODECAR */
-                        sprintf(filename, "%s/SPS.MODECAR", input->output_dir);
-                        sprintf(tmp_filename, "%s/%d.MODECAR",
-                                input->output_dir, local_count);
-                        concat_files(filename, tmp_filename);
-                        remove(tmp_filename);
+                        sprintf(filename, "./%d.MODECAR", local_count);
+                        concat_files("./SPS.MODECAR", filename);
+                        remove(filename);
                     }
                     /* XDATCAR */
-                    sprintf(filename, "%s/SPS.XDATCAR", input->output_dir);
-                    sprintf(tmp_filename, "%s/%d.XDATCAR",
-                            input->output_dir, local_count);
-                    concat_files(filename, tmp_filename);
-                    remove(tmp_filename);
+                    sprintf(filename, "./%d.XDATCAR", local_count);
+                    concat_files("./SPS.XDATCAR", filename);
+                    remove(filename);
                     /* log */
-                    sprintf(filename, "%s/SPS.log", input->output_dir);
-                    sprintf(tmp_filename, "%s/%d.log",
-                            input->output_dir, local_count);
-                    concat_files(filename, tmp_filename);
-                    remove(tmp_filename);
+                    sprintf(filename, "./%d.log", local_count);
+                    concat_files("./SPS.log", filename);
+                    remove(filename);
                     /* update statistics */
                     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, done_win);
                     MPI_Fetch_and_op(&zero, &local_done, MPI_INT,
@@ -362,15 +329,14 @@ int main(int argc, char *argv[])
                     MPI_Fetch_and_op(&zero, &local_unique, MPI_INT,
                                      0, (MPI_Aint)0, MPI_SUM, unique_win);
                     MPI_Win_unlock(0, unique_win);
-                    sprintf(filename, "%s/Statistics.log", input->output_dir);
-                    fp = fopen(filename, "a");
+                    fp = fopen("./Statistics.log", "a");
                     fprintf(fp, " %13d   %15d   %6d\n",
                             local_unique, local_conv, local_done);
                     fclose(fp);
                     /* write done */
                     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, write_win);
                     MPI_Fetch_and_op(&zero, &local_write, MPI_INT,
-                                     0, (MPI_Aint)0, MPI_MIN, write_win);
+                                     0, (MPI_Aint)0, MPI_REPLACE, write_win);
                     MPI_Win_unlock(0, write_win);
                     break;
                 } else {
@@ -442,16 +408,13 @@ int main(int argc, char *argv[])
                 }
             }
             char filename[128];
-            sprintf(filename, "%s/Redundancy.log", input->output_dir);
-            fp = fopen(filename, "a");
+            fp = fopen("./Redundancy.log", "a");
             fputs("-----------------\n", fp);
             fclose(fp);
-            sprintf(filename, "%s/Statistics.log", input->output_dir);
-            fp = fopen(filename, "a");
+            fp = fopen("./Statistics.log", "a");
             fputs("------------------------------------------\n", fp);
             fclose(fp);
-            sprintf(filename, "%s/Event.log", input->output_dir);
-            fp = fopen(filename, "a");
+            fp = fopen("./Event.log", "a");
             for (i = 0; i < total_reac_num; ++i) {
                 fprintf(fp, " %14d   %14f   %9d\n",
                         global_reac_list[i], global_acti_list[i], freq_num[i] + 1);

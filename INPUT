@@ -1,10 +1,9 @@
 # general parameter #
-TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
 ACTI_CUTOFF = 6.0
 ACTI_NEVERY = 3
 F_TOL       = 0.01
-DIFF_TOL    = 0.3
+DIFF_TOL    = 0.4
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 CONFIDENCE  = 0.9
@@ -13,20 +12,18 @@ MAX_SEARCH  = 100
 # initial structure parameter #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
-INIT_CONFIG = ./POSCAR
 INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3.0
 DISP_STDDEV = 0.1
 INIT_MODE   = 0
-MODE_LIST   = ./SPS.MODECAR
 
-# LAMMPS parameter #
+# LAMMPS parameter (for SPS_LMP) #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 NCORE       = 4
 
-# VASP parameter #
+# VASP parameter (for SPS_VASP) #
 VASP_CMD    = mpirun -np $nprocs vasp_std
 
 # dimer parameter #
@@ -38,14 +35,8 @@ MAX_NUM_TLS = 500
 
 # art_nouveau parameter #
 ART_NOUVEAU = 1
-LAMBDA_CRIT = 0.0
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
-ART_DELAY   = 0
-ART_MIXING  = 3
-
-# directory parameter #
-OUTPUT_DIR  = ./gen_1
-
-# random parameter #
-RANDOM_SEED = -1
+DELAY_STEP  = 0
+MIXING_STEP = 0
+HYPER_STEP  = 3

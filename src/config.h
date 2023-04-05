@@ -1,6 +1,5 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
-#include "input.h"
 
 typedef struct _Config
 {
@@ -16,9 +15,7 @@ typedef struct _Config
     int *atom_num;        /* atomic number for symbols */
     int *each_num;        /* the number of each types */
 
-    int *id;
     int *fix;
-    int *type;            /* type index starting from 1 */
     double *pos;          /* [N * 3] dimension of positions */
 } Config;
 
@@ -26,7 +23,7 @@ int get_atom_num(char *symbol);
 double get_mass(int atom_num);
 char *get_symbol(int atom_num);
 void remove_atom(Config *config, int index);
-int read_config(Config *config, Input *input, char *filename);
+int read_config(Config *config, char *filename);
 void write_config(Config *config, char *filename, char *header, char *mode);
 void copy_config(Config *config2, Config *config1);
 void free_config(Config *config);

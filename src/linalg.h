@@ -1,7 +1,5 @@
 #ifndef __LINALG_H__
 #define __LINALG_H__
-#include "config.h"
-#include "input.h"
 
 
 void int_shuffle(int list_len, int *int_list);

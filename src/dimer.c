@@ -81,7 +81,7 @@ static void rotate(Config *config0, Input *input,
         if (norm(f_rot_A, active_num) < input->f_rot_min) {
             if (local_rank == 0) {
                 char filename[128];
-                sprintf(filename, "%s/%d.log", input->output_dir, count);
+                sprintf(filename, "./%d.log", count);
                 FILE *fp = fopen(filename, "a");
                 fprintf(fp, " %10d   %8d   %16f   ---------   %14f\n",
                         sps_step, rot_step, energy0, norm(f_rot_A, active_num));
@@ -167,7 +167,7 @@ static void rotate(Config *config0, Input *input,
         free(tmp_force);
         if (local_rank == 0) {
             char filename[128];
-            sprintf(filename, "%s/%d.log", input->output_dir, count);
+            sprintf(filename, "./%d.log", count);
             FILE *fp = fopen(filename, "a");
             fprintf(fp, " %10d   %8d   %16f   %9f   %14f\n",
                     sps_step, rot_step + 1, energy0, cmin,
@@ -331,7 +331,7 @@ static void translate(Config *config0, Input *input, int active_num, int *active
     if (local_rank == 0) {
         char header[128];
         sprintf(header, "%d_%d %d", count, index, sps_step);
-        sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+        sprintf(filename, "./%d.XDATCAR", count);
         write_config(config0, filename, header, "a");
     }
 
@@ -420,7 +420,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* run */
     if (local_rank == 0) {
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         FILE *fp = fopen(filename, "w");
         fprintf(fp, " %d_%d\n", count, index);
         fputs("-----------------------------------------------------------------------\n", fp);
@@ -429,7 +429,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         fclose(fp);
         char header[128];
         sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+        sprintf(filename, "./%d.XDATCAR", count);
         write_config(config0, filename, header, "w");
     }
 
@@ -487,7 +487,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     free(direction_old);
     free(cg_direction);
     if (local_rank == 0) {
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         FILE *fp = fopen(filename, "a");
         fputs("-----------------------------------------------------------------------\n", fp);
         fputs(" State of the saddle   Barrier energy   Reaction energy   Elapsed time\n", fp);
@@ -524,7 +524,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     if (local_rank == 0) {
         char filename[128];
         /* modecar */
-        sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
+        sprintf(filename, "./%d.MODECAR", count);
         FILE *fp = fopen(filename, "w");
         fprintf(fp, "%d_%d\n", count, index);
         for (i = 0; i < config0->tot_num; ++i) {
@@ -535,7 +535,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         }
         fclose(fp);
         /* log */
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         fp = fopen(filename, "a");
         if (conv == 0) {
             fprintf(fp, "           Connected   %14f   %15f   %12f\n", *Ea, dE, time);

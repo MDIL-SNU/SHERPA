@@ -11,9 +11,8 @@
 void vasp_run(Input *input)
 {
     FILE *fp;
-    char line[1024], filename[256];
-    sprintf(filename, "%s_tmp", input->output_dir);
-    chdir(filename);
+    char line[1024];
+    chdir("./VASP_tmp");
     fp = popen(input->vasp_cmd, "r");
     if (fp != NULL) {
         char line[1024];
@@ -107,25 +106,16 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
              MPI_Comm comm)
 {
     FILE *fp;
-    char cmd[1024], filename[256];
-    sprintf(filename, "%s_tmp", input->output_dir);
-    mkdir(filename, 0775);
-    sprintf(filename, "%s_tmp/INCAR", input->output_dir);
-    write_incar(input, filename, -1);
-    sprintf(filename, "%s_tmp/POSCAR", input->output_dir);
-    write_config(config, filename, "poscar", "w");
-    sprintf(cmd, "cp POTCAR %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
+    mkdir("./VASP_tmp", 0775);
+    write_incar(input, "./VASP_tmp/INCAR", -1);
+    write_config(config, "./VASP_tmp/POSCAR", "poscar", "w");
+    fp = popen("cp POTCAR VASP_tmp", "r");
     pclose(fp);
-    sprintf(cmd, "cp KPOINTS %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
+    fp = popen("cp KPOINTS VASP_tmp", "r");
     pclose(fp);
     vasp_run(input);
-    sprintf(filename, "%s_tmp/OUTCAR", input->output_dir);
-    read_outcar(filename, config->pos, energy, force);
-    sprintf(cmd, "cat %s_tmp/OUTCAR >> %s/OUTCAR",
-            input->output_dir, input->output_dir);
-    fp = popen(cmd, "r");
+    read_outcar("./VASP_tmp/OUTCAR", config->pos, energy, force);
+    fp = popen("cat VASP_tmp/OUTCAR >> OUTCAR_concat", "r");
     pclose(fp);
 }
 
@@ -134,25 +124,17 @@ void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
 {
     FILE *fp;
     char cmd[1024], filename[256];
-    sprintf(filename, "%s_tmp", input->output_dir);
-    mkdir(filename, 0775);
-    sprintf(filename, "%s_tmp/INCAR", input->output_dir);
-    write_incar(input, filename, 2);
-    sprintf(filename, "%s_tmp/POSCAR", input->output_dir);
-    write_config(config, filename, "poscar", "w");
-    sprintf(cmd, "cp POTCAR %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
+    mkdir("./VASP_tmp", 0775);
+    write_incar(input, "VASP_tmp/INCAR", 2);
+    write_config(config, "VASP_tmp/POSCAR", "poscar", "w");
+    fp = popen("cp POTCAR VASP_tmp", "r");
     pclose(fp);
-    sprintf(cmd, "cp KPOINTS %s_tmp", input->output_dir);
-    fp = popen(cmd, "r");
+    fp = popen("cp KPOINTS VASP_tmp", "r");
     pclose(fp);
     vasp_run(input);
     double *tmp_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
-    sprintf(filename, "%s_tmp/OUTCAR", input->output_dir);
-    read_outcar(filename, config->pos, energy, tmp_force);
+    read_outcar("./VASP_tmp/OUTCAR", config->pos, energy, tmp_force);
     free(tmp_force);
-    sprintf(cmd, "cat %s_tmp/OUTCAR >> %s/OUTCAR",
-            input->output_dir, input->output_dir);
-    fp = popen(cmd, "r");
+    fp = popen("cat VASP_tmp/OUTCAR >> OUTCAR_concat", "r");
     pclose(fp);
 }

@@ -55,20 +55,17 @@ int check_unique(Config *config, Input *input)
 {
     int i, j, unique, count, errno;
     char filename[128];
-    sprintf(filename, "%s/Saddle.POSCAR", input->output_dir);
-    FILE *rp = fopen(filename, "r");
+    FILE *rp = fopen("./Saddle.POSCAR", "r");
     /* first open */
     if (rp == NULL) {
         return -1;
     } else {
-        char tmp_filename[128];
         char line[1024], header[128], *ptr;
-        sprintf(tmp_filename, "%s/tmp_Saddle.POSCAR", input->output_dir);
         while (1) {
             if (fgets(header, 128, rp) == NULL) {
                 break;
             }
-            FILE *wp = fopen(tmp_filename, "w");
+            FILE *wp = fopen("./tmp_Saddle.POSCAR", "w");
             fputs(header, wp);
             for (i = 0; i < 8; ++i) {
                 fgets(line, 1024, rp);
@@ -80,19 +77,19 @@ int check_unique(Config *config, Input *input)
             }
             fclose(wp);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
-            read_config(tmp_config, input, tmp_filename);
+            read_config(tmp_config, "./tmp_Saddle.POSCAR");
             int diff = diff_config(config, tmp_config, input->diff_tol);
             /* 0: identical */
             if (diff == 0) {
                 fclose(rp);
-                remove(tmp_filename);
+                remove("./tmp_Saddle.POSCAR");
                 free_config(tmp_config);
                 return atoi(strtok(header, "_"));
             }
             free_config(tmp_config);
         }
         fclose(rp);
-        remove(tmp_filename);
+        remove("./tmp_Saddle.POSCAR");
         return -1;
     }
 }
@@ -318,10 +315,15 @@ int diff_config(Config *config1, Config *config2, double tol)
 {
     int i;
     double del[3];
-    for (i = 0; i < config1->tot_num; ++i) {
-        if (config1->type[i] != config2->type[i]) {
+    if (config1->ntype != config2->ntype) {
+        return 1;
+    }
+    for (i = 0; i < config1->ntype; ++i) {
+        if (config1->each_num[i] != config2->each_num[i]) {
             return 1;
-        };
+        }
+    }
+    for (i = 0; i < config1->tot_num; ++i) {
         del[0] = config2->pos[i * 3 + 0] - config1->pos[i * 3 + 0];
         del[1] = config2->pos[i * 3 + 1] - config1->pos[i * 3 + 1];
         del[2] = config2->pos[i * 3 + 2] - config1->pos[i * 3 + 2];

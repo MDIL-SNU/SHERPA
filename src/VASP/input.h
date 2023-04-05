@@ -1,9 +1,8 @@
-#ifndef __INITIAL_H__
-#define __INITIAL_H__
+#ifndef __INPUT_H__
+#define __INPUT_H__
 
 typedef struct _Input
 {
-    char *target_list;
     double finite_diff;
     double acti_cutoff;
     int acti_nevery;
@@ -16,18 +15,13 @@ typedef struct _Input
 
     int nelem;
     char **atom_type;
-    char *init_config;
     int init_relax;
     int init_disp;
     double disp_cutoff;
     double disp_stddev;
     int init_mode;
-    char *mode_list;
 
-    char *pair_style;
-    char *pair_coeff;
     int ncore;
-
     char *vasp_cmd;
 
     int kappa_dimer;
@@ -37,13 +31,11 @@ typedef struct _Input
     int max_num_tls;
 
     int art_nouveau;
-    double lambda_crit;
     double lambda_conv;
     int max_num_rlx;
-    int art_delay;
-    int art_mixing;
-
-    char *output_dir;
+    int delay_step;
+    int mixing_step;
+    int hyper_step;
 
     int random_seed;
 

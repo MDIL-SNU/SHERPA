@@ -19,7 +19,7 @@
 #define MPI_DOUBLE 2
 
 #define MPI_SUM 1
-#define MPI_MIN 0
+#define MPI_REPLACE 0
 
 int MPI_Allgather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
                   void *recvbuf, int recvcount, MPI_Datatype recvtype,
@@ -53,8 +53,8 @@ int MPI_Init(int *argc, char **argv[]);
 int MPI_Fetch_and_op(void *origin_addr, void *result_addr,
                      MPI_Datatype datatype, int target_rank,
                      MPI_Aint target_disp, MPI_Op op, MPI_Win win);
-int MPI_Win_allocate(MPI_Aint size, int disp_unit, MPI_Info info,
-                     MPI_Comm comm, void *baseptr, MPI_Win *win);
+int MPI_Win_create(void *baseptr, MPI_Aint size, int disp_unit,
+                   MPI_Info info, MPI_Comm comm, MPI_Win *win);
 int MPI_Win_free(MPI_Win *win);
 int MPI_Win_lock(int lock_type, int rank, int assert, MPI_Win win);
 int MPI_Win_unlock(int target_rank, MPI_Win win);
