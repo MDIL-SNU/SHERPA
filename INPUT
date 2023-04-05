@@ -21,12 +21,12 @@ DISP_STDDEV = 0.1
 INIT_MODE   = 0
 MODE_LIST   = ./SPS.MODECAR
 
-# LAMMPS parameter #
+# LAMMPS parameter (for SPS_LMP) #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 NCORE       = 4
 
-# VASP parameter #
+# VASP parameter (for SPS_VASP) #
 VASP_CMD    = mpirun -np $nprocs vasp_std
 
 # dimer parameter #
@@ -40,12 +40,9 @@ MAX_NUM_TLS = 500
 ART_NOUVEAU = 1
 LAMBDA_CONV = 0.01
 MAX_NUM_RLX = 4
-ART_DELAY   = 0
-ART_MIXING  = 0
-HYPER_RLX   = 3
-
-# directory parameter #
-OUTPUT_DIR  = ./gen_1
+DELAY_STEP  = 0
+MIXING_STEP = 0
+HYPER_STEP  = 3
 
 # random parameter #
 RANDOM_SEED = -1

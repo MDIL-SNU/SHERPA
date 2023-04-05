@@ -226,21 +226,6 @@ int read_input(Input *input, char *filename)
         printf("MODE_LIST is missing.\n");
         return 1;
     }
-    errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
-    if (errno) {
-        printf("PAIR_STYLE is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
-    if (errno) {
-        printf("PAIR_COEFF is missing.\n");
-        return 1;
-    }
-    errno = input_int(&(input->ncore), "NCORE", filename);
-    if (errno) {
-        printf("NCORE is missing.\n");
-        return 1;
-    }
     errno = input_char(&(input->vasp_cmd), "VASP_CMD", filename);
     if (errno) {
         printf("VASP_CMD is missing.\n");
@@ -286,24 +271,19 @@ int read_input(Input *input, char *filename)
         printf("MAX_NUM_RLX is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->art_delay), "ART_DELAY", filename);
+    errno = input_int(&(input->delay_step), "DELAY_STEP", filename);
     if (errno) {
-        printf("ART_DELAY is missing.\n");
+        printf("DELAY_STEP is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->art_mixing), "ART_MIXING", filename);
+    errno = input_int(&(input->mixing_step), "MIXING_STEP", filename);
     if (errno) {
-        printf("ART_MIXING is missing.\n");
+        printf("MIXING_STEP is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->hyper_rlx), "HYPER_RLX", filename);
+    errno = input_int(&(input->hyper_step), "HYPER_STEP", filename);
     if (errno) {
-        printf("HYPER_RLX is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->output_dir), "OUTPUT_DIR", filename);
-    if (errno) {
-        printf("OUTPUT_DIR is missing.\n");
+        printf("HYPER_STEP is missing.\n");
         return 1;
     }
     errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
@@ -315,6 +295,7 @@ int read_input(Input *input, char *filename)
         input->random_seed = (unsigned int)time(NULL);
     }
     input->nredundant = (int)round(1 / (1 - input->confidence));
+    input->ncore = 1;
     if (input->kappa_dimer + input->art_nouveau > 1) {
         printf("Choose only one algirhtm.\n");
         return 1;
@@ -326,9 +307,7 @@ int read_input(Input *input, char *filename)
 void write_input(Input *input)
 {
     int i;
-    char filename[128];
-    sprintf(filename, "%s/INPUT", input->output_dir);
-    FILE *fp = fopen(filename, "w");
+    FILE *fp = fopen("./INPUT_read", "w");
 
     fputs("# general parameter #\n", fp);
     fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
@@ -359,12 +338,6 @@ void write_input(Input *input)
     fprintf(fp, "MODE_LIST\t= %s\n", input->mode_list);
     fputs("\n", fp);
 
-    fputs("# LAMMPS parameter #\n", fp);
-    fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
-    fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
-    fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
-    fputs("\n", fp);
-
     fputs("# VASP parameter #\n", fp);
     fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
     fputs("\n", fp);
@@ -381,13 +354,9 @@ void write_input(Input *input)
     fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
-    fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
-    fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
-    fprintf(fp, "HYPER_RLX\t= %d\n", input->hyper_rlx);
-    fputs("\n", fp);
-
-    fputs("# directory parameter #\n", fp);
-    fprintf(fp, "OUTPUT_DIR\t= %s\n", input->output_dir);
+    fprintf(fp, "DELAY_STEP\t= %d\n", input->delay_step);
+    fprintf(fp, "MIXING_STEP\t= %d\n", input->mixing_step);
+    fprintf(fp, "HYPER_STEP\t= %d\n", input->hyper_step);
     fputs("\n", fp);
 
     fputs("# random parameter #\n", fp);
@@ -406,10 +375,7 @@ void free_input(Input *input)
     free(input->atom_type);
     free(input->init_config);
     free(input->target_list);
-    free(input->pair_style);
-    free(input->pair_coeff);
     free(input->vasp_cmd);
-    free(input->output_dir);
     free(input->mode_list);
     free(input);
 }

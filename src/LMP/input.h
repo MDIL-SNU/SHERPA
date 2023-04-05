@@ -28,8 +28,6 @@ typedef struct _Input
     char *pair_coeff;
     int ncore;
 
-    char *vasp_cmd;
-
     int kappa_dimer;
     double f_rot_min;
     double f_rot_max;
@@ -39,11 +37,9 @@ typedef struct _Input
     int art_nouveau;
     double lambda_conv;
     int max_num_rlx;
-    int art_delay;
-    int art_mixing;
-    int hyper_rlx;
-
-    char *output_dir;
+    int delay_step;
+    int mixing_step;
+    int hyper_step;
 
     int random_seed;
 

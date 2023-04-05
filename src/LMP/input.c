@@ -241,11 +241,6 @@ int read_input(Input *input, char *filename)
         printf("NCORE is missing.\n");
         return 1;
     }
-    errno = input_char(&(input->vasp_cmd), "VASP_CMD", filename);
-    if (errno) {
-        printf("VASP_CMD is missing.\n");
-        return 1;
-    }
     errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
     if (errno) {
         printf("KAPPA_DIMER is missing.\n");
@@ -286,19 +281,19 @@ int read_input(Input *input, char *filename)
         printf("MAX_NUM_RLX is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->art_delay), "ART_DELAY", filename);
+    errno = input_int(&(input->delay_step), "DELAY_STEP", filename);
     if (errno) {
-        printf("ART_DELAY is missing.\n");
+        printf("DELAY_STEP is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->art_mixing), "ART_MIXING", filename);
+    errno = input_int(&(input->mixing_step), "MIXING_STEP", filename);
     if (errno) {
-        printf("ART_MIXING is missing.\n");
+        printf("MIXING_STEP is missing.\n");
         return 1;
     }
-    errno = input_int(&(input->hyper_rlx), "HYPER_RLX", filename);
+    errno = input_int(&(input->hyper_step), "HYPER_STEP", filename);
     if (errno) {
-        printf("HYPER_RLX is missing.\n");
+        printf("HYPER_STEP is missing.\n");
         return 1;
     }
     errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
@@ -358,10 +353,6 @@ void write_input(Input *input)
     fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
     fputs("\n", fp);
 
-    fputs("# VASP parameter #\n", fp);
-    fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
-    fputs("\n", fp);
-
     fputs("# dimer parameter #\n", fp);
     fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
@@ -374,9 +365,9 @@ void write_input(Input *input)
     fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
-    fprintf(fp, "ART_DELAY\t= %d\n", input->art_delay);
-    fprintf(fp, "ART_MIXING\t= %d\n", input->art_mixing);
-    fprintf(fp, "HYPER_RLX\t= %d\n", input->hyper_rlx);
+    fprintf(fp, "DELAY_STEP\t= %d\n", input->delay_step);
+    fprintf(fp, "MIXING_STEP\t= %d\n", input->mixing_step);
+    fprintf(fp, "HYPER_STEP\t= %d\n", input->hyper_step);
     fputs("\n", fp);
 
     fputs("# random parameter #\n", fp);
@@ -397,7 +388,6 @@ void free_input(Input *input)
     free(input->target_list);
     free(input->pair_style);
     free(input->pair_coeff);
-    free(input->vasp_cmd);
     free(input->mode_list);
     free(input);
 }

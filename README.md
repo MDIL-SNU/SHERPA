@@ -108,18 +108,15 @@ cmake --build . --target EXTRACTOR
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
 * **MAX_NUM_RLX** [integer]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
-* **ART_DELAY** [integer]
-  - *ART_DELAY* sets the number of initial steps without Lanczos method.
-* **ART_MIXING** [integer]
-  - *ART_MIXING* sets the number of mixing steps above inflection points.
-* **HYPER_RLX** [integer]
-  - *HYPER_RLX* sets the number of relaxation steps, where the configuration is on the hyperplane that is spanned by eigenmode and displacement vector.
+* **DELAY_STEP** [integer]
+  - *DELAY_STEP* sets the number of initial steps without Lanczos method.
+* **MIXING_STEP** [integer]
+  - *MIXING_STEP* sets the number of mixing steps above inflection points.
+* **HYPER_STEP** [integer]
+  - *HYPER_STEP* sets the number of relaxation steps, where the configuration is on the hyperplane that is spanned by eigenmode and displacement vector.
 ### Random parameter
 * **RANDOM_SEED** [-1/nonnegative integer]
   - *RANDOM_SEED* sets the seed for random number generation. *RANDOM_SEED* is generated automatically when provided -1.
-### Directory parameter
-* **OUTPUT_DIR** [strings]
-  - *OUTPUT_DIR* indicates the output directory.
 
 ## TARGET
 The TARGET file lists either the target atom indices or types that serve as the center of the active volume, with each condition being added sequentially.

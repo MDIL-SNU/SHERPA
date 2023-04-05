@@ -194,8 +194,8 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
         double f_norm = norm(parallel_force, active_num);
         double alpha = f_norm / fabs(eigenvalue);
         double dr = input->max_move < alpha ? input->max_move : alpha;
-        double ratio = negative > input->art_mixing ?
-                       1.0 : (double)negative / input->art_mixing;
+        double ratio = negative > input->mixing_step ?
+                       1.0 : (double)negative / input->mixing_step;
         free(parallel_force);
         double *push_vector = (double *)malloc(sizeof(double) * active_num * 3);
         if (dot(force, eigenmode, active_num) > 0) {
@@ -289,9 +289,9 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         }
         /* trajectory */
         if (local_rank == 0) {
-            sprintf(filename, "%s/%d.log", input->output_dir, count);
+            sprintf(filename, "./%d.log", count);
             FILE *fp = fopen(filename, "a");
-            if (sps_step > input->art_delay) {
+            if (sps_step > input->delay_step) {
                 fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
                         sps_step, relax_step, lanczos_step, energy0, eigenvalue);
             } else {
@@ -301,12 +301,12 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             fclose(fp);
             char header[128];
             sprintf(header, "%d_%d %d", count, index, sps_step);
-            sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+            sprintf(filename, "./%d.XDATCAR", count);
             write_config(config0, filename, header, "a");
         }
     
         double *perp_force0;
-        if (negative > input->hyper_rlx) {
+        if (negative > input->hyper_step) {
             perp_force0 = perpendicular_vector(force0, push_direction, active_num);
         } else {
             double *push_parallel_force0 = parallel_vector(force0, push_direction, active_num);
@@ -363,7 +363,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         }
 
         double *perp_force1;
-        if (negative > input->hyper_rlx) {
+        if (negative > input->hyper_step) {
             perp_force1 = perpendicular_vector(force1, push_direction, active_num);
         } else {
             double *push_parallel_force1 = parallel_vector(force1, push_direction, active_num);
@@ -532,7 +532,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     if (local_rank == 0) {
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         FILE *fp = fopen(filename, "w");
         fprintf(fp, " %d_%d\n", count, index);
         fputs("-----------------------------------------------------------------------\n", fp);
@@ -541,7 +541,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         fclose(fp);
         char header[128];
         sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "%s/%d.XDATCAR", input->output_dir, count);
+        sprintf(filename, "./%d.XDATCAR", count);
         write_config(config0, filename, header, "w");
     }
 
@@ -562,7 +562,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
         /* lanczos */
-        if (sps_step > input->art_delay) {
+        if (sps_step > input->delay_step) {
             lanczos(config0, input, active_num, active_list,
                     &eigenvalue, eigenmode, &lanczos_step, force0, comm);
         }
@@ -612,7 +612,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     free(force0);
     free(init_direction);
     if (local_rank == 0) {
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         FILE *fp = fopen(filename, "a");
         fputs("-----------------------------------------------------------------------\n", fp);
         fputs(" State of the saddle   Barrier energy   Reaction energy   Elapsed time\n", fp);
@@ -647,7 +647,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     if (local_rank == 0) {
         char filename[128];
         /* modecar */
-        sprintf(filename, "%s/%d.MODECAR", input->output_dir, count);
+        sprintf(filename, "./%d.MODECAR", count);
         FILE *fp = fopen(filename, "w");
         fprintf(fp, "%d_%d\n", count, index);
         for (i = 0; i < config0->tot_num; ++i) {
@@ -658,7 +658,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         }
         fclose(fp);
         /* log */
-        sprintf(filename, "%s/%d.log", input->output_dir, count);
+        sprintf(filename, "./%d.log", count);
         fp = fopen(filename, "a");
         if (conv == 0) {
             fprintf(fp, "           Connected   %14f   %15f   %12f\n", *Ea, dE, time);

@@ -55,20 +55,17 @@ int check_unique(Config *config, Input *input)
 {
     int i, j, unique, count, errno;
     char filename[128];
-    sprintf(filename, "%s/Saddle.POSCAR", input->output_dir);
-    FILE *rp = fopen(filename, "r");
+    FILE *rp = fopen("./Saddle.POSCAR", "r");
     /* first open */
     if (rp == NULL) {
         return -1;
     } else {
-        char tmp_filename[128];
         char line[1024], header[128], *ptr;
-        sprintf(tmp_filename, "%s/tmp_Saddle.POSCAR", input->output_dir);
         while (1) {
             if (fgets(header, 128, rp) == NULL) {
                 break;
             }
-            FILE *wp = fopen(tmp_filename, "w");
+            FILE *wp = fopen("./tmp_Saddle.POSCAR", "w");
             fputs(header, wp);
             for (i = 0; i < 8; ++i) {
                 fgets(line, 1024, rp);
@@ -80,19 +77,19 @@ int check_unique(Config *config, Input *input)
             }
             fclose(wp);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
-            read_config(tmp_config, tmp_filename);
+            read_config(tmp_config, "./tmp_Saddle.POSCAR");
             int diff = diff_config(config, tmp_config, input->diff_tol);
             /* 0: identical */
             if (diff == 0) {
                 fclose(rp);
-                remove(tmp_filename);
+                remove("./tmp_Saddle.POSCAR");
                 free_config(tmp_config);
                 return atoi(strtok(header, "_"));
             }
             free_config(tmp_config);
         }
         fclose(rp);
-        remove(tmp_filename);
+        remove("./tmp_Saddle.POSCAR");
         return -1;
     }
 }
