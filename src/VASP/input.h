@@ -3,7 +3,6 @@
 
 typedef struct _Input
 {
-    char *target_list;
     double finite_diff;
     double acti_cutoff;
     int acti_nevery;
@@ -16,13 +15,11 @@ typedef struct _Input
 
     int nelem;
     char **atom_type;
-    char *init_config;
     int init_relax;
     int init_disp;
     double disp_cutoff;
     double disp_stddev;
     int init_mode;
-    char *mode_list;
 
     int ncore;
     char *vasp_cmd;

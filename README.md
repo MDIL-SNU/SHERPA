@@ -39,84 +39,91 @@ cmake --build . --target SPS_VASP
 cmake --build . --target EXTRACTOR
 ```
 
+## Usage
+Before running scripts, *INPUT*, *POSCAR*, and *TARGET* should be prepared.
+*POSCAR* is an initial structure file written in VASP5 format.
+To run scripts, use the following commands:
+```bash
+# run SPS_LMP
+mpirun -np ${numproc} SPS_LMP
+# run SPS_VASP
+SPS_VASP
+```
+, where `${numproc}` stands for the number of processors.
+
+
 ## INPUT
 ### General parameter
-* **TARGET_LIST** [strings]
-  - *TARGET_LIST* indicates the file that contains the index of target atoms.
-* **FINITE_DIFF** [real]
+* **FINITE_DIFF** [real, 0.01 (default)]
   - *FINITE_DIFF* sets the displacement in finite difference method (in Angst).
-* **ACTI_CUTOFF** [real]
+* **ACTI_CUTOFF** [real, 6.0 (default)]
   - *ACTI_CUTOFF* sets the cutoff radius of active volume (in Angst).
-* **ACTI_NEVERY** [integer]
+* **ACTI_NEVERY** [integer, 3 (default)]
   - *ACTI_NEVERY* sets the interval step to check the active volume.
-* **F_TOL** [real]
+* **F_TOL** [real, 0.01 (default)]
   - *F_TOL* sets the force tolerance for saddle point searches and relaxation (in eV/Angst).
-* **DIFF_TOL** [real]
+* **DIFF_TOL** [real, 0.4 (default)]
   - *DIFF_TOL* sets the distance tolerance for each atom in identical structures (in Angst).
-* **MAX_MOVE** [real]
+* **MAX_MOVE** [real, 0.1 (default)]
   - *MAX_MOVE* sets the maximum step size of image movement (in Angst).
-* **TRIAL_MOVE** [real]
+* **TRIAL_MOVE** [real, 0.01 (default)]
   - *TRIAL_MOVE* sets the trial step size of image for cg optimization (in Angst).
-* **CONFIDENCE** [real]
+* **CONFIDENCE** [real, 0.9 (default)]
   - *CONFIDENCE* sets termination condition through confidence level (Ref. [1](https://doi.org/10.1063/1.2976010)).
-* **MAX_SEARCH** [integer]
+* **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
 ### Initial structure parameter
 * **NELEMENT** [integer]
   - *NELEMENT* is the number of elements
 * **ATOM_TYPE** [strings]
   - *ATOM_TYPE* is the symbols of elements
-* **INIT_CONFIG** [strings]
-  - *INIT_CONFIG* indicates the structure file written as POSCAR format.
-* **INIT_RELAX** [0/1]
+* **INIT_RELAX** [0/1, 1 (default)]
   - *INIT_RELAX* determines whether or not to relax *INIT_CONFIG* before saddle point searches.
-* **INIT_DISP** [0/1]
+* **INIT_DISP** [0/1, 0 (default)]
   - *INIT_DISP* determines whether or not to displace structure before saddle point searches.
-* **DISP_CUTOFF** [real]
+* **DISP_CUTOFF** [real, 3.0 (default)]
   - *DISP_CUTOFF* sets the cutoff radius of displaced region (in Angst).
-* **DISP_STDDEV** [real]
+* **DISP_STDDEV** [real, 0.1 (default)]
   - *DISP_STDDEV* sets the standard deviation of gaussian displacement vector (in Angst).
-* **INIT_MODE** [0/1]
-  - *INIT_MODE* determines whether or not to provide the initial eigenmode.
-* **MODE_LIST** [strings]
-  - *MODE_LIST* indicates the file that contains the eigenmodes.
-### LAMMPS parameter
+* **INIT_MODE** [0/1, 0 (default)]
+  - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *SPS.MODECAR*.
+### LAMMPS parameter (for SPS_LMP)
 * **PAIR_STYLE** [strings]
   - *PAIR_STYLE* stands for the pair style in LAMMPS input.
 * **PAIR_COEFF** [strings]
   - *PAIR_COEFF* stands for the pair coeff in LAMMPS input.
 * **NCORE** [integer]
   - *NCORE* sets the number of cores for each LAMMPS instance.
-### VASP parameter
+### VASP parameter (for SPS_VASP)
 * **VASP_CMD** [strings]
   - *VASP_CMD* is the command to run VASP.
 ### Dimer parameter
-* **KAPPA_DIMER** [0/1]
+* **KAPPA_DIMER** [0/1, 0 (default)]
   - *KAPPA_DIMER* activates the basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664)).
-* **F_ROT_MIN** [real]
+* **F_ROT_MIN** [real, 0.1 (default)]
   - *F_ROT_MIN* sets the minimum force criteria for rotation (in eV/Angst).
-* **F_ROT_MAX** [real]
+* **F_ROT_MAX** [real, 1.0 (default)]
   - *F_ROT_MAX* sets the maximum force criteria for rotation (in eV/Angst).
-* **MAX_NUM_ROT** [integer]
+* **MAX_NUM_ROT** [integer, 4 (default)]
   - *MAX_NUM_ROT* sets the maximum number of rotation steps in dimer method.
-* **MAX_NUM_TLS** [integer]
+* **MAX_NUM_TLS** [integer, 500 (default)]
   - *MAX_NUM_TLS* sets the maximum number of translation steps in dimer method.
 ### ART nouveau parameter
-* **ART_NOUVEAU** [0/1]
+* **ART_NOUVEAU** [0/1, 1 (default)]
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
-* **LAMBDA_CONV** [real]
+* **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
-* **MAX_NUM_RLX** [integer]
+* **MAX_NUM_RLX** [integer, 4 (default)]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
-* **DELAY_STEP** [integer]
+* **DELAY_STEP** [integer, 0 (default)]
   - *DELAY_STEP* sets the number of initial steps without Lanczos method.
-* **MIXING_STEP** [integer]
+* **MIXING_STEP** [integer, 0 (default)]
   - *MIXING_STEP* sets the number of mixing steps above inflection points.
-* **HYPER_STEP** [integer]
+* **HYPER_STEP** [integer, 3 (default)]
   - *HYPER_STEP* sets the number of relaxation steps, where the configuration is on the hyperplane that is spanned by eigenmode and displacement vector.
 ### Random parameter
-* **RANDOM_SEED** [-1/nonnegative integer]
-  - *RANDOM_SEED* sets the seed for random number generation. *RANDOM_SEED* is generated automatically when provided -1.
+* **RANDOM_SEED** [unsigned integer, $RANDOM (default)]
+  - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
 ## TARGET
 The TARGET file lists either the target atom indices or types that serve as the center of the active volume, with each condition being added sequentially.
@@ -134,17 +141,6 @@ A
 * T: type (starting from 1)
 * A: all
 * +R: random shuffle
-
-
-## Usage
-To run scripts, use the following commands:
-```bash
-# run SPS_LMP
-mpirun -np ${numproc} SPS_LMP
-# run SPS_VASP
-SPS_VASP
-```
-, where `${numproc}` stands for the number of processors.
 
 
 ## Outputs (will be updated soon)
@@ -183,9 +179,8 @@ EXTRACTOR ${output} ${count}
 
 
 ## Miscellaneous
-1. Fixed atoms in `INIT_CONFIG` will not move during saddle point searches.
-2. INCAR, KPOINTS, and POTCAR should be prepared in the current directory for `SPS_VASP`.
-3. To use hybrid potentials for LAMMPS, append `pair_coeff`s with the delimiter (|) among them.
+1. INCAR, KPOINTS, and POTCAR should be prepared in the current directory for `SPS_VASP`.
+2. To use hybrid potentials for LAMMPS, append `pair_coeff`s with the delimiter (|) among them.
 For example,
 ```text
 PAIR_COEFF = 1 1 potential_saved_1 | 1 2 potential_saved_2

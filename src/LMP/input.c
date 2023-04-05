@@ -131,177 +131,132 @@ int input_char_arr(char ***var, char *tag, int n, char *filename)
 int read_input(Input *input, char *filename)
 {
     int errno;
-    errno = input_char(&(input->target_list), "TARGET_LIST", filename);
-    if (errno) {
-        printf("TARGET_LIST is missing.\n");
-        return 1;
-    }
     errno = input_double(&(input->finite_diff), "FINITE_DIFF", filename);
     if (errno) {
-        printf("FINITE_DIFF is missing.\n");
-        return 1;
+        input->finite_diff = 0.01;
     }
     errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
     if (errno) {
-        printf("ACTI_CUTOFF is missing.\n");
-        return 1;
+        input->acti_cutoff = 6.0;
     }
     errno = input_int(&(input->acti_nevery), "ACTI_NEVERY", filename);
     if (errno) {
-        printf("ACTI_NEVERY is missing.\n");
-        return 1;
+        input->acti_nevery = 3;
     }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
-        printf("F_TOL is missing.\n");
-        return 1;
+        input->f_tol = 0.01;
     }
     errno = input_double(&(input->diff_tol), "DIFF_TOL", filename);
     if (errno) {
-        printf("DIFF_TOL is missing.\n");
-        return 1;
+        input->diff_tol = 0.4;
     }
     errno = input_double(&(input->max_move), "MAX_MOVE", filename);
     if (errno) {
-        printf("MAX_MOVE is missing.\n");
-        return 1;
+        input->max_move = 0.1;
     }
     errno = input_double(&(input->trial_move), "TRIAL_MOVE", filename);
     if (errno) {
-        printf("TRIAL_MOVE is missing.\n");
-        return 1;
+        input->trial_move = 0.01;
     }
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
     if (errno) {
-        printf("CONFIDENCE is missing.\n");
-        return 1;
+        input->confidence = 0.9;
     }
     errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
     if (errno) {
-        printf("MAX_SEARCH is missing.\n");
-        return 1;
+        input->max_search = 100;
     }
     errno = input_int(&(input->nelem), "NELEMENT", filename);
     if (errno) {
-        printf("NELEMENT is missing.\n");
+        printf("NELEMENT is necessary.\n");
         return 1;
     }
     errno = input_char_arr(&(input->atom_type), "ATOM_TYPE", input->nelem, filename);
     if (errno) {
-        printf("ATOM_TYPE is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->init_config), "INIT_CONFIG", filename);
-    if (errno) {
-        printf("INIT_CONFIG is missing.\n");
+        printf("ATOM_TYPE is necessary.\n");
         return 1;
     }
     errno = input_int(&(input->init_relax), "INIT_RELAX", filename);
     if (errno) {
-        printf("INIT_RELAX is missing.\n");
-        return 1;
+        input->init_relax = 1;
     }
     errno = input_int(&(input->init_disp), "INIT_DISP", filename);
     if (errno) {
-        printf("INIT_DISP is missing.\n");
-        return 1;
+        input->init_disp = 0;
     }
     errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
     if (errno) {
-        printf("DISP_CUTOFF is missing.\n");
-        return 1;
+        input->disp_cutoff = 3.0;
     }
     errno = input_double(&(input->disp_stddev), "DISP_STDDEV", filename);
     if (errno) {
-        printf("DISP_STDDEV is missing.\n");
-        return 1;
+        input->disp_stddev = 0.1;
     }
     errno = input_int(&(input->init_mode), "INIT_MODE", filename);
     if (errno) {
-        printf("INIT_MODE is missing.\n");
-        return 1;
-    }
-    errno = input_char(&(input->mode_list), "MODE_LIST", filename);
-    if (errno) {
-        printf("MODE_LIST is missing.\n");
-        return 1;
+        input->init_mode = 0;
     }
     errno = input_char(&(input->pair_style), "PAIR_STYLE", filename);
     if (errno) {
-        printf("PAIR_STYLE is missing.\n");
+        printf("PAIR_STYLE is necessary.\n");
         return 1;
     }
     errno = input_char(&(input->pair_coeff), "PAIR_COEFF", filename);
     if (errno) {
-        printf("PAIR_COEFF is missing.\n");
+        printf("PAIR_COEFF is necessary.\n");
         return 1;
     }
     errno = input_int(&(input->ncore), "NCORE", filename);
     if (errno) {
-        printf("NCORE is missing.\n");
-        return 1;
+        input->ncore = 1;
     }
     errno = input_int(&(input->kappa_dimer), "KAPPA_DIMER", filename);
     if (errno) {
-        printf("KAPPA_DIMER is missing.\n");
-        return 1;
+        input->kappa_dimer = 0;
     }
     errno = input_double(&(input->f_rot_min), "F_ROT_MIN", filename);
     if (errno) {
-        printf("F_ROT_MIN is missing.\n");
-        return 1;
+        input->f_rot_min = 0.1;
     }
     errno = input_double(&(input->f_rot_max), "F_ROT_MAX", filename);
     if (errno) {
-        printf("F_ROT_MAX is missing.\n");
-        return 1;
+        input->f_rot_max = 1.0;
     }
     errno = input_int(&(input->max_num_rot), "MAX_NUM_ROT", filename);
     if (errno) {
-        printf("MAX_NUM_ROT is missing.\n");
-        return 1;
+        input->max_num_rot = 4;
     }
     errno = input_int(&(input->max_num_tls), "MAX_NUM_TLS", filename);
     if (errno) {
-        printf("MAX_NUM_TLS is missing.\n");
-        return 1;
+        input->max_num_tls = 500;
     }
     errno = input_int(&(input->art_nouveau), "ART_NOUVEAU", filename);
     if (errno) {
-        printf("ART_NOUVEAU is missing.\n");
-        return 1;
+        input->art_nouveau = 1;
     }
     errno = input_double(&(input->lambda_conv), "LAMBDA_CONV", filename);
     if (errno) {
-        printf("LAMBDA_CONV is missing.\n");
-        return 1;
+        input->lambda_conv = 0.01;
     }
     errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
     if (errno) {
-        printf("MAX_NUM_RLX is missing.\n");
-        return 1;
+        input->max_num_rlx = 4;
     }
     errno = input_int(&(input->delay_step), "DELAY_STEP", filename);
     if (errno) {
-        printf("DELAY_STEP is missing.\n");
-        return 1;
+        input->delay_step = 0;
     }
     errno = input_int(&(input->mixing_step), "MIXING_STEP", filename);
     if (errno) {
-        printf("MIXING_STEP is missing.\n");
-        return 1;
+        input->mixing_step = 0;
     }
     errno = input_int(&(input->hyper_step), "HYPER_STEP", filename);
     if (errno) {
-        printf("HYPER_STEP is missing.\n");
-        return 1;
+        input->hyper_step = 3;
     }
     errno = input_int(&(input->random_seed), "RANDOM_SEED", filename);
     if (errno) {
-        printf("RANDOM_SEED is missing.\n");
-        return 1;
-    }
-    if (input->random_seed == -1) {
         input->random_seed = (unsigned int)time(NULL);
     }
     input->nredundant = (int)round(1 / (1 - input->confidence));
@@ -319,7 +274,6 @@ void write_input(Input *input)
     FILE *fp = fopen("./INPUT_read", "w");
 
     fputs("# general parameter #\n", fp);
-    fprintf(fp, "TARGET_LIST\t= %s\n", input->target_list);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
@@ -338,13 +292,11 @@ void write_input(Input *input)
         fprintf(fp, " %s", input->atom_type[i]);
     }
     fputs("\n", fp);
-    fprintf(fp, "INIT_CONFIG\t= %s\n", input->init_config);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
     fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
-    fprintf(fp, "MODE_LIST\t= %s\n", input->mode_list);
     fputs("\n", fp);
 
     fputs("# LAMMPS parameter #\n", fp);
@@ -384,10 +336,7 @@ void free_input(Input *input)
         free(input->atom_type[i]);
     }
     free(input->atom_type);
-    free(input->init_config);
-    free(input->target_list);
     free(input->pair_style);
     free(input->pair_coeff);
-    free(input->mode_list);
     free(input);
 }

@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     /* read config */
     Config *config = (Config *)malloc(sizeof(Config));
-    errno = read_config(config, input->init_config);
+    errno = read_config(config, "./POSCAR");
     if (errno > 0) {
         printf("ERROR in INIT_CONFIG FILE!\n");
         free_input(input);
@@ -58,8 +58,7 @@ int main(int argc, char *argv[])
     int target_num = 0;
     int list_size = 64;
     int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = read_target(config, input->target_list,
-                        &target_num, &target_list, &list_size);
+    errno = read_target(config, &target_num, &target_list, &list_size);
     MPI_Bcast(target_list, target_num, MPI_INT, 0, MPI_COMM_WORLD);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
@@ -169,7 +168,7 @@ int main(int argc, char *argv[])
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
     dataset->head = NULL;
     if (input->init_mode > 0) {
-        build_dataset(dataset, input->mode_list, config->tot_num);
+        build_dataset(dataset, config->tot_num);
     }
 
     int conv, unique;

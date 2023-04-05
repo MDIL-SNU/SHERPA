@@ -5,12 +5,12 @@
 #include <string.h>
 
 
-int read_target(Config *config, char *filename,
-               int *target_num, int **target_list, int *list_size)
+int read_target(Config *config, int *target_num, int **target_list,
+                int *list_size)
 {
     int i;
     FILE *fp;
-    fp = fopen(filename, "r");
+    fp = fopen("./TARGET", "r");
     if (fp == NULL) {
         return 1;
     }

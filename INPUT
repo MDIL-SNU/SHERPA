@@ -1,10 +1,9 @@
 # general parameter #
-TARGET_LIST = ./TARGET
 FINITE_DIFF = 0.01
 ACTI_CUTOFF = 6.0
 ACTI_NEVERY = 3
 F_TOL       = 0.01
-DIFF_TOL    = 0.3
+DIFF_TOL    = 0.4
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 CONFIDENCE  = 0.9
@@ -13,13 +12,11 @@ MAX_SEARCH  = 100
 # initial structure parameter #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
-INIT_CONFIG = ./POSCAR
 INIT_RELAX  = 1
 INIT_DISP   = 1
 DISP_CUTOFF = 3.0
 DISP_STDDEV = 0.1
 INIT_MODE   = 0
-MODE_LIST   = ./SPS.MODECAR
 
 # LAMMPS parameter (for SPS_LMP) #
 PAIR_STYLE  = nn
@@ -43,6 +40,3 @@ MAX_NUM_RLX = 4
 DELAY_STEP  = 0
 MIXING_STEP = 0
 HYPER_STEP  = 3
-
-# random parameter #
-RANDOM_SEED = -1
