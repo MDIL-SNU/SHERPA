@@ -9,7 +9,7 @@
 void *lmp_init(Config *config, Input *input, MPI_Comm comm)
 {
     /* create LAMMPS instance */
-    int i;
+    int i, j, k;
     void *lmp;
     char cmd[65536], tmp_cmd[65536];
     char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
@@ -33,8 +33,25 @@ void *lmp_init(Config *config, Input *input, MPI_Comm comm)
     sprintf(cmd, "create_box %d cell", input->nelem);
     lammps_command(lmp, cmd);
     /* atoms */
-    lammps_create_atoms(lmp, config->tot_num, config->id,
-                        config->type, config->pos, NULL, NULL, 0);
+    int count = 0;
+    int *id = (int *)malloc(sizeof(int) * config->tot_num);
+    int *type = (int *)malloc(sizeof(int) * config->tot_num);
+    for (i = 0; i < config->ntype; ++i) {
+        for (j = 0; j < input->nelem; ++j) {
+            if (config->atom_num[i] == get_atom_num(input->atom_type[j])) {
+                for (k = 0; k < config->each_num[i]; ++k) {
+                    type[count] = j + 1;
+                    id[count] = count + 1;
+                    count++;
+                }
+            }
+        }
+    }
+    lammps_create_atoms(lmp, config->tot_num, id,
+                        type, config->pos, NULL, NULL, 0);
+    free(id);
+    free(type);
+    /* mass */
     for (i = 0; i < input->nelem; ++i) {
         sprintf(cmd, "mass %d %f", i + 1,
                 get_mass(get_atom_num(input->atom_type[i])));

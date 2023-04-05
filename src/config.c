@@ -186,22 +186,19 @@ void remove_atom(Config *config, int index)
 
     for (i = index; i < config->tot_num - 1; ++i) {
         config->fix[i] = config->fix[i + 1];
-        config->type[i] = config->type[i + 1];
         config->pos[i * 3 + 0] = config->pos[(i + 1) * 3 + 0];
         config->pos[i * 3 + 1] = config->pos[(i + 1) * 3 + 1];
         config->pos[i * 3 + 2] = config->pos[(i + 1) * 3 + 2];
     }
     config->tot_num--;
     tot_num = config->tot_num;
-    config->id = (int *)realloc(config->id, sizeof(int) * tot_num);
     config->fix = (int *)realloc(config->fix, sizeof(int) * tot_num);
-    config->type = (int *)realloc(config->type, sizeof(int) * tot_num);
     config->pos = (double *)realloc(config->pos, sizeof(double) * tot_num * 3);
 }
 
 
 #define MAXLINE 128
-int read_config(Config *config, Input *input, char *filename)
+int read_config(Config *config, char *filename)
 {
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
@@ -248,33 +245,16 @@ int read_config(Config *config, Input *input, char *filename)
 
     /* each number of type */
     config->each_num = (int *)malloc(sizeof(int) * config->ntype);
-    int *start_idx = (int *)calloc(config->ntype, sizeof(int));
     config->tot_num = 0;
     ptr = fgets(line, MAXLINE, fp);
     config->each_num[0] = atoi(strtok(line, " \n"));
     config->tot_num += config->each_num[0];
-    for (i = 1; i < config->ntype; ++i) {
-        config->each_num[i] = atoi(strtok(NULL, " \n"));
-        config->tot_num += config->each_num[i];
-        start_idx[i] = config->each_num[i - 1] + start_idx[i - 1];
-    }
-
-    /* type index of atom */
-    int count = 0;
-    config->id = (int *)malloc(sizeof(int) * config->tot_num);
-    config->type = (int *)malloc(sizeof(int) * config->tot_num);
-    for (i = 0; i < config->ntype; ++i) {
-        for (j = 0; j < input->nelem; ++j) {
-            if (config->atom_num[i] == get_atom_num(input->atom_type[j])) {
-                for (k = 0; k < config->each_num[i]; ++k) {
-                    config->type[count] = j + 1;
-                    config->id[count] = count + 1;
-                    count++;
-                }
-            }
+    if (config->ntype > 1) {
+        for (i = 1; i < config->ntype; ++i) {
+            config->each_num[i] = atoi(strtok(NULL, " \n"));
+            config->tot_num += config->each_num[i];
         }
     }
-    free(start_idx);
 
     /* positions and constraint */
     ptr = fgets(line, MAXLINE, fp);
@@ -401,9 +381,7 @@ void copy_config(Config *config2, Config *config1)
 
     config2->atom_num = (int *)malloc(sizeof(int) * config1->ntype);
     config2->each_num = (int *)malloc(sizeof(int) * config1->ntype);
-    config2->id = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->fix = (int *)malloc(sizeof(int) * config1->tot_num);
-    config2->type = (int *)malloc(sizeof(int) * config1->tot_num);
     config2->pos = (double *)malloc(sizeof(double) * config1->tot_num * 3);
 
     for (i = 0; i < config1->ntype; ++i) {
@@ -411,9 +389,7 @@ void copy_config(Config *config2, Config *config1)
         config2->each_num[i] = config1->each_num[i];
     }
     for (i = 0; i < config1->tot_num; ++i) {
-        config2->id[i] = config1->id[i];
         config2->fix[i] = config1->fix[i];
-        config2->type[i] = config1->type[i];
         config2->pos[i * 3 + 0] = config1->pos[i * 3 + 0];
         config2->pos[i * 3 + 1] = config1->pos[i * 3 + 1];
         config2->pos[i * 3 + 2] = config1->pos[i * 3 + 2];
@@ -425,9 +401,7 @@ void free_config(Config *config)
 {
     free(config->atom_num);
     free(config->each_num);
-    free(config->id);
     free(config->fix);
-    free(config->type);
     free(config->pos);
     free(config);
 }

@@ -26,11 +26,11 @@ void insert_data(Dataset *dataset, int n, int index, double *eigenmode)
 }
 
 
-void build_dataset(Dataset *dataset, Input *input, int n)
+void build_dataset(Dataset *dataset, char *filename, int n)
 {
     int i, index;
 
-    FILE *fp = fopen(input->mode_list, "r");
+    FILE *fp = fopen(filename, "r");
     char line[1024];
     while (fgets(line, 1024, fp) != NULL) {
         strtok(line, "_\n");

@@ -8,19 +8,17 @@ set ( CMAKE_VERBOSE_MAKEFILE TRUE )
 add_compile_options ( -O3 -g -Wall )
 
 add_executable ( EXTRACTOR extractor.c )
-add_executable ( KMC kmc.c )
+#add_executable ( KMC kmc.c )
+add_library ( SPS config.c dataset.c linalg.c target.c )
 
-set ( SPS_SRC_FILES config.c dataset.c input.c linalg.c target.c )
-add_library ( SPS config.c dataset.c input.c linalg.c target.c )
-
-set ( MAIN_SRC_FILES art_nouveau.c kappa_dimer.c dimer.c )
+set ( SRC_FILES main.c art_nouveau.c dimer.c kappa_dimer.c utils.c )
 
 add_subdirectory ( LMP )
-add_executable ( SPS_LMP main.c utils.c ${MAIN_SRC_FILES} )
+add_executable ( SPS_LMP ${SRC_FILES} )
 target_include_directories ( SPS_LMP PRIVATE LMP )
 target_link_libraries ( SPS_LMP LMP )
 
 add_subdirectory ( VASP )
-add_executable ( SPS_VASP main.c utils.c ${MAIN_SRC_FILES} )
+add_executable ( SPS_VASP ${SRC_FILES} )
 target_include_directories ( SPS_VASP PRIVATE VASP )
 target_link_libraries ( SPS_VASP VASP )

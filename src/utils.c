@@ -80,7 +80,7 @@ int check_unique(Config *config, Input *input)
             }
             fclose(wp);
             Config *tmp_config = (Config *)malloc(sizeof(Config));
-            read_config(tmp_config, input, tmp_filename);
+            read_config(tmp_config, tmp_filename);
             int diff = diff_config(config, tmp_config, input->diff_tol);
             /* 0: identical */
             if (diff == 0) {
@@ -318,10 +318,15 @@ int diff_config(Config *config1, Config *config2, double tol)
 {
     int i;
     double del[3];
-    for (i = 0; i < config1->tot_num; ++i) {
-        if (config1->type[i] != config2->type[i]) {
+    if (config1->ntype != config2->ntype) {
+        return 1;
+    }
+    for (i = 0; i < config1->ntype; ++i) {
+        if (config1->each_num[i] != config2->each_num[i]) {
             return 1;
-        };
+        }
+    }
+    for (i = 0; i < config1->tot_num; ++i) {
         del[0] = config2->pos[i * 3 + 0] - config1->pos[i * 3 + 0];
         del[1] = config2->pos[i * 3 + 1] - config1->pos[i * 3 + 1];
         del[2] = config2->pos[i * 3 + 2] - config1->pos[i * 3 + 2];

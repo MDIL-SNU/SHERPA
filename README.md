@@ -12,7 +12,7 @@ Three executables can be built.
 - SPS_VASP: saddle point searches script by reading/writing VASP
 - EXTRACTOR: script for postprocessing of outputs (see `Outputs`)
 
-0. If `SPS_LMP` is needed, build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
+1. If `SPS_LMP` is needed, build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
 ```bash
 cd lammps
 mkdir build; cd build
@@ -20,14 +20,14 @@ cmake ../cmake -D BUILD_SHARED_LIBS=yes
 cmake --build . --target install
 ```
 
-1. Make `build` directory and configure with `CMakeLists.txt` in `src` directory.
+2. Make `build` directory and configure with `CMakeLists.txt` in `src` directory.
 ```bash
 cd Saddle_point_search
 mkdir build; cd build
 cmake ../src
 ```
 
-2. Build targets through **one of following commands**. 
+3. Build targets through **one of following commands**.
 ```bash
 # all (SPS_LMP, SPS_VASP, and EXTRACTOR)
 cmake --build .
@@ -47,7 +47,7 @@ cmake --build . --target EXTRACTOR
   - *FINITE_DIFF* sets the displacement in finite difference method (in Angst).
 * **ACTI_CUTOFF** [real]
   - *ACTI_CUTOFF* sets the cutoff radius of active volume (in Angst).
-* **ACTI_NEVERY** [int]
+* **ACTI_NEVERY** [integer]
   - *ACTI_NEVERY* sets the interval step to check the active volume.
 * **F_TOL** [real]
   - *F_TOL* sets the force tolerance for saddle point searches and relaxation (in eV/Angst).

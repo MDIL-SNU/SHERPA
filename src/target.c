@@ -5,12 +5,12 @@
 #include <string.h>
 
 
-int read_target(Config *config, Input *input,
+int read_target(Config *config, char *filename,
                int *target_num, int **target_list, int *list_size)
 {
     int i;
     FILE *fp;
-    fp = fopen(input->target_list, "r");
+    fp = fopen(filename, "r");
     if (fp == NULL) {
         return 1;
     }
@@ -49,15 +49,18 @@ int read_target(Config *config, Input *input,
                 ptr = strtok(NULL, " \n\t");
                 while (ptr != NULL) {
                     int type = atoi(ptr);
-                    for (i = 0; i < config->tot_num; ++i) {
-                        if (config->type[i] == type) {
-                            (*target_list)[*target_num] = i;
-                            (*target_num)++;
-                            if ((*target_num) >= (*list_size)) {
-                                (*list_size) = (*list_size) << 1;
-                                *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
-                            }
+                    while (config->each_num[type - 1] + (*target_num) >= (*list_size)) {
+                        (*list_size) = (*list_size) << 1;
+                    }
+                    int begin = 0;
+                    if (type > 1) {
+                        for (i = 0; i < type - 1; ++i) {
+                            begin += config->each_num[i];
                         }
+                    }
+                    for (i = begin; i < begin + config->each_num[type - 1]; ++i) {
+                        (*target_list)[*target_num] = i;
+                        (*target_num)++;
                     }
                     ptr = strtok(NULL, " \n\t");
                 }
@@ -84,12 +87,10 @@ int read_target(Config *config, Input *input,
 }
 
 
-void write_target(Input *input, int target_num, int *target_list)
+void write_target(int target_num, int *target_list)
 {
     int i;
-    char filename[128];
-    sprintf(filename, "%s/TARGET", input->output_dir);
-    FILE *fp = fopen(filename, "w");
+    FILE *fp = fopen("./TARGET_read", "w");
     fputs("I", fp);
     for (i = 0; i < target_num; ++i) {
         fprintf(fp, " %d", target_list[i]);

@@ -185,7 +185,7 @@ static void lanczos(Config *config, Input *input, int active_num, int *active_li
 
 
 static void uphill_push(Config *config, Input *input, int active_num, int *active_list,
-                        double eigenvalue, double *eigenmode, double *push_vector,
+                        double eigenvalue, double *eigenmode, double **push_direction,
                         double *init_direction, double *force, int negative, MPI_Comm comm)
 {
     int i;
@@ -197,36 +197,48 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
         double ratio = negative > input->art_mixing ?
                        1.0 : (double)negative / input->art_mixing;
         free(parallel_force);
+        double *push_vector = (double *)malloc(sizeof(double) * active_num * 3);
         if (dot(force, eigenmode, active_num) > 0) {
             for (i = 0; i < active_num; ++i) {
-                push_vector[i * 3 + 0] = dr * (init_direction[i * 3 + 0] * (1 - ratio)
-                                                  - eigenmode[i * 3 + 0] * ratio);
-                push_vector[i * 3 + 1] = dr * (init_direction[i * 3 + 1] * (1 - ratio)
-                                                  - eigenmode[i * 3 + 1] * ratio);
-                push_vector[i * 3 + 2] = dr * (init_direction[i * 3 + 2] * (1 - ratio)
-                                                  - eigenmode[i * 3 + 2] * ratio);
+                push_vector[i * 3 + 0] = init_direction[i * 3 + 0] * (1 - ratio)
+                                       - eigenmode[i * 3 + 0] * ratio;
+                push_vector[i * 3 + 1] = init_direction[i * 3 + 1] * (1 - ratio)
+                                       - eigenmode[i * 3 + 1] * ratio;
+                push_vector[i * 3 + 2] = init_direction[i * 3 + 2] * (1 - ratio)
+                                       - eigenmode[i * 3 + 2] * ratio;
             }
         } else {
             for (i = 0; i < active_num; ++i) {
-                push_vector[i * 3 + 0] = dr * (init_direction[i * 3 + 0] * (1 - ratio)
-                                                  + eigenmode[i * 3 + 0] * ratio);
-                push_vector[i * 3 + 1] = dr * (init_direction[i * 3 + 1] * (1 - ratio)
-                                                  + eigenmode[i * 3 + 1] * ratio);
-                push_vector[i * 3 + 2] = dr * (init_direction[i * 3 + 2] * (1 - ratio)
-                                                  + eigenmode[i * 3 + 2] * ratio);
+                push_vector[i * 3 + 0] = init_direction[i * 3 + 0] * (1 - ratio)
+                                       + eigenmode[i * 3 + 0] * ratio;
+                push_vector[i * 3 + 1] = init_direction[i * 3 + 1] * (1 - ratio)
+                                       + eigenmode[i * 3 + 1] * ratio;
+                push_vector[i * 3 + 2] = init_direction[i * 3 + 2] * (1 - ratio)
+                                       + eigenmode[i * 3 + 2] * ratio;
             }
         }
-    } else {
+        *push_direction = normalize(push_vector, active_num);
+        free(push_vector);
         for (i = 0; i < active_num; ++i) {
-            push_vector[i * 3 + 0] = input->max_move * init_direction[i * 3 + 0];
-            push_vector[i * 3 + 1] = input->max_move * init_direction[i * 3 + 1];
-            push_vector[i * 3 + 2] = input->max_move * init_direction[i * 3 + 2];
+            config->pos[active_list[i] * 3 + 0] += dr * (*push_direction)[i * 3 + 0];
+            config->pos[active_list[i] * 3 + 1] += dr * (*push_direction)[i * 3 + 1];
+            config->pos[active_list[i] * 3 + 2] += dr * (*push_direction)[i * 3 + 2];
         }
-    }
-    for (i = 0; i < active_num; ++i) {
-        config->pos[active_list[i] * 3 + 0] += push_vector[i * 3 + 0];
-        config->pos[active_list[i] * 3 + 1] += push_vector[i * 3 + 1];
-        config->pos[active_list[i] * 3 + 2] += push_vector[i * 3 + 2];
+    } else {
+        *push_direction = (double *)malloc(sizeof(double) * active_num * 3);
+        for (i = 0; i < active_num; ++i) {
+            (*push_direction)[i * 3 + 0] = init_direction[i * 3 + 0];
+            (*push_direction)[i * 3 + 1] = init_direction[i * 3 + 1];
+            (*push_direction)[i * 3 + 2] = init_direction[i * 3 + 2];
+        }
+        for (i = 0; i < active_num; ++i) {
+            config->pos[active_list[i] * 3 + 0] += input->max_move
+                                                 * (*push_direction)[i * 3 + 0];
+            config->pos[active_list[i] * 3 + 1] += input->max_move
+                                                 * (*push_direction)[i * 3 + 1];
+            config->pos[active_list[i] * 3 + 2] += input->max_move
+                                                 * (*push_direction)[i * 3 + 2];
+        }
     }
 }
 
@@ -580,11 +592,9 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
             negative = 0;
         }
         /* uphill push */
-        double *push_vector = (double *)malloc(sizeof(double) * active_num * 3);
-        uphill_push(config0, input, active_num, active_list, eigenvalue,
-                    eigenmode, push_vector, init_direction, force0, negative, comm);
-        double *push_direction = normalize(push_vector, active_num);
-        free(push_vector);
+        double *push_direction;
+        uphill_push(config0, input, active_num, active_list, eigenvalue, eigenmode,
+                    &push_direction, init_direction, force0, negative, comm);
         /* normal relax */
         perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
                    push_direction, count, index, sps_step, lanczos_step, negative, comm);
