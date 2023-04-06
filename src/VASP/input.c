@@ -167,6 +167,10 @@ int read_input(Input *input, char *filename)
     if (errno) {
         input->max_search = 100;
     }
+    errno = input_int(&(input->cont), "CONTINUE", filename);
+    if (errno) {
+        input->cont = 0;
+    }
     errno = input_int(&(input->nelem), "NELEMENT", filename);
     if (errno) {
         printf("NELEMENT is necessary.\n");
@@ -275,6 +279,7 @@ void write_input(Input *input)
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
     fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
+    fprintf(fp, "CONTINUE\t= %d\n", input->cont);
     fputs("\n", fp);
 
     fputs("# initial structure parameter #\n", fp);

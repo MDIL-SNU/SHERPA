@@ -197,7 +197,6 @@ void remove_atom(Config *config, int index)
 }
 
 
-#define MAXLINE 128
 int read_config(Config *config, char *filename)
 {
     FILE *fp = fopen(filename, "r");
@@ -206,26 +205,26 @@ int read_config(Config *config, char *filename)
     }
     int i, j, k;
     double tmp_pos[3];
-    char line[MAXLINE], tmp_line[MAXLINE], *ptr;
+    char line[1024], tmp_line[1024], *ptr;
 
     /* system name */
-    ptr = fgets(line, MAXLINE, fp);
+    ptr = fgets(line, 1024, fp);
 
     /* scale */
-    ptr = fgets(line, MAXLINE, fp);
+    ptr = fgets(line, 1024, fp);
     double scale = atof(line);
 
     /* lattice vector */
     for (i = 0; i < 3; ++i) {
-        ptr = fgets(line, MAXLINE, fp);
+        ptr = fgets(line, 1024, fp);
         config->cell[i][0] = atof(strtok(line, " \n")) * scale;
         config->cell[i][1] = atof(strtok(NULL, " \n")) * scale;
         config->cell[i][2] = atof(strtok(NULL, " \n")) * scale;
     }
 
     /* the number of type */
-    ptr = fgets(line, MAXLINE, fp);
-    strncpy(tmp_line, line, MAXLINE);
+    ptr = fgets(line, 1024, fp);
+    strncpy(tmp_line, line, 1024);
     config->ntype = 0;
     ptr = strtok(line, " \r\n");
     while (ptr != NULL) {
@@ -246,7 +245,7 @@ int read_config(Config *config, char *filename)
     /* each number of type */
     config->each_num = (int *)malloc(sizeof(int) * config->ntype);
     config->tot_num = 0;
-    ptr = fgets(line, MAXLINE, fp);
+    ptr = fgets(line, 1024, fp);
     config->each_num[0] = atoi(strtok(line, " \n"));
     config->tot_num += config->each_num[0];
     if (config->ntype > 1) {
@@ -257,17 +256,17 @@ int read_config(Config *config, char *filename)
     }
 
     /* positions and constraint */
-    ptr = fgets(line, MAXLINE, fp);
+    ptr = fgets(line, 1024, fp);
     config->fix = (int *)calloc(config->tot_num, sizeof(int));
     config->pos = (double *)malloc(sizeof(double) * config->tot_num * 3);
     int constraint = 0;
     if (strncasecmp(line, "S", 1) == 0) {
         constraint = 1;
-        ptr = fgets(line, MAXLINE, fp);
+        ptr = fgets(line, 1024, fp);
     }
     if (strncasecmp(line, "D", 1) == 0) {
         for (i = 0; i < config->tot_num; ++i) {
-            ptr = fgets(line, MAXLINE, fp);
+            ptr = fgets(line, 1024, fp);
             tmp_pos[0] = atof(strtok(line, " \n"));
             tmp_pos[1] = atof(strtok(NULL, " \n"));
             tmp_pos[2] = atof(strtok(NULL, " \n"));
@@ -285,7 +284,7 @@ int read_config(Config *config, char *filename)
         }
     } else {
         for (i = 0; i < config->tot_num; ++i) {
-            ptr = fgets(line, MAXLINE, fp);
+            ptr = fgets(line, 1024, fp);
             config->pos[i * 3 + 0] = atof(strtok(line, " \n"));
             config->pos[i * 3 + 1] = atof(strtok(NULL, " \n"));
             config->pos[i * 3 + 2] = atof(strtok(NULL, " \n"));
