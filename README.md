@@ -72,6 +72,8 @@ SPS_VASP
   - *CONFIDENCE* sets termination condition through confidence level (Ref. [1](https://doi.org/10.1063/1.2976010)).
 * **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
+* **CONTINUE** [0/1, 0 (default)]
+  - *CONTINUE* determines whether or not to continue SPS from previous results. *Statistics.log* and *Event.log* should be prepared.
 ### Initial structure parameter
 * **NELEMENT** [integer]
   - *NELEMENT* is the number of elements
@@ -143,7 +145,12 @@ A
 * +R: random shuffle
 
 
-## Outputs (will be updated soon)
+## Outputs (will be updated)
+### Redundancy.log
+### Statistics.log
+### Event.log
+
+
 ||Unconverged|Not splited|Disconnected|Connected|
 |:---|:---:|:---:|:---:|:---:|
 |SPS.log|O|O|O|O|
@@ -152,8 +159,7 @@ A
 |Saddle.POSCAR|X|O|O|O|
 |Final.POSCAR|X|X|X|O|
 
-
-All outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of saddle point searches trials and the index of target atom, respectively. 
+The below outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of saddle point searches trials and the index of target atom, respectively.
 `EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs.
 ```bash
 EXTRACTOR ${output} ${count}

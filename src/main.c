@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     Config *config = (Config *)malloc(sizeof(Config));
     errno = read_config(config, "./POSCAR");
     if (errno > 0) {
-        printf("ERROR in INIT_CONFIG FILE!\n");
+        printf("ERROR in POSCAR FILE!\n");
         free_input(input);
         free(config);
         MPI_Finalize();
@@ -71,32 +71,40 @@ int main(int argc, char *argv[])
         write_target(target_num, target_list);
     }
 
+    /* continue */
+    if (input->cont > 0) {
+        fp = fopen("./Statistics.log", "r");
+        if (fp == NULL) {
+            printf("Cannot find Statistics.log.");
+            free_input(input);
+            free_config(config);
+            free(target_list);
+            MPI_Finalize();
+            return 1;
+        } else {
+            fclose(fp);
+        }
+        fp = fopen("./Event.log", "r");
+        if (fp == NULL) {
+            printf("Cannot find Event.log");
+            free_input(input);
+            free_config(config);
+            free(target_list);
+            MPI_Finalize();
+            return 1;
+        } else {
+            fclose(fp);
+        }
+    }
+
     /* initial relax */
     if (input->init_relax > 0) {
         double energy;
         atom_relax(config, input, &energy, MPI_COMM_WORLD);
+        if (rank == 0) {
+            write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
+        }
     }
-
-    /* log */
-    if (rank == 0) {
-        fp = fopen("./Redundancy.log", "w");
-        fputs("-----------------\n", fp);
-        fputs(" Earlier   Later\n", fp);
-        fputs("-----------------\n", fp);
-        fclose(fp);
-        fp = fopen("./Statistics.log", "w");
-        fputs("------------------------------------------\n", fp);
-        fputs(" Unique events   Relevant events   Trials\n", fp);
-        fputs("------------------------------------------\n", fp);
-        fclose(fp);
-        fp = fopen("./Event.log", "w");
-        fputs("---------------------------------------------\n", fp);
-        fputs(" Reaction index   Barrier energy   Frequency\n", fp);
-        fputs("---------------------------------------------\n", fp);
-        fclose(fp);
-        write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
 
     int group_size = size / input->ncore;
     int group_rank = rank / input->ncore;
@@ -111,7 +119,6 @@ int main(int argc, char *argv[])
     if (rank >= group_size * input->ncore) {
         input->ncore = size - group_size * input->ncore;
     }
-
     /* one-sided communication */
     MPI_Win count_win;
     int global_count = 0;
@@ -150,19 +157,86 @@ int main(int argc, char *argv[])
 
     int zero = 0;
     int one = 1;
-    int mone = -1;
-    int local_count = -1;
-    int local_done = 0;
-    int local_conv = 0;
-    int local_unique = 0;
-    int local_write = 0;
-    int local_redundant = 0;
-    int local_exit = 0;
+    int local_count;
+    int local_done;
+    int local_conv;
+    int local_unique;
+    int local_write;
+    int local_redundant;
+    int local_exit;
     int local_reac_num = 0;
     int local_freq_num = 0;
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size);
     int *local_freq_list = (int *)malloc(sizeof(int) * list_size);
     double *local_acti_list = (double *)malloc(sizeof(double) * list_size);
+
+    /* log */
+    if (rank == 0) {
+        if (input->cont == 0) {
+            fp = fopen("./Redundancy.log", "w");
+            fputs("-----------------\n", fp);
+            fputs(" Earlier   Later\n", fp);
+            fputs("-----------------\n", fp);
+            fclose(fp);
+            fp = fopen("./Statistics.log", "w");
+            fputs("------------------------------------------\n", fp);
+            fputs(" Unique events   Relevant events   Trials\n", fp);
+            fputs("------------------------------------------\n", fp);
+            fclose(fp);
+        } else {
+            char tmp_line[1024], line[1024], *ptr;
+            fp = fopen("./Statistics.log", "r");
+            fgets(tmp_line, 1024, fp);
+            fgets(tmp_line, 1024, fp);
+            fgets(tmp_line, 1024, fp);
+            ptr = fgets(tmp_line, 1024, fp);
+            while (ptr != NULL) {
+                strcpy(line, tmp_line);
+                ptr = fgets(tmp_line, 1024, fp);
+            }
+            global_unique = atoi(strtok(line, " \n"));
+            global_conv = atoi(strtok(NULL, " \n"));
+            global_count = atoi(strtok(NULL, " \n"));
+            global_done = global_count;
+            fclose(fp);
+            fp = fopen("./Event.log", "r");
+            fgets(line, 1024, fp);
+            fgets(line, 1024, fp);
+            fgets(line, 1024, fp);
+            ptr = fgets(line, 1024, fp);
+            while (ptr != NULL) {
+                local_reac_list[local_reac_num] = atoi(strtok(line, " \n"));
+                local_acti_list[local_reac_num] = atof(strtok(NULL, " \n"));
+                int frequency = atoi(strtok(NULL, " \n"));
+                for (i = 0; i < frequency; ++i) {
+                    local_freq_list[local_freq_num] = local_reac_list[local_reac_num];
+                    local_freq_num++;
+                    if (local_freq_num >= list_size) {
+                        list_size = list_size << 1;
+                        local_freq_list = (int *)realloc(local_freq_list,
+                                                 sizeof(int) * list_size);
+                    }
+                }
+                local_reac_num++;
+                if (local_reac_num >= list_size) {
+                    list_size = list_size << 1;
+                    local_reac_list = (int *)realloc(local_reac_list,
+                                             sizeof(int) * list_size);
+                    local_acti_list = (double *)realloc(local_acti_list,
+                                                sizeof(double) * list_size);
+                }
+                ptr = fgets(line, 1024, fp);
+            }
+            fclose(fp);
+        }
+        fp = fopen("./Event.log", "w");
+        fputs("---------------------------------------------\n", fp);
+        fputs(" Reaction index   Barrier energy   Frequency\n", fp);
+        fputs("---------------------------------------------\n", fp);
+        fclose(fp);
+    }
+    MPI_Bcast(&global_done, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    input->max_search += global_done;
 
     /* dataset */
     Dataset *dataset = (Dataset *)malloc(sizeof(Dataset));
@@ -348,12 +422,7 @@ int main(int argc, char *argv[])
         free_config(saddle);
         free_config(final);
     }
-    /* overestimated local_count */
     if (local_rank == 0) {
-        MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, count_win);
-        MPI_Fetch_and_op(&mone, &local_count, MPI_INT,
-                         0, (MPI_Aint)0, MPI_SUM, count_win);
-        MPI_Win_unlock(0, count_win);
         int total_reac_num;
         int total_freq_num;
         MPI_Allreduce(&local_reac_num, &total_reac_num, 1, MPI_INT,
@@ -407,19 +476,15 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            char filename[128];
             fp = fopen("./Redundancy.log", "a");
-            fputs("-----------------\n", fp);
             fclose(fp);
             fp = fopen("./Statistics.log", "a");
-            fputs("------------------------------------------\n", fp);
             fclose(fp);
             fp = fopen("./Event.log", "a");
             for (i = 0; i < total_reac_num; ++i) {
                 fprintf(fp, " %14d   %14f   %9d\n",
                         global_reac_list[i], global_acti_list[i], freq_num[i] + 1);
             }
-            fputs("---------------------------------------------\n", fp);
             fclose(fp);
             free(freq_num);
         }

@@ -12,6 +12,7 @@ typedef struct _Input
     double trial_move;
     double confidence;
     int max_search;
+    int cont;
 
     int nelem;
     char **atom_type;

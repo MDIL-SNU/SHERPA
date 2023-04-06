@@ -8,6 +8,7 @@ MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 CONFIDENCE  = 0.9
 MAX_SEARCH  = 100
+CONTINUE    = 0
 
 # initial structure parameter #
 NELEMENT    = 2
