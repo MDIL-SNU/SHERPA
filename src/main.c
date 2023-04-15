@@ -97,15 +97,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* initial relax */
-    if (input->init_relax > 0) {
-        double energy;
-        atom_relax(config, input, &energy, MPI_COMM_WORLD);
-        if (rank == 0) {
-            write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
-        }
-    }
-
     int group_size = size / input->ncore;
     int group_rank = rank / input->ncore;
     int local_rank = rank % input->ncore;
@@ -169,6 +160,15 @@ int main(int argc, char *argv[])
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size);
     int *local_freq_list = (int *)malloc(sizeof(int) * list_size);
     double *local_acti_list = (double *)malloc(sizeof(double) * list_size);
+
+    /* initial relax */
+    if (input->init_relax > 0) {
+        double energy;
+        atom_relax(config, input, &energy, local_comm);
+        if (rank == 0) {
+            write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
+        }
+    }
 
     /* log */
     if (rank == 0) {
