@@ -56,9 +56,10 @@ int main(int argc, char *argv[])
 
     /* read target */
     int target_num = 0;
-    int list_size = 64;
-    int *target_list = (int *)malloc(sizeof(int) * list_size);
-    errno = read_target(config, &target_num, &target_list, &list_size);
+    int list_size1 = 64;
+    int list_size2 = 64;
+    int *target_list = (int *)malloc(sizeof(int) * list_size1);
+    errno = read_target(config, &target_num, &target_list, &list_size1);
     MPI_Bcast(target_list, target_num, MPI_INT, 0, MPI_COMM_WORLD);
     if (errno > 0) {
         printf("ERROR in TARGET FILE!\n");
@@ -157,9 +158,9 @@ int main(int argc, char *argv[])
     int local_exit;
     int local_reac_num = 0;
     int local_freq_num = 0;
-    int *local_reac_list = (int *)malloc(sizeof(int) * list_size);
-    int *local_freq_list = (int *)malloc(sizeof(int) * list_size);
-    double *local_acti_list = (double *)malloc(sizeof(double) * list_size);
+    int *local_reac_list = (int *)malloc(sizeof(int) * list_size1);
+    int *local_freq_list = (int *)malloc(sizeof(int) * list_size2);
+    double *local_acti_list = (double *)malloc(sizeof(double) * list_size1);
 
     /* initial relax */
     if (input->init_relax > 0) {
@@ -211,19 +212,19 @@ int main(int argc, char *argv[])
                 for (i = 0; i < frequency; ++i) {
                     local_freq_list[local_freq_num] = local_reac_list[local_reac_num];
                     local_freq_num++;
-                    if (local_freq_num >= list_size) {
-                        list_size = list_size << 1;
+                    if (local_freq_num >= list_size2) {
+                        list_size2 = list_size2 << 1;
                         local_freq_list = (int *)realloc(local_freq_list,
-                                                 sizeof(int) * list_size);
+                                                 sizeof(int) * list_size2);
                     }
                 }
                 local_reac_num++;
-                if (local_reac_num >= list_size) {
-                    list_size = list_size << 1;
+                if (local_reac_num >= list_size1) {
+                    list_size1 = list_size1 << 1;
                     local_reac_list = (int *)realloc(local_reac_list,
-                                             sizeof(int) * list_size);
+                                             sizeof(int) * list_size1);
                     local_acti_list = (double *)realloc(local_acti_list,
-                                                sizeof(double) * list_size);
+                                                sizeof(double) * list_size1);
                 }
                 ptr = fgets(line, 1024, fp);
             }
@@ -345,12 +346,12 @@ int main(int argc, char *argv[])
                                 local_reac_list[local_reac_num] = local_count;
                                 local_acti_list[local_reac_num] = Ea;
                                 local_reac_num++;
-                                if (local_reac_num >= list_size) {
-                                    list_size = list_size << 1;
+                                if (local_reac_num >= list_size1) {
+                                    list_size1 = list_size1 << 1;
                                     local_reac_list = (int *)realloc(local_reac_list,
-                                                             sizeof(int) * list_size);
+                                                             sizeof(int) * list_size1);
                                     local_acti_list = (double *)realloc(local_acti_list,
-                                                                sizeof(double) * list_size);
+                                                                sizeof(double) * list_size1);
                                 }
                                 MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
                                 MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
@@ -363,10 +364,10 @@ int main(int argc, char *argv[])
                                 MPI_Win_unlock(0, redundant_win);
                                 local_freq_list[local_freq_num] = unique;
                                 local_freq_num++;
-                                if (local_freq_num >= list_size) {
-                                    list_size = list_size << 1;
+                                if (local_freq_num >= list_size2) {
+                                    list_size2 = list_size2 << 1;
                                     local_freq_list = (int *)realloc(local_freq_list,
-                                                             sizeof(int) * list_size);
+                                                             sizeof(int) * list_size2);
                                 }
                                 fp = fopen("./Redundancy.log", "a");
                                 fprintf(fp, " %7d   %5d\n", unique, local_count);
@@ -476,10 +477,6 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            fp = fopen("./Redundancy.log", "a");
-            fclose(fp);
-            fp = fopen("./Statistics.log", "a");
-            fclose(fp);
             fp = fopen("./Event.log", "a");
             for (i = 0; i < total_reac_num; ++i) {
                 fprintf(fp, " %14d   %14f   %9d\n",

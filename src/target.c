@@ -23,7 +23,7 @@ int read_target(Config *config, int *target_num, int **target_list,
             continue;
         } else {
             int random = 0;
-            if (strchr(ptr, 'R') != NULL ) {
+            if (strstr(ptr, "R") != NULL) {
                 random = 1;
             }
             if (strncmp(ptr, "I", 1) == 0) {
