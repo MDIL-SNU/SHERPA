@@ -3,6 +3,7 @@
 #include "config.h"
 #include "linalg.h"
 #include "utils.h"
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -434,7 +435,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     int sps_step;
-    int max_index = index;
+    int all = 0;
     double curvature = 1.0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
@@ -454,9 +455,6 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
             /* force criteria */
             double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
-                force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
-                force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
-                force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
                 double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
                             + force0[i * 3 + 1] * force0[i * 3 + 1]
                             + force0[i * 3 + 2] * force0[i * 3 + 2];
@@ -466,8 +464,17 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                conv = 0;
-                break;
+                if (all > 0) {
+                    conv = 0;
+                    break;
+                } else {
+                    input->acti_cutoff = DBL_MAX;
+                    expand_active_volume(initial, config0, input,
+                                         &active_num, active_list, comm);
+                    rotate(config0, input, active_num, active_list, &curvature,
+                           eigenmode, energy0, force0, count, sps_step, comm);
+                    all = 1;
+                }
             }
         }
         /* translation */
@@ -478,7 +485,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         if ((sps_step > input->acti_nevery) &&
             ((sps_step - 1) % input->acti_nevery == 0)) {
             expand_active_volume(initial, config0, input,
-                                 &active_num, active_list, &max_index, comm);
+                                 &active_num, active_list, comm);
         }
     }
     clock_t end = clock();
@@ -519,8 +526,9 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* postprocess */
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
-                        count, index, active_num, active_list, comm);
+    conv = split_config(initial, saddle, final, input, Ea, &dE,
+                        curvature, eigenmode, active_num, active_list,
+                        count, index, comm);
     if (local_rank == 0) {
         char filename[128];
         /* modecar */

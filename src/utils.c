@@ -257,10 +257,9 @@ void get_sphere_list(Config *config, Input *input, double *center, double cutoff
 
 
 void expand_active_volume(Config *initial, Config *saddle, Input *input,
-                          int *active_num, int *active_list,
-                          int *max_index, MPI_Comm comm)
+                          int *active_num, int *active_list, MPI_Comm comm)
 {
-    int i, j, tmp_index;
+    int i, j, max_index;
     double del[3];
     double dmax = 0.0;
     /* maximally displaced atom */
@@ -273,20 +272,15 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                - initial->pos[active_list[i] * 3 + 2];
         if (norm(del, 1) > dmax) {
             dmax = norm(del, 1);
-            tmp_index = active_list[i];
+            max_index = active_list[i];
         }
-    }
-    if (tmp_index == (*max_index)) {
-        return;
-    } else {
-        *max_index = tmp_index;
     }
 
     /* generate lists */
     double center[3];
-    center[0] = saddle->pos[(*max_index) * 3 + 0];
-    center[1] = saddle->pos[(*max_index) * 3 + 1];
-    center[2] = saddle->pos[(*max_index) * 3 + 2];
+    center[0] = saddle->pos[max_index * 3 + 0];
+    center[1] = saddle->pos[max_index * 3 + 1];
+    center[2] = saddle->pos[max_index * 3 + 2];
     int tmp_num;
     int *tmp_list;
     get_sphere_list(saddle, input, center, input->acti_cutoff,
@@ -338,8 +332,8 @@ int diff_config(Config *config1, Config *config2, double tol)
 
 
 int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double *eigenmode, int count, int index,
-                int active_num, int *active_list, MPI_Comm comm)
+                double *Ea, double *dE, double eigenvalue, double *eigenmode,
+                int active_num, int *active_list, int count, int index, MPI_Comm comm)
 {
     int i, j, rank;
 
@@ -357,16 +351,19 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     *Ea = saddle_energy - initial_energy;
     free(force0);
 
+    /* step size */
+    double dr = -2 * input->f_tol / eigenvalue;
+
     /* forward image */
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, saddle);
     double energy1;
-    double *force1 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
+    double *force1 = (double *)malloc(sizeof(double) * config1->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < active_num; ++j) {
-            config1->pos[active_list[j] * 3 + 0] += 0.1 * eigenmode[j * 3 + 0];
-            config1->pos[active_list[j] * 3 + 1] += 0.1 * eigenmode[j * 3 + 1];
-            config1->pos[active_list[j] * 3 + 2] += 0.1 * eigenmode[j * 3 + 2];
+            config1->pos[active_list[j] * 3 + 0] += dr * eigenmode[j * 3 + 0];
+            config1->pos[active_list[j] * 3 + 1] += dr * eigenmode[j * 3 + 1];
+            config1->pos[active_list[j] * 3 + 2] += dr * eigenmode[j * 3 + 2];
         }
         oneshot(config1, input, &energy1, force1, comm);
         if (energy1 < energy0) {
@@ -381,12 +378,12 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     Config *config2 = (Config *)malloc(sizeof(Config));
     copy_config(config2, saddle);
     double energy2;
-    double *force2 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
+    double *force2 = (double *)malloc(sizeof(double) * config2->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < active_num; ++j) {
-            config2->pos[active_list[j] * 3 + 0] -= 0.1 * eigenmode[j * 3 + 0];
-            config2->pos[active_list[j] * 3 + 1] -= 0.1 * eigenmode[j * 3 + 1];
-            config2->pos[active_list[j] * 3 + 2] -= 0.1 * eigenmode[j * 3 + 2];
+            config2->pos[active_list[j] * 3 + 0] -= dr * eigenmode[j * 3 + 0];
+            config2->pos[active_list[j] * 3 + 1] -= dr * eigenmode[j * 3 + 1];
+            config2->pos[active_list[j] * 3 + 2] -= dr * eigenmode[j * 3 + 2];
         }
         oneshot(config2, input, &energy2, force2, comm);
         if (energy2 < energy0) {
@@ -397,15 +394,17 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     atom_relax(config2, input, &energy2, comm);
     int diff2 = diff_config(initial, config2, input->diff_tol);
 
-    /* log */
+    /* disconnected */
     if ((diff1 == 1) && (diff2 == 1)) {
         free_config(config1);
         free_config(config2);
         return 1;
+    /* not splited */
     } else if ((diff1  == 0) && (diff2 == 0)) {
         free_config(config1);
         free_config(config2);
         return 2;
+    /* connected */
     } else {
         if (diff1 == 0) {
             *dE = energy2 - initial_energy;

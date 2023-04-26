@@ -40,6 +40,28 @@ int main(int argc, char *argv[])
         write_input(input);
     }
 
+    /* continue check */
+    if (input->cont > 0) {
+        fp = fopen("./Statistics.log", "r");
+        if (fp == NULL) {
+            printf("Cannot find Statistics.log.");
+            free_input(input);
+            MPI_Finalize();
+            return 1;
+        } else {
+            fclose(fp);
+        }
+        fp = fopen("./Event.log", "r");
+        if (fp == NULL) {
+            printf("Cannot find Event.log");
+            free_input(input);
+            MPI_Finalize();
+            return 1;
+        } else {
+            fclose(fp);
+        }
+    }
+
     /* random number */
     srand(input->random_seed + rank);
 
@@ -70,32 +92,6 @@ int main(int argc, char *argv[])
     }
     if (rank == 0) {
         write_target(target_num, target_list);
-    }
-
-    /* continue */
-    if (input->cont > 0) {
-        fp = fopen("./Statistics.log", "r");
-        if (fp == NULL) {
-            printf("Cannot find Statistics.log.");
-            free_input(input);
-            free_config(config);
-            free(target_list);
-            MPI_Finalize();
-            return 1;
-        } else {
-            fclose(fp);
-        }
-        fp = fopen("./Event.log", "r");
-        if (fp == NULL) {
-            printf("Cannot find Event.log");
-            free_input(input);
-            free_config(config);
-            free(target_list);
-            MPI_Finalize();
-            return 1;
-        } else {
-            fclose(fp);
-        }
     }
 
     int group_size = size / input->ncore;
@@ -175,15 +171,20 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         if (input->cont == 0) {
             fp = fopen("./Redundancy.log", "w");
-            fputs("-----------------\n", fp);
-            fputs(" Earlier   Later\n", fp);
-            fputs("-----------------\n", fp);
+            fputs("---------------------\n", fp);
+            fputs(" Initial   Following\n", fp);
+            fputs("---------------------\n", fp);
             fclose(fp);
             fp = fopen("./Statistics.log", "w");
             fputs("------------------------------------------\n", fp);
             fputs(" Unique events   Relevant events   Trials\n", fp);
             fputs("------------------------------------------\n", fp);
             fclose(fp);
+            remove("SPS.log");
+            remove("SPS.XDATCAR");
+            remove("SPS.MODECAR");
+            remove("Final.POSCAR");
+            remove("Saddle.POSCAR");
         } else {
             char tmp_line[1024], line[1024], *ptr;
             fp = fopen("./Statistics.log", "r");

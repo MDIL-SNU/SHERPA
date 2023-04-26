@@ -3,6 +3,7 @@
 #include "config.h"
 #include "linalg.h"
 #include "utils.h"
+#include <float.h>
 #include <math.h>
 #include <mkl.h>
 #include <stdio.h>
@@ -328,12 +329,21 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         }
         if (eigenvalue < 0) {
             double *parallel_force0 = (double *)malloc(sizeof(double) * active_num * 3);
+            double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
                 parallel_force0[i * 3 + 0] = force0[i * 3 + 0] - perp_force0[i * 3 + 0];
                 parallel_force0[i * 3 + 1] = force0[i * 3 + 1] - perp_force0[i * 3 + 1];
                 parallel_force0[i * 3 + 2] = force0[i * 3 + 2] - perp_force0[i * 3 + 2];
+                double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
+                            + force0[i * 3 + 1] * force0[i * 3 + 1]
+                            + force0[i * 3 + 2] * force0[i * 3 + 2];
+                tmpf = sqrt(tmpf);
+                if (tmpf > fmax) {
+                    fmax = tmpf;
+                }
             }
-            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
+            if ((norm(perp_force0, active_num) < norm(parallel_force0, active_num))
+                || (fmax < input->f_tol)) {
                 free(parallel_force0);
                 break;
             }
@@ -546,7 +556,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     int sps_step;
-    int max_index = index;
+    int all = 0;
     double eigenvalue = 1.0;
     int negative = 0;
     int lanczos_step = 0;
@@ -570,9 +580,6 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
             /* force criteria */
             double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
-                force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
-                force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
-                force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
                 double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
                             + force0[i * 3 + 1] * force0[i * 3 + 1]
                             + force0[i * 3 + 2] * force0[i * 3 + 2];
@@ -582,10 +589,19 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                conv = 0;
-                break;
+                if (all > 0) {
+                    conv = 0;
+                    break;
+                } else {
+                    input->acti_cutoff = DBL_MAX;
+                    expand_active_volume(initial, config0, input,
+                                         &active_num, active_list, comm);
+                    lanczos(config0, input, active_num, active_list,
+                            &eigenvalue, eigenmode, &lanczos_step, force0, comm);
+                    all = 1;
+                }
             } else {
-                /* mixing */
+                /* mixing & hyper */
                 negative++;
             }
         } else {
@@ -604,7 +620,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         if ((sps_step > input->acti_nevery) &&
             ((sps_step - 1) % input->acti_nevery == 0)) {
             expand_active_volume(initial, config0, input,
-                                 &active_num, active_list, &max_index, comm);
+                                 &active_num, active_list, comm);
         }
     }
     clock_t end = clock();
@@ -642,8 +658,9 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
-                        count, index, active_num, active_list, comm);
+    conv = split_config(initial, saddle, final, input, Ea, &dE,
+                        eigenvalue, eigenmode, active_num, active_list,
+                        count, index, comm);
     if (local_rank == 0) {
         char filename[128];
         /* modecar */
