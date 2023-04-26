@@ -1,5 +1,5 @@
 # SHERPA
-SHERPA (Saddle points Hunting based on Energy surface for Reaction PAthways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as dimer method and activation-relaxation technique nouveau (ARTn). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
+**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as dimer method and activation-relaxation technique nouveau (ARTn). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 
 ## Requirement
 - Intel oneAPI >= 21.3
@@ -8,11 +8,11 @@ SHERPA (Saddle points Hunting based on Energy surface for Reaction PAthways) is 
 
 ## Build
 Three executables can be built.
-- SPS_LMP: saddle point searches script through LAMMPS C-API
-- SPS_VASP: saddle point searches script by reading/writing VASP
+- SHERPA_LMP: saddle point searches script through LAMMPS C-API
+- SHERPA_VASP: saddle point searches script by reading/writing VASP
 - EXTRACTOR: script for postprocessing of outputs (see `Outputs`)
 
-1. If `SPS_LMP` is needed, build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
+1. If `SHERPA_LMP` is needed, build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
 ```bash
 cd lammps
 mkdir build; cd build
@@ -30,12 +30,12 @@ If cmake fails to find LAMMPS package automatically, please check environment va
 
 3. Build targets through **one of following commands**.
 ```bash
-# all (SPS_LMP, SPS_VASP, and EXTRACTOR)
+# all (SHERPA_LMP, SHERPA_VASP, and EXTRACTOR)
 cmake --build .
-# only SPS_LMP
-cmake --build . --target SPS_LMP
-# only SPS_VASP
-cmake --build . --target SPS_VASP 
+# only SHERPA_LMP
+cmake --build . --target SHERPA_LMP
+# only SHERPA_VASP
+cmake --build . --target SHERPA_VASP
 # only EXTRACTOR
 cmake --build . --target EXTRACTOR
 ```
@@ -45,10 +45,10 @@ Before running scripts, *INPUT*, *POSCAR*, and *TARGET* should be prepared.
 *POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 To run scripts, use the following commands:
 ```bash
-# run SPS_LMP
-mpirun -np ${numproc} SPS_LMP
-# run SPS_VASP
-SPS_VASP
+# run SHERPA_LMP
+mpirun -np ${numproc} SHERPA_LMP
+# run SHERPA_VASP
+SHERPA_VASP
 ```
 , where `${numproc}` stands for the number of processors.
 
@@ -74,7 +74,7 @@ SPS_VASP
 * **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
 * **CONTINUE** [0/1, 0 (default)]
-  - *CONTINUE* determines whether or not to continue SPS from previous results. *Statistics.log* and *Event.log* should be prepared.
+  - *CONTINUE* determines whether or not to continue SHERPA from previous results. *Statistics.log* and *Event.log* should be prepared.
 ### Initial structure parameter
 * **NELEMENT** [integer]
   - *NELEMENT* is the number of elements
@@ -90,14 +90,14 @@ SPS_VASP
   - *DISP_STDDEV* sets the standard deviation of gaussian displacement vector (in Angst).
 * **INIT_MODE** [0/1, 0 (default)]
   - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*.
-### LAMMPS parameter (for SPS_LMP)
+### LAMMPS parameter (for SHERPA_LMP)
 * **PAIR_STYLE** [strings]
   - *PAIR_STYLE* stands for the pair style in LAMMPS input.
 * **PAIR_COEFF** [strings]
   - *PAIR_COEFF* stands for the pair coeff in LAMMPS input.
 * **NCORE** [integer]
   - *NCORE* sets the number of cores for each LAMMPS instance.
-### VASP parameter (for SPS_VASP)
+### VASP parameter (for SHERPA_VASP)
 * **VASP_CMD** [strings]
   - *VASP_CMD* is the command to run VASP.
 ### Dimer parameter
@@ -168,22 +168,22 @@ EXTRACTOR ${output} ${count}
 Not all saddle points are written in all output files. The rules of the outputs are summarized below table.
 ||Unconverged|Not splited|Disconnected|Connected|
 |:---|:---:|:---:|:---:|:---:|
-|SPS.log|O|O|O|O|
-|SPS.XDATCAR|O|O|O|O|
-|SPS.MODECAR|X|O|O|O|
+|SHERPA.log|O|O|O|O|
+|SHERPA.XDATCAR|O|O|O|O|
+|SHERPA.MODECAR|X|O|O|O|
 |Saddle.POSCAR|X|O|O|O|
 |Final.POSCAR|X|X|X|O|
 
 
-### SPS.log
-*SPS.log* contains information of saddle point searches such as steps, potential energy, and curvature.
-*SPS.log* also provides the type of the saddle point, barrier energy, reaction energy, and elapsed time.
+### SHERPA.log
+*SHERPA.log* contains information of saddle point searches such as steps, potential energy, and curvature.
+*SHERPA.log* also provides the type of the saddle point, barrier energy, reaction energy, and elapsed time.
 
-### SPS.XDATCAR
-*SPS.XDATCAR* is the trajectory of configuration during saddle point searches.
+### SHERPA.XDATCAR
+*SHERPA.XDATCAR* is the trajectory of configuration during saddle point searches.
 
-### SPS.MODECAR
-*SPS.MODECAR* is the eigenvector at the saddle point.
+### SHERPA.MODECAR
+*SHERPA.MODECAR* is the eigenvector at the saddle point.
 
 ### Saddle.POSCAR
 *Saddle.POSCAR* is the configuration of the saddle point.
@@ -193,7 +193,7 @@ Not all saddle points are written in all output files. The rules of the outputs 
 
 
 ## Miscellaneous
-1. INCAR, KPOINTS, and POTCAR should be prepared in the current directory for `SPS_VASP`.
+1. INCAR, KPOINTS, and POTCAR should be prepared in the current directory for `SHERPA_VASP`.
 2. To use hybrid potentials for LAMMPS, append `pair_coeff`s with the delimiter (|) among them.
 For example,
 ```text
