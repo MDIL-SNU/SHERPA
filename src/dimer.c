@@ -468,8 +468,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                     conv = 0;
                     break;
                 } else {
-                    input->acti_cutoff = DBL_MAX;
-                    expand_active_volume(initial, config0, input,
+                    expand_active_volume(initial, config0, input, DBL_MAX,
                                          &active_num, active_list, comm);
                     rotate(config0, input, active_num, active_list, &curvature,
                            eigenmode, energy0, force0, count, sps_step, comm);
@@ -484,7 +483,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         /* change active volume */
         if ((sps_step > input->acti_nevery) &&
             ((sps_step - 1) % input->acti_nevery == 0)) {
-            expand_active_volume(initial, config0, input,
+            expand_active_volume(initial, config0, input, input->acti_cutoff,
                                  &active_num, active_list, comm);
         }
     }

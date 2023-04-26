@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
                                                              sizeof(int) * list_size2);
                                 }
                                 fp = fopen("./Redundancy.log", "a");
-                                fprintf(fp, " %7d   %5d\n", unique, local_count);
+                                fprintf(fp, " %7d   %9d\n", unique, local_count);
                                 fclose(fp);
                             }
                             /* Final */
