@@ -17,10 +17,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm);
 void get_sphere_list(Config *config, Input *input, double *center, double cutoff,
                      int *atom_num, int **atom_list, MPI_Comm comm);
 void expand_active_volume(Config *initial, Config *saddle, Input *input,
-                          int *active_num, int *active_list,
-                          int *max_index, MPI_Comm comm);
+                          int *active_num, int *active_list, MPI_Comm comm);
 int diff_config(Config *config1, Config *config2, double tol);
 int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double *eigenmode, int count, int index,
-                int active_num, int *active_list, MPI_Comm comm);
+                double *Ea, double *dE, double eigenvalue, double *eigenmode,
+                int active_num, int *active_list, int count, int index, MPI_Comm comm);
 #endif

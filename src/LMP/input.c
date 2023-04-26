@@ -161,7 +161,7 @@ int read_input(Input *input, char *filename)
     }
     errno = input_double(&(input->confidence), "CONFIDENCE", filename);
     if (errno) {
-        input->confidence = 0.9;
+        input->confidence = 0.99;
     }
     errno = input_int(&(input->max_search), "MAX_SEARCH", filename);
     if (errno) {

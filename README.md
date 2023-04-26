@@ -1,5 +1,5 @@
-# Saddle point search
-The scripts for saddle point searches combined with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
+# SHERPA
+SHERPA (Saddle points Hunting based on Energy surface for Reaction PAthways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as dimer method and activation-relaxation technique nouveau (ARTn). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 
 ## Requirement
 - Intel oneAPI >= 21.3
@@ -26,22 +26,23 @@ cd Saddle_point_search
 mkdir build; cd build
 cmake ../src
 ```
+If cmake fails to find LAMMPS package automatically, please check environment variables of system or specify the path of LAMMPS in `src/LMP/CMakeLists.txt` manually.
 
 3. Build targets through **one of following commands**.
 ```bash
 # all (SPS_LMP, SPS_VASP, and EXTRACTOR)
 cmake --build .
-# SPS_LMP
+# only SPS_LMP
 cmake --build . --target SPS_LMP
-# SPS_VASP
+# only SPS_VASP
 cmake --build . --target SPS_VASP 
-# EXTRACTOR
+# only EXTRACTOR
 cmake --build . --target EXTRACTOR
 ```
 
 ## Usage
 Before running scripts, *INPUT*, *POSCAR*, and *TARGET* should be prepared.
-*POSCAR* is an initial structure file written in VASP5 format.
+*POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 To run scripts, use the following commands:
 ```bash
 # run SPS_LMP
@@ -68,7 +69,7 @@ SPS_VASP
   - *MAX_MOVE* sets the maximum step size of image movement (in Angst).
 * **TRIAL_MOVE** [real, 0.01 (default)]
   - *TRIAL_MOVE* sets the trial step size of image for cg optimization (in Angst).
-* **CONFIDENCE** [real, 0.9 (default)]
+* **CONFIDENCE** [real, 0.99 (default)]
   - *CONFIDENCE* sets termination condition through confidence level (Ref. [1](https://doi.org/10.1063/1.2976010)).
 * **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
@@ -88,7 +89,7 @@ SPS_VASP
 * **DISP_STDDEV** [real, 0.1 (default)]
   - *DISP_STDDEV* sets the standard deviation of gaussian displacement vector (in Angst).
 * **INIT_MODE** [0/1, 0 (default)]
-  - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *SPS.MODECAR*.
+  - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*.
 ### LAMMPS parameter (for SPS_LMP)
 * **PAIR_STYLE** [strings]
   - *PAIR_STYLE* stands for the pair style in LAMMPS input.
@@ -128,8 +129,15 @@ SPS_VASP
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
 ## TARGET
-The TARGET file lists either the target atom indices or types that serve as the center of the active volume, with each condition being added sequentially.
-If `R` is appended after a single character, the indices of target atoms are randomly shuffled.
+The TARGET file lists the conditions for the center of the active volume. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition.
+
+* I: index (starting from 0)
+* T: type (starting from 1)
+* A: all
+* +R: random shuffle
+
+If the characters contain `R`, the indices of atoms are randomly shuffled.
+For example,
 ```text
 # indices of 0th, 1st, 2nd, and 3rd atoms
 I 0 1 2 3
@@ -139,18 +147,25 @@ TR 1
 A
 ```
 
-* I: index (starting from 0)
-* T: type (starting from 1)
-* A: all
-* +R: random shuffle
-
-
-## Outputs (will be updated)
-### Redundancy.log
-### Statistics.log
+## Outputs
 ### Event.log
+*Event.log* contains `{count}`, barrier energy and frequency of unique reactions.
+
+### Statistics.log
+*Statistics.log* shows a current progress of reaction finding. The number of unique reaction, relevant (=connected) reaction, and trials are written.
+
+### Redundancy.log
+*Redundancy.log* tells the which reactions are duplicated.
 
 
+The below outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of reaction finding trials and the index of target atom, respectively.
+`EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs.
+```bash
+EXTRACTOR ${output} ${count}
+```
+, where `${output}` indicates one of output files.
+
+Not all saddle points are written in all output files. The rules of the outputs are summarized below table.
 ||Unconverged|Not splited|Disconnected|Connected|
 |:---|:---:|:---:|:---:|:---:|
 |SPS.log|O|O|O|O|
@@ -158,13 +173,6 @@ A
 |SPS.MODECAR|X|O|O|O|
 |Saddle.POSCAR|X|O|O|O|
 |Final.POSCAR|X|X|X|O|
-
-The below outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of saddle point searches trials and the index of target atom, respectively.
-`EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs.
-```bash
-EXTRACTOR ${output} ${count}
-```
-, where `${output}` indicates one of output files.
 
 
 ### SPS.log
