@@ -344,6 +344,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             }
             if ((norm(perp_force0, active_num) < norm(parallel_force0, active_num))
                 || (fmax < input->f_tol)) {
+//            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
                 free(parallel_force0);
                 break;
             }
@@ -593,8 +594,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                     conv = 0;
                     break;
                 } else {
-                    input->acti_cutoff = DBL_MAX;
-                    expand_active_volume(initial, config0, input,
+                    expand_active_volume(initial, config0, input, DBL_MAX,
                                          &active_num, active_list, comm);
                     lanczos(config0, input, active_num, active_list,
                             &eigenvalue, eigenmode, &lanczos_step, force0, comm);
@@ -619,7 +619,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         /* change active volume */
         if ((sps_step > input->acti_nevery) &&
             ((sps_step - 1) % input->acti_nevery == 0)) {
-            expand_active_volume(initial, config0, input,
+            expand_active_volume(initial, config0, input, input->acti_cutoff,
                                  &active_num, active_list, comm);
         }
     }

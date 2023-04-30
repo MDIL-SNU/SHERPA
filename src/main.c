@@ -180,9 +180,9 @@ int main(int argc, char *argv[])
             fputs(" Unique events   Relevant events   Trials\n", fp);
             fputs("------------------------------------------\n", fp);
             fclose(fp);
-            remove("SPS.log");
-            remove("SPS.XDATCAR");
-            remove("SPS.MODECAR");
+            remove("SHERPA.log");
+            remove("SHERPA.XDATCAR");
+            remove("SHERPA.MODECAR");
             remove("Final.POSCAR");
             remove("Saddle.POSCAR");
         } else {
@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
                                                              sizeof(int) * list_size2);
                                 }
                                 fp = fopen("./Redundancy.log", "a");
-                                fprintf(fp, " %7d   %5d\n", unique, local_count);
+                                fprintf(fp, " %7d   %9d\n", unique, local_count);
                                 fclose(fp);
                             }
                             /* Final */
@@ -381,16 +381,16 @@ int main(int argc, char *argv[])
                         write_config(saddle, "./Saddle.POSCAR", header, "a");
                         /* MODECAR */
                         sprintf(filename, "./%d.MODECAR", local_count);
-                        concat_files("./SPS.MODECAR", filename);
+                        concat_files("./SHERPA.MODECAR", filename);
                         remove(filename);
                     }
                     /* XDATCAR */
                     sprintf(filename, "./%d.XDATCAR", local_count);
-                    concat_files("./SPS.XDATCAR", filename);
+                    concat_files("./SHERPA.XDATCAR", filename);
                     remove(filename);
                     /* log */
                     sprintf(filename, "./%d.log", local_count);
-                    concat_files("./SPS.log", filename);
+                    concat_files("./SHERPA.log", filename);
                     remove(filename);
                     /* update statistics */
                     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, done_win);

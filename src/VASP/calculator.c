@@ -31,7 +31,7 @@ static void write_incar(Input *input, char *filename, int ibrion)
 {
     FILE *wp = fopen(filename, "w");
     char line[1024];
-    fputs("# Overwritten by SPS #\n", wp);
+    fputs("# Written by SHERPA #\n", wp);
     fputs("ISTART    =    1\n", wp);
     fputs("ICHARG    =    1\n", wp);
     fputs("LWAVE     =    TRUE\n", wp);
