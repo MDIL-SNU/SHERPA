@@ -22,7 +22,7 @@ int get_atom_num(char *symbol)
     "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At",
     "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U"};
     for (i = 0; i < 92; ++i) {
-        if (strncmp(symbol, name[i], strlen(symbol)) == 0) {
+        if (strcmp(symbol, name[i]) == 0) {
             return i + 1;
         }
     }

@@ -528,7 +528,7 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
-        full_eigenmode = get_eigenmode(input, config0->tot_num, comm);
+        full_eigenmode = get_random_vector(input, config0->tot_num, comm);
     }
     double *eigenmode = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
@@ -554,12 +554,12 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     get_sphere_list(config0, input, center, input->init_cutoff,
                     &tmp_num, &tmp_list, comm);
     if (input->init_disp > 0) {
-        double *tmp_init_disp = (double *)calloc(active_num * 3, sizeof(double));
+        double *tmp_init_disp = get_random_vector(input, tmp_num, comm);
         for (i = 0; i < tmp_num; ++i) {
-            if (config0->fix[tmp_list[i]] == 0) {
-                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
-                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
-                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+            if (config0->fix[tmp_list[i]] > 0) {
+                tmp_init_disp[i * 3 + 0] = 0.0;
+                tmp_init_disp[i * 3 + 1] = 0.0;
+                tmp_init_disp[i * 3 + 2] = 0.0;
             }
         }
         double *init_disp = normalize(tmp_init_disp, tmp_num);
