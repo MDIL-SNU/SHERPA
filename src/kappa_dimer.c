@@ -514,56 +514,29 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
-    /* starting configuration */
+    /* active region */
     Config *config0 = (Config *)malloc(sizeof(Config));
     copy_config(config0, initial);
-    /* generate lists */
-    int tmp_num;
-    int *tmp_list;
-    double center[3] = {config0->pos[index * 3 + 0],
-                        config0->pos[index * 3 + 1],
-                        config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, input->acti_cutoff,
-                    &tmp_num, &tmp_list, comm);
     int active_num = 0;
-    int *active_list = (int *)malloc(sizeof(int) * tmp_num);
-    for (i = 0; i < tmp_num; ++i) {
-        if (config0->fix[tmp_list[i]] == 0) {
-            active_list[active_num] = tmp_list[i];
+    int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
+    for (i = 0; i < config0->tot_num; ++i) {
+        if (config0->fix[i] == 0) {
+            active_list[active_num] = i;
             active_num++;
         }
     }
-    free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, config0->tot_num, comm);
     }
-    double *eigenmode = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *eigenmode = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
         eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
         eigenmode[i * 3 + 2] = full_eigenmode[active_list[i] * 3 + 2];
     }
-    memset(full_eigenmode, 0, sizeof(double) * saddle->tot_num * 3);
-
-    /* initial perturbation */
-    if (input->init_disp > 0) {
-        get_sphere_list(config0, input, center, input->disp_cutoff,
-                        &tmp_num, &tmp_list, comm);
-        for (i = 0; i < active_num; ++i) {
-            for (j = 0; j < tmp_num; ++j) {
-                if (active_list[i] == tmp_list[j]) {
-                    config0->pos[tmp_list[j] * 3 + 0] += eigenmode[i * 3 + 0];
-                    config0->pos[tmp_list[j] * 3 + 1] += eigenmode[i * 3 + 1];
-                    config0->pos[tmp_list[j] * 3 + 2] += eigenmode[i * 3 + 2];
-                    break;
-                }
-            }
-        }
-        free(tmp_list);
-    }
-    /* normalize */
+    memset(full_eigenmode, 0, sizeof(double) * config0->tot_num * 3);
     double *tmp_eigenmode = normalize(eigenmode, active_num);
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
@@ -571,6 +544,36 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
         eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
     }
     free(tmp_eigenmode);
+
+    /* initial */
+    int tmp_num;
+    int *tmp_list;
+    double center[3] = {config0->pos[index * 3 + 0],
+                        config0->pos[index * 3 + 1],
+                        config0->pos[index * 3 + 2]};
+    get_sphere_list(config0, input, center, input->init_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    if (input->init_disp > 0) {
+        double *tmp_init_disp = (double *)calloc(active_num * 3, sizeof(double));
+        for (i = 0; i < tmp_num; ++i) {
+            if (config0->fix[tmp_list[i]] == 0) {
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+            }
+        }
+        double *init_disp = normalize(tmp_init_disp, tmp_num);
+        free(tmp_init_disp);
+        for (i = 0; i < tmp_num; ++i) {
+            config0->pos[tmp_list[i] * 3 + 0] += input->disp_move
+                                               * init_disp[i * 3 + 0];
+            config0->pos[tmp_list[i] * 3 + 1] += input->disp_move
+                                               * init_disp[i * 3 + 1];
+            config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
+                                               * init_disp[i * 3 + 2];
+        }
+    }
+    free(tmp_list);
 
     /* cg optimization */
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
@@ -592,7 +595,6 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     int sps_step;
-    int all = 0;
     double curvature = 1.0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
@@ -621,16 +623,8 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                if (all > 0) {
-                    conv = 0;
-                    break;
-                } else {
-                    expand_active_volume(initial, config0, input, DBL_MAX,
-                                         &active_num, active_list, comm);
-                    rotate(config0, input, active_num, active_list, &curvature,
-                           eigenmode, energy0, force0, count, sps_step, comm);
-                    all = 1;
-                }
+                conv = 0;
+                break;
             }
         }
         /* kappa */
@@ -646,13 +640,6 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
         /* translation */
         translate(config0, input, active_num, active_list, eigenmode, force0,
                   direction_old, cg_direction, count, index, sps_step, kappa, comm);
-
-        /* change active volume */
-        if ((sps_step > input->acti_nevery) &&
-            ((sps_step - 1) % input->acti_nevery == 0)) {
-            expand_active_volume(initial, config0, input, input->acti_cutoff,
-                                 &active_num, active_list, comm);
-        }
     }
     clock_t end = clock();
     double time = (double)(end - start) / CLOCKS_PER_SEC;

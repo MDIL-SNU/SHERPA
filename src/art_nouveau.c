@@ -491,6 +491,13 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         eigenmode[i * 3 + 2] = full_eigenmode[active_list[i] * 3 + 2];
     }
     memset(full_eigenmode, 0, sizeof(double) * config0->tot_num * 3);
+    double *tmp_eigenmode = normalize(eigenmode, active_num);
+    for (i = 0; i < active_num; ++i) {
+        eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
+        eigenmode[i * 3 + 1] = tmp_eigenmode[i * 3 + 1];
+        eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
+    }
+    free(tmp_eigenmode);
 
     /* initial */
     int tmp_num;
@@ -498,7 +505,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double center[3] = {config0->pos[index * 3 + 0],
                         config0->pos[index * 3 + 1],
                         config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, input->disp_cutoff,
+    get_sphere_list(config0, input, center, input->init_cutoff,
                     &tmp_num, &tmp_list, comm);
     double *init_direction = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
@@ -520,7 +527,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     if (input->init_disp > 0) {
         double *tmp_init_disp = (double *)calloc(active_num * 3, sizeof(double));
         for (i = 0; i < tmp_num; ++i) {
-            if (config0->fix[tmp_list[i]] > 0) {
+            if (config0->fix[tmp_list[i]] == 0) {
                 tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
                 tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
                 tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
@@ -538,15 +545,6 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         }
     }
     free(tmp_list);
-
-    /* normalize */
-    double *tmp_eigenmode = normalize(eigenmode, active_num);
-    for (i = 0; i < active_num; ++i) {
-        eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
-        eigenmode[i * 3 + 1] = tmp_eigenmode[i * 3 + 1];
-        eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
-    }
-    free(tmp_eigenmode);
 
     if (local_rank == 0) {
         sprintf(filename, "./%d.log", count);

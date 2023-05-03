@@ -4,8 +4,6 @@
 typedef struct _Input
 {
     double finite_diff;
-    double acti_cutoff;
-    int acti_nevery;
     double f_tol;
     double diff_tol;
     double max_move;
@@ -17,8 +15,8 @@ typedef struct _Input
     int nelem;
     char **atom_type;
     int init_relax;
+    double init_cutoff;
     int init_disp;
-    double disp_cutoff;
     double disp_move;
     int init_mode;
 

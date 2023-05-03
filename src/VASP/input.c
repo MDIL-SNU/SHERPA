@@ -135,14 +135,6 @@ int read_input(Input *input, char *filename)
     if (errno) {
         input->finite_diff = 0.01;
     }
-    errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
-    if (errno) {
-        input->acti_cutoff = 6.0;
-    }
-    errno = input_int(&(input->acti_nevery), "ACTI_NEVERY", filename);
-    if (errno) {
-        input->acti_nevery = 3;
-    }
     errno = input_double(&(input->f_tol), "F_TOL", filename);
     if (errno) {
         input->f_tol = 0.01;
@@ -185,13 +177,13 @@ int read_input(Input *input, char *filename)
     if (errno) {
         input->init_relax = 1;
     }
+    errno = input_double(&(input->init_cutoff), "INIT_CUTOFF", filename);
+    if (errno) {
+        input->init_cutoff = 5.0;
+    }
     errno = input_int(&(input->init_disp), "INIT_DISP", filename);
     if (errno) {
         input->init_disp = 0;
-    }
-    errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
-    if (errno) {
-        input->disp_cutoff = 3.0;
     }
     errno = input_double(&(input->disp_move), "DISP_MOVE", filename);
     if (errno) {
@@ -236,7 +228,7 @@ int read_input(Input *input, char *filename)
     }
     errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
     if (errno) {
-        input->max_num_rlx = 4;
+        input->max_num_rlx = 1;
     }
     errno = input_int(&(input->delay_step), "DELAY_STEP", filename);
     if (errno) {
@@ -271,8 +263,6 @@ void write_input(Input *input)
 
     fputs("# general parameter #\n", fp);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
-    fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
-    fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
@@ -290,8 +280,8 @@ void write_input(Input *input)
     }
     fputs("\n", fp);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
+    fprintf(fp, "INIT_CUTOFF\t= %f\n", input->init_cutoff);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
-    fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_MOVE\t= %f\n", input->disp_move);
     fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
     fputs("\n", fp);
