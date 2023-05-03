@@ -167,10 +167,10 @@ void get_cg_direction(double *direction, double *direction_old,
 
 
 /* not normalized */
-double *get_eigenmode(Input *input, int n, MPI_Comm comm)
+double *get_random_vector(Input *input, int n, MPI_Comm comm)
 {
     int i, rank;
-    double *eigenmode = (double *)malloc(sizeof(double) * n * 3);
+    double *vector = (double *)malloc(sizeof(double) * n * 3);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
@@ -183,9 +183,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
         end++;
     }
     for (i = begin; i < end; ++i) {
-        eigenmode[i * 3 + 0] = normal_random(0, input->disp_stddev);
-        eigenmode[i * 3 + 1] = normal_random(0, input->disp_stddev);
-        eigenmode[i * 3 + 2] = normal_random(0, input->disp_stddev);
+        vector[i * 3 + 0] = normal_random(0, 1);
+        vector[i * 3 + 1] = normal_random(0, 1);
+        vector[i * 3 + 2] = normal_random(0, 1);
     }
     int count = (end - begin) * 3;
     int *counts = (int *)malloc(sizeof(int) * input->ncore);
@@ -198,10 +198,10 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
         }
     }
     MPI_Allgatherv(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-                   eigenmode, counts, disp, MPI_DOUBLE, comm); 
+                   vector, counts, disp, MPI_DOUBLE, comm);
     free(disp);
     free(counts);
-    return eigenmode;
+    return vector;
 }
 
 

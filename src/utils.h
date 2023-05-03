@@ -13,7 +13,7 @@ double *get_rot_force(Input *input, double *force1, double *force2,
                       double *eigenmode, int n);
 void get_cg_direction(double *direction, double *direction_old,
                       double *cg_direction, int n);
-double *get_eigenmode(Input *input, int n, MPI_Comm comm);
+double *get_random_vector(Input *input, int n, MPI_Comm comm);
 void get_sphere_list(Config *config, Input *input, double *center,
                      double cutoff, int *atom_num, int **atom_list,
                      MPI_Comm comm);

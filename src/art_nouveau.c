@@ -247,7 +247,8 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
 static void perp_relax(Config *initial, Config *config0, Input *input,
                        int active_num, int *active_list, double eigenvalue,
                        double *push_direction, int count, int index,
-                       int sps_step, int lanczos_step, int negative, MPI_Comm comm)
+                       int sps_step, int lanczos_step, int *relax_step,
+                       int negative, MPI_Comm comm)
 {
     int i, rank;
     char filename[128];
@@ -279,33 +280,14 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(active_num * 3, sizeof(double));
 
-    int relax_step;
     int end_step = eigenvalue < 0 ? 500 : input->max_num_rlx;
-    for (relax_step = 0; relax_step < end_step; ++relax_step) {
+    for ((*relax_step) = 0; (*relax_step) < end_step; ++(*relax_step)) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-        /* trajectory */
-        if (local_rank == 0) {
-            sprintf(filename, "./%d.log", count);
-            FILE *fp = fopen(filename, "a");
-            if (sps_step > input->delay_step) {
-                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
-                        sps_step, relax_step, lanczos_step, energy0, eigenvalue);
-            } else {
-                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
-                        sps_step, relax_step, lanczos_step, energy0);
-            }
-            fclose(fp);
-            char header[128];
-            sprintf(header, "%d_%d %d", count, index, sps_step);
-            sprintf(filename, "./%d.XDATCAR", count);
-            write_config(config0, filename, header, "a");
-        }
-    
         double *perp_force0;
         if (negative > input->hyper_step) {
             perp_force0 = perpendicular_vector(force0, push_direction, active_num);
@@ -329,22 +311,12 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         }
         if (eigenvalue < 0) {
             double *parallel_force0 = (double *)malloc(sizeof(double) * active_num * 3);
-            double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
                 parallel_force0[i * 3 + 0] = force0[i * 3 + 0] - perp_force0[i * 3 + 0];
                 parallel_force0[i * 3 + 1] = force0[i * 3 + 1] - perp_force0[i * 3 + 1];
                 parallel_force0[i * 3 + 2] = force0[i * 3 + 2] - perp_force0[i * 3 + 2];
-                double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
-                            + force0[i * 3 + 1] * force0[i * 3 + 1]
-                            + force0[i * 3 + 2] * force0[i * 3 + 2];
-                tmpf = sqrt(tmpf);
-                if (tmpf > fmax) {
-                    fmax = tmpf;
-                }
             }
-            if ((norm(perp_force0, active_num) < norm(parallel_force0, active_num))
-                || (fmax < input->f_tol)) {
-//            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
+            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
                 free(parallel_force0);
                 break;
             }
@@ -446,6 +418,24 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             break;
         }
 
+        /* trajectory */
+        if (local_rank == 0) {
+            sprintf(filename, "./%d.log", count);
+            FILE *fp = fopen(filename, "a");
+            if (sps_step > input->delay_step) {
+                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
+                        sps_step, *relax_step, lanczos_step, energy0, eigenvalue);
+            } else {
+                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
+                        sps_step, *relax_step, lanczos_step, energy0);
+            }
+            fclose(fp);
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, sps_step);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "a");
+        }
+
         for (i = 0; i < active_num; ++i) {
             config0->pos[active_list[i] * 3 + 0] += step[i * 3 + 0];
             config0->pos[active_list[i] * 3 + 1] += step[i * 3 + 1];
@@ -478,56 +468,29 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
-    /* starting configuration */
+    /* active region */
     Config *config0 = (Config *)malloc(sizeof(Config));
     copy_config(config0, initial);
-    /* generate lists */
-    int tmp_num;
-    int *tmp_list;
-    double center[3] = {config0->pos[index * 3 + 0],
-                        config0->pos[index * 3 + 1],
-                        config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, input->acti_cutoff,
-                    &tmp_num, &tmp_list, comm);
     int active_num = 0;
     int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
-    for (i = 0; i < tmp_num; ++i) {
-        if (config0->fix[tmp_list[i]] == 0) {
-            active_list[active_num] = tmp_list[i];
+    for (i = 0; i < config0->tot_num; ++i) {
+        if (config0->fix[i] == 0) {
+            active_list[active_num] = i;
             active_num++;
         }
     }
-    free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
-        full_eigenmode = get_eigenmode(input, config0->tot_num, comm);
+        full_eigenmode = get_random_vector(input, config0->tot_num, comm);
     }
-    double *eigenmode = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *eigenmode = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
         eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
         eigenmode[i * 3 + 2] = full_eigenmode[active_list[i] * 3 + 2];
     }
     memset(full_eigenmode, 0, sizeof(double) * config0->tot_num * 3);
-
-    /* initial perturbation */
-    if (input->init_disp > 0) {
-        get_sphere_list(config0, input, center, input->disp_cutoff,
-                        &tmp_num, &tmp_list, comm);
-        for (i = 0; i < active_num; ++i) {
-            for (j = 0; j < tmp_num; ++j) {
-                if (active_list[i] == tmp_list[j]) {
-                    config0->pos[tmp_list[j] * 3 + 0] += eigenmode[i * 3 + 0];
-                    config0->pos[tmp_list[j] * 3 + 1] += eigenmode[i * 3 + 1];
-                    config0->pos[tmp_list[j] * 3 + 2] += eigenmode[i * 3 + 2];
-                    break;
-                }
-            }
-        }
-        free(tmp_list);
-    }
-    /* normalize */
     double *tmp_eigenmode = normalize(eigenmode, active_num);
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = tmp_eigenmode[i * 3 + 0];
@@ -535,12 +498,53 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
     }
     free(tmp_eigenmode);
-    double *init_direction = (double *)calloc(config0->tot_num * 3, sizeof(double));
+
+    /* initial */
+    int tmp_num;
+    int *tmp_list;
+    double center[3] = {config0->pos[index * 3 + 0],
+                        config0->pos[index * 3 + 1],
+                        config0->pos[index * 3 + 2]};
+    get_sphere_list(config0, input, center, input->init_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    double *init_direction = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
-        init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
-        init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
-        init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+        for (j = 0; j < tmp_num; ++j) {
+            if (active_list[i] == tmp_list[j]) {
+                init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
+                init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
+                init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+            }
+        }
     }
+    double *tmp_init_direction = normalize(init_direction, active_num);
+    for (i = 0; i < active_num; ++i) {
+        init_direction[i * 3 + 0] = tmp_init_direction[i * 3 + 0];
+        init_direction[i * 3 + 1] = tmp_init_direction[i * 3 + 1];
+        init_direction[i * 3 + 2] = tmp_init_direction[i * 3 + 2];
+    }
+    free(tmp_init_direction);
+    if (input->init_disp > 0) {
+        double *tmp_init_disp = get_random_vector(input, tmp_num, comm);
+        for (i = 0; i < tmp_num; ++i) {
+            if (config0->fix[tmp_list[i]] > 0) {
+                tmp_init_disp[i * 3 + 0] = 0.0;
+                tmp_init_disp[i * 3 + 1] = 0.0;
+                tmp_init_disp[i * 3 + 2] = 0.0;
+            }
+        }
+        double *init_disp = normalize(tmp_init_disp, tmp_num);
+        free(tmp_init_disp);
+        for (i = 0; i < tmp_num; ++i) {
+            config0->pos[tmp_list[i] * 3 + 0] += input->disp_move
+                                               * init_disp[i * 3 + 0];
+            config0->pos[tmp_list[i] * 3 + 1] += input->disp_move
+                                               * init_disp[i * 3 + 1];
+            config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
+                                               * init_disp[i * 3 + 2];
+        }
+    }
+    free(tmp_list);
 
     if (local_rank == 0) {
         sprintf(filename, "./%d.log", count);
@@ -550,19 +554,15 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         fputs(" Push step   Relax step   Lanczos step   Potential energy   Eigenvalue\n", fp);
         fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
-        char header[128];
-        sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "./%d.XDATCAR", count);
-        write_config(config0, filename, header, "w");
     }
 
     int sps_step;
-    int all = 0;
     double eigenvalue = 1.0;
     int negative = 0;
     int lanczos_step = 0;
+    int relax_step = 0;
     double energy0;
-    double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *force0 = (double *)calloc(active_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     clock_t start = clock();
     for (sps_step = 1; sps_step <= 500; ++sps_step) {
@@ -571,6 +571,23 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
+        }
+        /* trajectory */
+        if (local_rank == 0) {
+            sprintf(filename, "./%d.log", count);
+            FILE *fp = fopen(filename, "a");
+            if (lanczos_step > 0) {
+                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
+                        sps_step - 1, relax_step, lanczos_step, energy0, eigenvalue);
+            } else {
+                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
+                        sps_step - 1, relax_step, lanczos_step, energy0);
+            }
+            fclose(fp);
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, sps_step - 1);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "a");
         }
         /* lanczos */
         if (sps_step > input->delay_step) {
@@ -590,20 +607,11 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                if (all > 0) {
-                    conv = 0;
-                    break;
-                } else {
-                    expand_active_volume(initial, config0, input, DBL_MAX,
-                                         &active_num, active_list, comm);
-                    lanczos(config0, input, active_num, active_list,
-                            &eigenvalue, eigenmode, &lanczos_step, force0, comm);
-                    all = 1;
-                }
-            } else {
-                /* mixing & hyper */
-                negative++;
+                conv = 0;
+                break;
             }
+            /* mixing & hyper */
+            negative++;
         } else {
             negative = 0;
         }
@@ -613,15 +621,9 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                     &push_direction, init_direction, force0, negative, comm);
         /* normal relax */
         perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
-                   push_direction, count, index, sps_step, lanczos_step, negative, comm);
+                   push_direction, count, index, sps_step, lanczos_step,
+                   &relax_step, negative, comm);
         free(push_direction);
-
-        /* change active volume */
-        if ((sps_step > input->acti_nevery) &&
-            ((sps_step - 1) % input->acti_nevery == 0)) {
-            expand_active_volume(initial, config0, input, input->acti_cutoff,
-                                 &active_num, active_list, comm);
-        }
     }
     clock_t end = clock();
     double time = (double)(end - start) / CLOCKS_PER_SEC;

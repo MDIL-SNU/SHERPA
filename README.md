@@ -22,7 +22,7 @@ cmake --build . --target install
 
 2. Make `build` directory and configure with `CMakeLists.txt` in `src` directory.
 ```bash
-cd Saddle_point_search
+cd SHERPA
 mkdir build; cd build
 cmake ../src
 ```
@@ -30,13 +30,13 @@ If cmake fails to find LAMMPS package automatically, please check environment va
 
 3. Build targets through **one of following commands**.
 ```bash
-# all (SHERPA_LMP, SHERPA_VASP, and EXTRACTOR)
+# All (SHERPA_LMP, SHERPA_VASP, and EXTRACTOR)
 cmake --build .
-# only SHERPA_LMP
+# Only SHERPA_LMP
 cmake --build . --target SHERPA_LMP
-# only SHERPA_VASP
+# Only SHERPA_VASP
 cmake --build . --target SHERPA_VASP
-# only EXTRACTOR
+# Only EXTRACTOR
 cmake --build . --target EXTRACTOR
 ```
 
@@ -45,9 +45,9 @@ Before running scripts, *INPUT*, *POSCAR*, and *TARGET* should be prepared.
 *POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 To run scripts, use the following commands:
 ```bash
-# run SHERPA_LMP
+# SHERPA_LMP
 mpirun -np ${numproc} SHERPA_LMP
-# run SHERPA_VASP
+# SHERPA_VASP
 SHERPA_VASP
 ```
 , where `${numproc}` stands for the number of processors.
@@ -57,10 +57,6 @@ SHERPA_VASP
 ### General parameter
 * **FINITE_DIFF** [real, 0.01 (default)]
   - *FINITE_DIFF* sets the displacement in finite difference method (in Angst).
-* **ACTI_CUTOFF** [real, 6.0 (default)]
-  - *ACTI_CUTOFF* sets the cutoff radius of active volume (in Angst).
-* **ACTI_NEVERY** [integer, 3 (default)]
-  - *ACTI_NEVERY* sets the interval step to check the active volume.
 * **F_TOL** [real, 0.01 (default)]
   - *F_TOL* sets the force tolerance for saddle point searches and relaxation (in eV/Angst).
 * **DIFF_TOL** [real, 0.4 (default)]
@@ -82,12 +78,12 @@ SHERPA_VASP
   - *ATOM_TYPE* is the symbols of elements
 * **INIT_RELAX** [0/1, 1 (default)]
   - *INIT_RELAX* determines whether or not to relax *INIT_CONFIG* before saddle point searches.
+* **INIT_CUTOFF** [real, 5.0 (default)]
+  - *INIT_CUTOFF* sets the cutoff radius, where initial displacement and push vector (for ARTn) are defined (in Angst).
 * **INIT_DISP** [0/1, 0 (default)]
   - *INIT_DISP* determines whether or not to displace structure before saddle point searches.
-* **DISP_CUTOFF** [real, 3.0 (default)]
-  - *DISP_CUTOFF* sets the cutoff radius of displaced region (in Angst).
-* **DISP_STDDEV** [real, 0.1 (default)]
-  - *DISP_STDDEV* sets the standard deviation of gaussian displacement vector (in Angst).
+* **DISP_MOVE** [real, 0.0 (default)]
+  - *DISP_MOVE* sets the magnitude of the initial displacement vector (in Angst).
 * **INIT_MODE** [0/1, 0 (default)]
   - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*.
 ### LAMMPS parameter (for SHERPA_LMP)
@@ -116,7 +112,7 @@ SHERPA_VASP
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
 * **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
-* **MAX_NUM_RLX** [integer, 4 (default)]
+* **MAX_NUM_RLX** [integer, 1 (default)]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
 * **DELAY_STEP** [integer, 0 (default)]
   - *DELAY_STEP* sets the number of initial steps without Lanczos method.
@@ -129,7 +125,7 @@ SHERPA_VASP
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
 ## TARGET
-The TARGET file lists the conditions for the center of the active volume. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition.
+The TARGET file lists the conditions for the center of the sphere whose radius is *INIT_CUTOFF*. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition.
 
 * I: index (starting from 0)
 * T: type (starting from 1)
