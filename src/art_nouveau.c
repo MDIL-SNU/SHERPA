@@ -329,22 +329,12 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         }
         if (eigenvalue < 0) {
             double *parallel_force0 = (double *)malloc(sizeof(double) * active_num * 3);
-            double fmax = 0.0;
             for (i = 0; i < active_num; ++i) {
                 parallel_force0[i * 3 + 0] = force0[i * 3 + 0] - perp_force0[i * 3 + 0];
                 parallel_force0[i * 3 + 1] = force0[i * 3 + 1] - perp_force0[i * 3 + 1];
                 parallel_force0[i * 3 + 2] = force0[i * 3 + 2] - perp_force0[i * 3 + 2];
-                double tmpf = force0[i * 3 + 0] * force0[i * 3 + 0]
-                            + force0[i * 3 + 1] * force0[i * 3 + 1]
-                            + force0[i * 3 + 2] * force0[i * 3 + 2];
-                tmpf = sqrt(tmpf);
-                if (tmpf > fmax) {
-                    fmax = tmpf;
-                }
             }
-            if ((norm(perp_force0, active_num) < norm(parallel_force0, active_num))
-                || (fmax < input->f_tol)) {
-//            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
+            if (norm(perp_force0, active_num) < norm(parallel_force0, active_num)) {
                 free(parallel_force0);
                 break;
             }
@@ -487,23 +477,20 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double center[3] = {config0->pos[index * 3 + 0],
                         config0->pos[index * 3 + 1],
                         config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, DBL_MAX,
-                    &tmp_num, &tmp_list, comm);
     int active_num = 0;
     int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
-    for (i = 0; i < tmp_num; ++i) {
-        if (config0->fix[tmp_list[i]] == 0) {
-            active_list[active_num] = tmp_list[i];
+    for (i = 0; i < config0->tot_num; ++i) {
+        if (config0->fix[i] == 0) {
+            active_list[active_num] = i;
             active_num++;
         }
     }
-    free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
         full_eigenmode = get_eigenmode(input, config0->tot_num, comm);
     }
-    double *eigenmode = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *eigenmode = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
         eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
@@ -513,7 +500,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
 
     get_sphere_list(config0, input, center, input->disp_cutoff,
                     &tmp_num, &tmp_list, comm);
-    double *init_direction = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *init_direction = (double *)calloc(active_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         for (j = 0; j < tmp_num; ++j) {
             if (active_list[i] == tmp_list[j]) {
@@ -574,7 +561,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     int negative = 0;
     int lanczos_step = 0;
     double energy0;
-    double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    double *force0 = (double *)calloc(active_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     clock_t start = clock();
     for (sps_step = 1; sps_step <= 500; ++sps_step) {
