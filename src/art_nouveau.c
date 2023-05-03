@@ -487,7 +487,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double center[3] = {config0->pos[index * 3 + 0],
                         config0->pos[index * 3 + 1],
                         config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, input->acti_cutoff,
+    get_sphere_list(config0, input, center, DBL_MAX,
                     &tmp_num, &tmp_list, comm);
     int active_num = 0;
     int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
@@ -511,10 +511,28 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     }
     memset(full_eigenmode, 0, sizeof(double) * config0->tot_num * 3);
 
+    get_sphere_list(config0, input, center, input->disp_cutoff,
+                    &tmp_num, &tmp_list, comm);
+    double *init_direction = (double *)calloc(config0->tot_num * 3, sizeof(double));
+    for (i = 0; i < active_num; ++i) {
+        for (j = 0; j < tmp_num; ++j) {
+            if (active_list[i] == tmp_list[j]) {
+                init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
+                init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
+                init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
+            }
+        }
+    }
+    double *tmp_init_direction = normalize(init_direction, active_num);
+    for (i = 0; i < active_num; ++i) {
+        init_direction[i * 3 + 0] = tmp_init_direction[i * 3 + 0];
+        init_direction[i * 3 + 1] = tmp_init_direction[i * 3 + 1];
+        init_direction[i * 3 + 2] = tmp_init_direction[i * 3 + 2];
+    }
+    free(tmp_init_direction);
+
     /* initial perturbation */
     if (input->init_disp > 0) {
-        get_sphere_list(config0, input, center, input->disp_cutoff,
-                        &tmp_num, &tmp_list, comm);
         for (i = 0; i < active_num; ++i) {
             for (j = 0; j < tmp_num; ++j) {
                 if (active_list[i] == tmp_list[j]) {
@@ -525,8 +543,9 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
         }
-        free(tmp_list);
     }
+    free(tmp_list);
+
     /* normalize */
     double *tmp_eigenmode = normalize(eigenmode, active_num);
     for (i = 0; i < active_num; ++i) {
@@ -535,12 +554,6 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         eigenmode[i * 3 + 2] = tmp_eigenmode[i * 3 + 2];
     }
     free(tmp_eigenmode);
-    double *init_direction = (double *)calloc(config0->tot_num * 3, sizeof(double));
-    for (i = 0; i < active_num; ++i) {
-        init_direction[i * 3 + 0] = eigenmode[i * 3 + 0];
-        init_direction[i * 3 + 1] = eigenmode[i * 3 + 1];
-        init_direction[i * 3 + 2] = eigenmode[i * 3 + 2];
-    }
 
     if (local_rank == 0) {
         sprintf(filename, "./%d.log", count);
@@ -557,7 +570,6 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     }
 
     int sps_step;
-    int all = 0;
     double eigenvalue = 1.0;
     int negative = 0;
     int lanczos_step = 0;
@@ -590,20 +602,11 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                if (all > 0) {
-                    conv = 0;
-                    break;
-                } else {
-                    expand_active_volume(initial, config0, input, DBL_MAX,
-                                         &active_num, active_list, comm);
-                    lanczos(config0, input, active_num, active_list,
-                            &eigenvalue, eigenmode, &lanczos_step, force0, comm);
-                    all = 1;
-                }
-            } else {
-                /* mixing & hyper */
-                negative++;
+                conv = 0;
+                break;
             }
+            /* mixing & hyper */
+            negative++;
         } else {
             negative = 0;
         }
@@ -615,13 +618,6 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
                    push_direction, count, index, sps_step, lanczos_step, negative, comm);
         free(push_direction);
-
-        /* change active volume */
-        if ((sps_step > input->acti_nevery) &&
-            ((sps_step - 1) % input->acti_nevery == 0)) {
-            expand_active_volume(initial, config0, input, input->acti_cutoff,
-                                 &active_num, active_list, comm);
-        }
     }
     clock_t end = clock();
     double time = (double)(end - start) / CLOCKS_PER_SEC;
