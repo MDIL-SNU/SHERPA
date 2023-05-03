@@ -247,7 +247,8 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
 static void perp_relax(Config *initial, Config *config0, Input *input,
                        int active_num, int *active_list, double eigenvalue,
                        double *push_direction, int count, int index,
-                       int sps_step, int lanczos_step, int negative, MPI_Comm comm)
+                       int sps_step, int lanczos_step, int *relax_step,
+                       int negative, MPI_Comm comm)
 {
     int i, rank;
     char filename[128];
@@ -279,33 +280,14 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(active_num * 3, sizeof(double));
 
-    int relax_step;
     int end_step = eigenvalue < 0 ? 500 : input->max_num_rlx;
-    for (relax_step = 0; relax_step < end_step; ++relax_step) {
+    for ((*relax_step) = 0; (*relax_step) < end_step; ++(*relax_step)) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-        /* trajectory */
-        if (local_rank == 0) {
-            sprintf(filename, "./%d.log", count);
-            FILE *fp = fopen(filename, "a");
-            if (sps_step > input->delay_step) {
-                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
-                        sps_step, relax_step, lanczos_step, energy0, eigenvalue);
-            } else {
-                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
-                        sps_step, relax_step, lanczos_step, energy0);
-            }
-            fclose(fp);
-            char header[128];
-            sprintf(header, "%d_%d %d", count, index, sps_step);
-            sprintf(filename, "./%d.XDATCAR", count);
-            write_config(config0, filename, header, "a");
-        }
-    
         double *perp_force0;
         if (negative > input->hyper_step) {
             perp_force0 = perpendicular_vector(force0, push_direction, active_num);
@@ -436,6 +418,24 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             break;
         }
 
+        /* trajectory */
+        if (local_rank == 0) {
+            sprintf(filename, "./%d.log", count);
+            FILE *fp = fopen(filename, "a");
+            if (sps_step > input->delay_step) {
+                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
+                        sps_step, *relax_step, lanczos_step, energy0, eigenvalue);
+            } else {
+                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
+                        sps_step, *relax_step, lanczos_step, energy0);
+            }
+            fclose(fp);
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, sps_step);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "a");
+        }
+
         for (i = 0; i < active_num; ++i) {
             config0->pos[active_list[i] * 3 + 0] += step[i * 3 + 0];
             config0->pos[active_list[i] * 3 + 1] += step[i * 3 + 1];
@@ -554,16 +554,13 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         fputs(" Push step   Relax step   Lanczos step   Potential energy   Eigenvalue\n", fp);
         fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
-        char header[128];
-        sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "./%d.XDATCAR", count);
-        write_config(config0, filename, header, "w");
     }
 
     int sps_step;
     double eigenvalue = 1.0;
     int negative = 0;
     int lanczos_step = 0;
+    int relax_step = 0;
     double energy0;
     double *force0 = (double *)calloc(active_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
@@ -574,6 +571,23 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
+        }
+        /* trajectory */
+        if (local_rank == 0) {
+            sprintf(filename, "./%d.log", count);
+            FILE *fp = fopen(filename, "a");
+            if (lanczos_step > 0) {
+                fprintf(fp, " %9d   %10d   %12d   %16f   %10f\n",
+                        sps_step - 1, relax_step, lanczos_step, energy0, eigenvalue);
+            } else {
+                fprintf(fp, " %9d   %10d   %12d   %16f   ----------\n",
+                        sps_step - 1, relax_step, lanczos_step, energy0);
+            }
+            fclose(fp);
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, sps_step);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "a");
         }
         /* lanczos */
         if (sps_step > input->delay_step) {
@@ -607,7 +621,8 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                     &push_direction, init_direction, force0, negative, comm);
         /* normal relax */
         perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
-                   push_direction, count, index, sps_step, lanczos_step, negative, comm);
+                   push_direction, count, index, sps_step, lanczos_step,
+                   &relax_step, negative, comm);
         free(push_direction);
     }
     clock_t end = clock();
