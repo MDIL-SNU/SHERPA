@@ -183,9 +183,9 @@ double *get_eigenmode(Input *input, int n, MPI_Comm comm)
         end++;
     }
     for (i = begin; i < end; ++i) {
-        eigenmode[i * 3 + 0] = normal_random(0, input->disp_stddev);
-        eigenmode[i * 3 + 1] = normal_random(0, input->disp_stddev);
-        eigenmode[i * 3 + 2] = normal_random(0, input->disp_stddev);
+        eigenmode[i * 3 + 0] = normal_random(0, 1);
+        eigenmode[i * 3 + 1] = normal_random(0, 1);
+        eigenmode[i * 3 + 2] = normal_random(0, 1);
     }
     int count = (end - begin) * 3;
     int *counts = (int *)malloc(sizeof(int) * input->ncore);

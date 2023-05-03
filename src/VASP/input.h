@@ -19,7 +19,7 @@ typedef struct _Input
     int init_relax;
     int init_disp;
     double disp_cutoff;
-    double disp_stddev;
+    double disp_move;
     int init_mode;
 
     int ncore;

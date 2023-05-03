@@ -468,15 +468,9 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
-    /* starting configuration */
+    /* active region */
     Config *config0 = (Config *)malloc(sizeof(Config));
     copy_config(config0, initial);
-    /* generate lists */
-    int tmp_num;
-    int *tmp_list;
-    double center[3] = {config0->pos[index * 3 + 0],
-                        config0->pos[index * 3 + 1],
-                        config0->pos[index * 3 + 2]};
     int active_num = 0;
     int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
     for (i = 0; i < config0->tot_num; ++i) {
@@ -498,6 +492,12 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     }
     memset(full_eigenmode, 0, sizeof(double) * config0->tot_num * 3);
 
+    /* initial */
+    int tmp_num;
+    int *tmp_list;
+    double center[3] = {config0->pos[index * 3 + 0],
+                        config0->pos[index * 3 + 1],
+                        config0->pos[index * 3 + 2]};
     get_sphere_list(config0, input, center, input->disp_cutoff,
                     &tmp_num, &tmp_list, comm);
     double *init_direction = (double *)calloc(active_num * 3, sizeof(double));
@@ -517,18 +517,24 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         init_direction[i * 3 + 2] = tmp_init_direction[i * 3 + 2];
     }
     free(tmp_init_direction);
-
-    /* initial perturbation */
     if (input->init_disp > 0) {
-        for (i = 0; i < active_num; ++i) {
-            for (j = 0; j < tmp_num; ++j) {
-                if (active_list[i] == tmp_list[j]) {
-                    config0->pos[tmp_list[j] * 3 + 0] += eigenmode[i * 3 + 0];
-                    config0->pos[tmp_list[j] * 3 + 1] += eigenmode[i * 3 + 1];
-                    config0->pos[tmp_list[j] * 3 + 2] += eigenmode[i * 3 + 2];
-                    break;
-                }
+        double *tmp_init_disp = (double *)calloc(active_num * 3, sizeof(double));
+        for (i = 0; i < tmp_num; ++i) {
+            if (config0->fix[tmp_list[i]] > 0) {
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
+                tmp_init_disp[i * 3 + 0] = normal_random(0, 1);
             }
+        }
+        double *init_disp = normalize(tmp_init_disp, tmp_num);
+        free(tmp_init_disp);
+        for (i = 0; i < tmp_num; ++i) {
+            config0->pos[tmp_list[i] * 3 + 0] += input->disp_move
+                                               * init_disp[i * 3 + 0];
+            config0->pos[tmp_list[i] * 3 + 1] += input->disp_move
+                                               * init_disp[i * 3 + 1];
+            config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
+                                               * init_disp[i * 3 + 2];
         }
     }
     free(tmp_list);

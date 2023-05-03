@@ -193,9 +193,9 @@ int read_input(Input *input, char *filename)
     if (errno) {
         input->disp_cutoff = 3.0;
     }
-    errno = input_double(&(input->disp_stddev), "DISP_STDDEV", filename);
+    errno = input_double(&(input->disp_move), "DISP_MOVE", filename);
     if (errno) {
-        input->disp_stddev = 0.1;
+        input->disp_move = 0.1;
     }
     errno = input_int(&(input->init_mode), "INIT_MODE", filename);
     if (errno) {
@@ -300,7 +300,7 @@ void write_input(Input *input)
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
-    fprintf(fp, "DISP_STDDEV\t= %f\n", input->disp_stddev);
+    fprintf(fp, "DISP_MOVE\t= %f\n", input->disp_move);
     fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
     fputs("\n", fp);
 
