@@ -660,9 +660,8 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE,
-                        eigenvalue, eigenmode, active_num, active_list,
-                        count, index, comm);
+    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
+                        active_num, active_list, count, index, comm);
     if (local_rank == 0) {
         char filename[128];
         /* modecar */

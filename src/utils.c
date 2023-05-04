@@ -334,7 +334,7 @@ int diff_config(Config *config1, Config *config2, double tol)
 
 
 int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double eigenvalue, double *eigenmode,
+                double *Ea, double *dE, double *eigenmode,
                 int active_num, int *active_list, int count, int index,
                 MPI_Comm comm)
 {
@@ -354,9 +354,6 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     *Ea = saddle_energy - initial_energy;
     free(force0);
 
-    /* step size */
-    double dr = -2 * input->f_tol / eigenvalue;
-
     /* forward image */
     Config *config1 = (Config *)malloc(sizeof(Config));
     copy_config(config1, saddle);
@@ -364,9 +361,12 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     double *force1 = (double *)malloc(sizeof(double) * config1->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < active_num; ++j) {
-            config1->pos[active_list[j] * 3 + 0] += dr * eigenmode[j * 3 + 0];
-            config1->pos[active_list[j] * 3 + 1] += dr * eigenmode[j * 3 + 1];
-            config1->pos[active_list[j] * 3 + 2] += dr * eigenmode[j * 3 + 2];
+            config1->pos[active_list[j] * 3 + 0] += input->max_move
+                                                  * eigenmode[j * 3 + 0];
+            config1->pos[active_list[j] * 3 + 1] += input->max_move
+                                                  * eigenmode[j * 3 + 1];
+            config1->pos[active_list[j] * 3 + 2] += input->max_move
+                                                  * eigenmode[j * 3 + 2];
         }
         oneshot(config1, input, &energy1, force1, comm);
         if (energy1 < energy0) {
@@ -384,9 +384,12 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
     double *force2 = (double *)malloc(sizeof(double) * config2->tot_num * 3);
     for (i = 0; i < 10; ++i) {
         for (j = 0; j < active_num; ++j) {
-            config2->pos[active_list[j] * 3 + 0] -= dr * eigenmode[j * 3 + 0];
-            config2->pos[active_list[j] * 3 + 1] -= dr * eigenmode[j * 3 + 1];
-            config2->pos[active_list[j] * 3 + 2] -= dr * eigenmode[j * 3 + 2];
+            config2->pos[active_list[j] * 3 + 0] -= input->max_move
+                                                  * eigenmode[j * 3 + 0];
+            config2->pos[active_list[j] * 3 + 1] -= input->max_move
+                                                  * eigenmode[j * 3 + 1];
+            config2->pos[active_list[j] * 3 + 2] -= input->max_move
+                                                  * eigenmode[j * 3 + 2];
         }
         oneshot(config2, input, &energy2, force2, comm);
         if (energy2 < energy0) {

@@ -511,9 +511,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* postprocess */
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE,
-                        curvature, eigenmode, active_num, active_list,
-                        count, index, comm);
+    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
+                        active_num, active_list, count, index, comm);
     if (local_rank == 0) {
         char filename[128];
         /* modecar */

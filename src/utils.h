@@ -22,7 +22,7 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                           MPI_Comm comm);
 int diff_config(Config *config1, Config *config2, double tol);
 int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double eigenvalue, double *eigenmode,
+                double *Ea, double *dE, double *eigenmode,
                 int active_num, int *active_list, int count, int index,
                 MPI_Comm comm);
 #endif
