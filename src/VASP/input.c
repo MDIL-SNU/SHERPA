@@ -131,6 +131,14 @@ int input_char_arr(char ***var, char *tag, int n, char *filename)
 int read_input(Input *input, char *filename)
 {
     int errno;
+    errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
+    if (errno) {
+        input->acti_cutoff = 5.0;
+    }
+    errno = input_int(&(input->acti_nevery), "ACTI_NEVERY", filename);
+    if (errno) {
+        input->acti_nevery = 3;
+    }
     errno = input_double(&(input->finite_diff), "FINITE_DIFF", filename);
     if (errno) {
         input->finite_diff = 0.01;
@@ -177,13 +185,13 @@ int read_input(Input *input, char *filename)
     if (errno) {
         input->init_relax = 1;
     }
-    errno = input_double(&(input->init_cutoff), "INIT_CUTOFF", filename);
-    if (errno) {
-        input->init_cutoff = 5.0;
-    }
     errno = input_int(&(input->init_disp), "INIT_DISP", filename);
     if (errno) {
         input->init_disp = 0;
+    }
+    errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
+    if (errno) {
+        input->disp_cutoff = 5.0;
     }
     errno = input_double(&(input->disp_move), "DISP_MOVE", filename);
     if (errno) {
@@ -262,6 +270,8 @@ void write_input(Input *input)
     FILE *fp = fopen("./INPUT_read", "w");
 
     fputs("# general parameter #\n", fp);
+    fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
+    fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
@@ -280,8 +290,8 @@ void write_input(Input *input)
     }
     fputs("\n", fp);
     fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
-    fprintf(fp, "INIT_CUTOFF\t= %f\n", input->init_cutoff);
     fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
+    fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_MOVE\t= %f\n", input->disp_move);
     fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
     fputs("\n", fp);

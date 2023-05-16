@@ -357,23 +357,31 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
 
-    /* active region */
+    int tmp_num;
+    int *tmp_list;
+    double center[3] = {initial->pos[index * 3 + 0],
+                        initial->pos[index * 3 + 1],
+                        initial->pos[index * 3 + 2]};
     Config *config0 = (Config *)malloc(sizeof(Config));
     copy_config(config0, initial);
+    /* active region */
+    get_sphere_list(config0, input, center, input->acti_cutoff,
+                    &tmp_num, &tmp_list, comm);
     int active_num = 0;
     int *active_list = (int *)malloc(sizeof(int) * config0->tot_num);
-    for (i = 0; i < config0->tot_num; ++i) {
-        if (config0->fix[i] == 0) {
-            active_list[active_num] = i;
+    for (i = 0; i < tmp_num; ++i) {
+        if (config0->fix[tmp_list[i]] == 0) {
+            active_list[active_num] = tmp_list[i];
             active_num++;
         }
     }
+    free(tmp_list);
 
     /* eigenmode */
     if (full_eigenmode == NULL) {
         full_eigenmode = get_random_vector(input, config0->tot_num, comm);
     }
-    double *eigenmode = (double *)calloc(active_num * 3, sizeof(double));
+    double *eigenmode = (double *)calloc(config0->tot_num * 3, sizeof(double));
     for (i = 0; i < active_num; ++i) {
         eigenmode[i * 3 + 0] = full_eigenmode[active_list[i] * 3 + 0];
         eigenmode[i * 3 + 1] = full_eigenmode[active_list[i] * 3 + 1];
@@ -389,12 +397,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     free(tmp_eigenmode);
 
     /* initial */
-    int tmp_num;
-    int *tmp_list;
-    double center[3] = {config0->pos[index * 3 + 0],
-                        config0->pos[index * 3 + 1],
-                        config0->pos[index * 3 + 2]};
-    get_sphere_list(config0, input, center, input->init_cutoff,
+    get_sphere_list(config0, input, center, input->disp_cutoff,
                     &tmp_num, &tmp_list, comm);
     if (input->init_disp > 0) {
         double *tmp_init_disp = get_random_vector(input, tmp_num, comm);
@@ -415,6 +418,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
             config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
                                                * init_disp[i * 3 + 2];
         }
+        free(init_disp);
     }
     free(tmp_list);
 
@@ -439,6 +443,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     int sps_step;
     double curvature = 1.0;
+    int all = 0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
@@ -466,12 +471,28 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                conv = 0;
+                if (all > 0) {
+                    conv = 0;
+                    break;
+                } else {
+                    expand_active_volume(initial, config0, input, DBL_MAX,
+                                         &active_num, active_list, comm);
+                    rotate(config0, input, active_num, active_list, &curvature,
+                           eigenmode, energy0, force0, count, sps_step, comm);
+                    all = 1;
+                }
             }
         }
         /* translation */
         translate(config0, input, active_num, active_list, eigenmode, force0,
                   direction_old, cg_direction, count, index, sps_step, comm);
+
+        /* change active volume */
+        if ((sps_step > input->acti_nevery) &&
+            ((sps_step - 1) % input->acti_nevery == 0)) {
+            expand_active_volume(initial, config0, input, input->acti_cutoff,
+                                 &active_num, active_list, comm);
+        }
     }
     clock_t end = clock();
     double time = (double)(end - start) / CLOCKS_PER_SEC;

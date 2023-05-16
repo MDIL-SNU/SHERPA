@@ -55,6 +55,10 @@ SHERPA_VASP
 
 ## INPUT
 ### General parameter
+* **ACTI_CUTOFF** [real, 5.0 (default)]
+  - *ACTI_CUTOFF* sets the cutoff radius of active volume (in Angst).
+* **ACTI_NEVERY** [integer, 3 (default)]
+  - *ACTI_NEVERY* sets the interval step to expand the active volume (in Angst).
 * **FINITE_DIFF** [real, 0.01 (default)]
   - *FINITE_DIFF* sets the displacement in finite difference method (in Angst).
 * **F_TOL** [real, 0.01 (default)]
@@ -78,10 +82,10 @@ SHERPA_VASP
   - *ATOM_TYPE* is the symbols of elements
 * **INIT_RELAX** [0/1, 1 (default)]
   - *INIT_RELAX* determines whether or not to relax *INIT_CONFIG* before saddle point searches.
-* **INIT_CUTOFF** [real, 5.0 (default)]
-  - *INIT_CUTOFF* sets the cutoff radius, where initial displacement and push vector (for ARTn) are defined (in Angst).
 * **INIT_DISP** [0/1, 0 (default)]
   - *INIT_DISP* determines whether or not to displace structure before saddle point searches.
+* **DISP_CUTOFF** [real, 5.0 (default)]
+  - *DISP_CUTOFF* sets the cutoff radius, where initial displacement is defined (in Angst).
 * **DISP_MOVE** [real, 0.0 (default)]
   - *DISP_MOVE* sets the magnitude of the initial displacement vector (in Angst).
 * **INIT_MODE** [0/1, 0 (default)]

@@ -1,4 +1,6 @@
 # general parameter #
+ACTI_CUTOFF = 5.0
+ACTI_NEVERY = 3
 FINITE_DIFF = 0.01
 F_TOL       = 0.01
 DIFF_TOL    = 0.4
@@ -12,9 +14,9 @@ CONTINUE    = 0
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
 INIT_RELAX  = 1
-INIT_CUTOFF = 4.0
 INIT_DISP   = 0
-DISP_MOVE   = 0.0
+DISP_CUTOFF = 5.0
+DISP_MOVE   = 0.2
 INIT_MODE   = 0
 
 # LAMMPS parameter (SHERPA_LMP) #
