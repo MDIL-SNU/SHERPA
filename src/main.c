@@ -75,11 +75,6 @@ int main(int argc, char *argv[])
         MPI_Finalize();
         return 1;
     }
-    /* write config */
-    if (rank == 0) {
-        write_config(config, "./POSCAR_read", "INIT_CONFIG", "w");
-    }
-
     /* read target */
     int target_num = 0;
     int list_size1 = 64;
@@ -167,6 +162,10 @@ int main(int argc, char *argv[])
     if (input->init_relax > 0) {
         double energy;
         atom_relax(config, input, &energy, local_comm);
+    }
+    /* write config */
+    if (rank == 0) {
+        write_config(config, "./Initial.POSCAR", "INIT_CONFIG", "w");
     }
 
     /* log */

@@ -598,7 +598,6 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     int sps_step;
     double curvature = 1.0;
-    int all = 0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
@@ -626,16 +625,8 @@ int kappa_dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                if (all > 0) {
-                    conv = 0;
-                    break;
-                } else {
-                    expand_active_volume(initial, config0, input, DBL_MAX,
-                                         &active_num, active_list, comm);
-                    rotate(config0, input, active_num, active_list, &curvature,
-                           eigenmode, energy0, force0, count, sps_step, comm);
-                    all = 1;
-                }
+                conv = 0;
+                break;
             }
         }
         /* kappa */

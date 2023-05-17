@@ -549,11 +549,16 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         fputs(" Push step   Relax step   Lanczos step   Potential energy   Eigenvalue\n", fp);
         fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
+        sprintf(filename, "./%d.XDATCAR", count);
+        fp = fopen(filename, "r");
+        if (fp) {
+            fclose(fp);
+            remove(filename);
+        }
     }
 
     int sps_step;
     double eigenvalue = 1.0;
-    int all = 0;
     int negative = 0;
     int lanczos_step = 0;
     int relax_step = 0;
@@ -603,16 +608,8 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                if (all > 0) {
-                    conv = 0;
-                    break;
-                } else {
-                    expand_active_volume(initial, config0, input, DBL_MAX,
-                                         &active_num, active_list, comm);
-                    lanczos(config0, input, active_num, active_list,
-                            &eigenvalue, eigenmode, &lanczos_step, force0, comm);
-                    all = 1;
-                }
+                conv = 0;
+                break;
             }
             /* mixing & hyper */
             negative++;
@@ -631,8 +628,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
 
         /* change active volume */
         if ((sps_step > input->acti_nevery) &&
-            ((sps_step - 1) % input->acti_nevery == 0) &&
-            (all == 0)) {
+            ((sps_step - 1) % input->acti_nevery == 0)) {
             expand_active_volume(initial, config0, input, input->acti_cutoff,
                                  &active_num, active_list, comm);
         }

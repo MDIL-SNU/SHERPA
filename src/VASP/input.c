@@ -133,7 +133,7 @@ int read_input(Input *input, char *filename)
     int errno;
     errno = input_double(&(input->acti_cutoff), "ACTI_CUTOFF", filename);
     if (errno) {
-        input->acti_cutoff = 5.0;
+        input->acti_cutoff = 6.0;
     }
     errno = input_int(&(input->acti_nevery), "ACTI_NEVERY", filename);
     if (errno) {
@@ -191,7 +191,7 @@ int read_input(Input *input, char *filename)
     }
     errno = input_double(&(input->disp_cutoff), "DISP_CUTOFF", filename);
     if (errno) {
-        input->disp_cutoff = 5.0;
+        input->disp_cutoff = 3.0;
     }
     errno = input_double(&(input->disp_move), "DISP_MOVE", filename);
     if (errno) {
