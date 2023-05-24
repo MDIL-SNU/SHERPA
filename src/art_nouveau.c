@@ -562,6 +562,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     int negative = 0;
     int lanczos_step = 0;
     int relax_step = 0;
+    int all = 0;
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
@@ -608,8 +609,16 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 }
             }
             if (fmax < input->f_tol) {
-                conv = 0;
-                break;
+                if (all == 0) {
+                    expand_active_volume(initial, config0, input, DBL_MAX,
+                                         &active_num, active_list, comm);
+                    lanczos(config0, input, active_num, active_list,
+                            &eigenvalue, eigenmode, &lanczos_step, force0, comm);
+                    all = 1;
+                } else {
+                    conv = 0;
+                    break;
+                }
             }
             /* mixing & hyper */
             negative++;
