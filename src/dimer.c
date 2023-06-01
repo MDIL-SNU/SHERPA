@@ -401,24 +401,28 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                     &tmp_num, &tmp_list, comm);
     if (input->init_disp > 0) {
         double *tmp_init_disp = get_random_vector(input, tmp_num, comm);
+        int num_fix = 0;
         for (i = 0; i < tmp_num; ++i) {
             if (config0->fix[tmp_list[i]] > 0) {
+                num_fix++;
                 tmp_init_disp[i * 3 + 0] = 0.0;
                 tmp_init_disp[i * 3 + 1] = 0.0;
                 tmp_init_disp[i * 3 + 2] = 0.0;
             }
         }
-        double *init_disp = normalize(tmp_init_disp, tmp_num);
-        free(tmp_init_disp);
-        for (i = 0; i < tmp_num; ++i) {
-            config0->pos[tmp_list[i] * 3 + 0] += input->disp_move
-                                               * init_disp[i * 3 + 0];
-            config0->pos[tmp_list[i] * 3 + 1] += input->disp_move
-                                               * init_disp[i * 3 + 1];
-            config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
-                                               * init_disp[i * 3 + 2];
+        if (num_fix < tmp_num) {
+            double *init_disp = normalize(tmp_init_disp, tmp_num);
+            free(tmp_init_disp);
+            for (i = 0; i < tmp_num; ++i) {
+                config0->pos[tmp_list[i] * 3 + 0] += input->disp_move
+                                                   * init_disp[i * 3 + 0];
+                config0->pos[tmp_list[i] * 3 + 1] += input->disp_move
+                                                   * init_disp[i * 3 + 1];
+                config0->pos[tmp_list[i] * 3 + 2] += input->disp_move
+                                                   * init_disp[i * 3 + 2];
+            }
+            free(init_disp);
         }
-        free(init_disp);
     }
     free(tmp_list);
 

@@ -41,8 +41,11 @@ int read_target(Config *config, int *target_num, int **target_list,
                 *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
                 strtok(tmp_line, " \n\t");
                 for (i = 0; i < tmp_target_num; ++i) {
-                    (*target_list)[*target_num] = atoi(strtok(NULL, " \n\t"));
-                    (*target_num)++;
+                    int index = atoi(strtok(NULL, " \n\t"));
+                    if (config->fix[index] == 0) {
+                        (*target_list)[*target_num] = index;
+                        (*target_num)++;
+                    }
                 }
             } else if (strncmp(ptr, "T", 1) == 0) {
                 strtok(line, " \n\t");
@@ -59,8 +62,10 @@ int read_target(Config *config, int *target_num, int **target_list,
                         }
                     }
                     for (i = begin; i < begin + config->each_num[type - 1]; ++i) {
-                        (*target_list)[*target_num] = i;
-                        (*target_num)++;
+                        if (config->fix[i] == 0) {
+                            (*target_list)[*target_num] = i;
+                            (*target_num)++;
+                        }
                     }
                     ptr = strtok(NULL, " \n\t");
                 }
@@ -70,8 +75,10 @@ int read_target(Config *config, int *target_num, int **target_list,
                 }
                 *target_list = (int *)realloc(*target_list, sizeof(int) * (*list_size));
                 for (i = 0; i < config->tot_num; ++i) {
-                    (*target_list)[*target_num] = i;
-                    (*target_num)++;
+                    if (config->fix[i] == 0) {
+                        (*target_list)[*target_num] = i;
+                        (*target_num)++;
+                    }
                 }
             } else {
                 fclose(fp);

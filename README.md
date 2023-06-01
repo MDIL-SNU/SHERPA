@@ -129,7 +129,7 @@ SHERPA_VASP
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
 ## TARGET
-The TARGET file lists the conditions for the center of the sphere whose radius is *INIT_CUTOFF*. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition.
+The TARGET file lists the conditions for the center atoms of the sphere. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition. Fixed atoms cannot be the center atoms.
 
 * I: index (starting from 0)
 * T: type (starting from 1)
