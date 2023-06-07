@@ -262,20 +262,6 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
     double *force1 = (double *)malloc(sizeof(double) * active_num * 3);
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
 
-    double *disp_vector = (double *)malloc(sizeof(double) * active_num * 3);
-    for (i = 0; i < active_num; ++i) {
-        disp_vector[i * 3 + 0] = config0->pos[active_list[i] * 3 + 0]
-                               - initial->pos[active_list[i] * 3 + 0];
-        disp_vector[i * 3 + 1] = config0->pos[active_list[i] * 3 + 1]
-                               - initial->pos[active_list[i] * 3 + 1];
-        disp_vector[i * 3 + 2] = config0->pos[active_list[i] * 3 + 2]
-                               - initial->pos[active_list[i] * 3 + 2];
-    }
-    double *perp_disp = perpendicular_vector(disp_vector, push_direction, active_num);
-    free(disp_vector);
-    double *disp_direction = normalize(perp_disp, active_num);
-    free(perp_disp);
-
     /* cg optimization */
     double *direction_old = (double *)calloc(active_num * 3, sizeof(double));
     double *cg_direction = (double *)calloc(active_num * 3, sizeof(double));
@@ -288,28 +274,39 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-        double *perp_force0;
-        if (negative > input->hyper_step) {
-            perp_force0 = perpendicular_vector(force0, push_direction, active_num);
-        } else {
-            double *push_parallel_force0 = parallel_vector(force0, push_direction, active_num);
-            double *disp_parallel_force0 = parallel_vector(force0, disp_direction, active_num);
-            perp_force0 = (double *)malloc(sizeof(double) * active_num * 3);
-            for (i = 0; i < active_num; ++i) {
-                perp_force0[i * 3 + 0] = force0[i * 3 + 0]
-                                       - push_parallel_force0[i * 3 + 0]
-                                       - disp_parallel_force0[i * 3 + 0];
-                perp_force0[i * 3 + 1] = force0[i * 3 + 1]
-                                       - push_parallel_force0[i * 3 + 1]
-                                       - disp_parallel_force0[i * 3 + 1];
-                perp_force0[i * 3 + 2] = force0[i * 3 + 2]
-                                       - push_parallel_force0[i * 3 + 2]
-                                       - disp_parallel_force0[i * 3 + 2];
-            }
-            free(push_parallel_force0);
-            free(disp_parallel_force0);
-        }
+        double *perp_force0 = perpendicular_vector(force0, push_direction, active_num);
         if (eigenvalue < 0) {
+            if (negative <= input->hyper_step) {
+                double *disp_vector = (double *)malloc(sizeof(double) * active_num * 3);
+                for (i = 0; i < active_num; ++i) {
+                    disp_vector[i * 3 + 0] = config0->pos[active_list[i] * 3 + 0]
+                                           - initial->pos[active_list[i] * 3 + 0];
+                    disp_vector[i * 3 + 1] = config0->pos[active_list[i] * 3 + 1]
+                                           - initial->pos[active_list[i] * 3 + 1];
+                    disp_vector[i * 3 + 2] = config0->pos[active_list[i] * 3 + 2]
+                                           - initial->pos[active_list[i] * 3 + 2];
+                }
+                double *perp_disp = perpendicular_vector(disp_vector, push_direction, active_num);
+                free(disp_vector);
+                double *disp_direction = normalize(perp_disp, active_num);
+                free(perp_disp);
+                double *push_parallel_force0 = parallel_vector(force0, push_direction, active_num);
+                double *disp_parallel_force0 = parallel_vector(force0, disp_direction, active_num);
+                free(disp_direction);
+                for (i = 0; i < active_num; ++i) {
+                    perp_force0[i * 3 + 0] = force0[i * 3 + 0]
+                                           - push_parallel_force0[i * 3 + 0]
+                                           - disp_parallel_force0[i * 3 + 0];
+                    perp_force0[i * 3 + 1] = force0[i * 3 + 1]
+                                           - push_parallel_force0[i * 3 + 1]
+                                           - disp_parallel_force0[i * 3 + 1];
+                    perp_force0[i * 3 + 2] = force0[i * 3 + 2]
+                                           - push_parallel_force0[i * 3 + 2]
+                                           - disp_parallel_force0[i * 3 + 2];
+                }
+                free(push_parallel_force0);
+                free(disp_parallel_force0);
+            }
             double *parallel_force0 = (double *)malloc(sizeof(double) * active_num * 3);
             for (i = 0; i < active_num; ++i) {
                 parallel_force0[i * 3 + 0] = force0[i * 3 + 0] - perp_force0[i * 3 + 0];
@@ -344,27 +341,39 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force1[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
-
-        double *perp_force1;
-        if (negative > input->hyper_step) {
-            perp_force1 = perpendicular_vector(force1, push_direction, active_num);
-        } else {
-            double *push_parallel_force1 = parallel_vector(force1, push_direction, active_num);
-            double *disp_parallel_force1 = parallel_vector(force1, disp_direction, active_num);
-            perp_force1 = (double *)malloc(sizeof(double) * active_num * 3);
-            for (i = 0; i < active_num; ++i) {
-                perp_force1[i * 3 + 0] = force1[i * 3 + 0]
-                                       - push_parallel_force1[i * 3 + 0]
-                                       - disp_parallel_force1[i * 3 + 0];
-                perp_force1[i * 3 + 1] = force1[i * 3 + 1]
-                                       - push_parallel_force1[i * 3 + 1]
-                                       - disp_parallel_force1[i * 3 + 1];
-                perp_force1[i * 3 + 2] = force1[i * 3 + 2]
-                                       - push_parallel_force1[i * 3 + 2]
-                                       - disp_parallel_force1[i * 3 + 2];
+        double *perp_force1 = perpendicular_vector(force1, push_direction, active_num);
+        if (eigenvalue < 0) {
+            if (negative <= input->hyper_step) {
+                double *disp_vector = (double *)malloc(sizeof(double) * active_num * 3);
+                for (i = 0; i < active_num; ++i) {
+                    disp_vector[i * 3 + 0] = config1->pos[active_list[i] * 3 + 0]
+                                           - initial->pos[active_list[i] * 3 + 0];
+                    disp_vector[i * 3 + 1] = config1->pos[active_list[i] * 3 + 1]
+                                           - initial->pos[active_list[i] * 3 + 1];
+                    disp_vector[i * 3 + 2] = config1->pos[active_list[i] * 3 + 2]
+                                           - initial->pos[active_list[i] * 3 + 2];
+                }
+                double *perp_disp = perpendicular_vector(disp_vector, push_direction, active_num);
+                free(disp_vector);
+                double *disp_direction = normalize(perp_disp, active_num);
+                free(perp_disp);
+                double *push_parallel_force1 = parallel_vector(force1, push_direction, active_num);
+                double *disp_parallel_force1 = parallel_vector(force1, disp_direction, active_num);
+                free(disp_direction);
+                for (i = 0; i < active_num; ++i) {
+                    perp_force1[i * 3 + 0] = force1[i * 3 + 0]
+                                           - push_parallel_force1[i * 3 + 0]
+                                           - disp_parallel_force1[i * 3 + 0];
+                    perp_force1[i * 3 + 1] = force1[i * 3 + 1]
+                                           - push_parallel_force1[i * 3 + 1]
+                                           - disp_parallel_force1[i * 3 + 1];
+                    perp_force1[i * 3 + 2] = force1[i * 3 + 2]
+                                           - push_parallel_force1[i * 3 + 2]
+                                           - disp_parallel_force1[i * 3 + 2];
+                }
+                free(push_parallel_force1);
+                free(disp_parallel_force1);
             }
-            free(push_parallel_force1);
-            free(disp_parallel_force1);
         }
 
         double *tmp_force = (double *)malloc(sizeof(double) * active_num * 3);
@@ -453,7 +462,6 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
     free(full_force);
     free(direction_old);
     free(cg_direction);
-    free(disp_direction);
 }
 
 
