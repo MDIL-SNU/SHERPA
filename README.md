@@ -116,7 +116,7 @@ SHERPA_VASP
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
 * **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
-* **MAX_NUM_RLX** [integer, 1 (default)]
+* **MAX_NUM_RLX** [integer, 4 (default)]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
 * **DELAY_STEP** [integer, 0 (default)]
   - *DELAY_STEP* sets the number of initial steps without Lanczos method.

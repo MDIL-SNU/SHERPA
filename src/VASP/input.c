@@ -236,7 +236,7 @@ int read_input(Input *input, char *filename)
     }
     errno = input_int(&(input->max_num_rlx), "MAX_NUM_RLX", filename);
     if (errno) {
-        input->max_num_rlx = 1;
+        input->max_num_rlx = 4;
     }
     errno = input_int(&(input->delay_step), "DELAY_STEP", filename);
     if (errno) {
