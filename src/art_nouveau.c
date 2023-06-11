@@ -299,7 +299,6 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         if ((input->hyper_step > 0) && (negative <= input->hyper_step)) {
             double *push_parallel_force0 = parallel_vector(force0, push_direction, active_num);
             double *disp_parallel_force0 = parallel_vector(force0, disp_direction, active_num);
-            free(disp_direction);
             for (i = 0; i < active_num; ++i) {
                 perp_force0[i * 3 + 0] = force0[i * 3 + 0]
                                        - push_parallel_force0[i * 3 + 0]
@@ -353,7 +352,6 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
         if ((input->hyper_step > 0) && (negative <= input->hyper_step)) {
             double *push_parallel_force1 = parallel_vector(force1, push_direction, active_num);
             double *disp_parallel_force1 = parallel_vector(force1, disp_direction, active_num);
-            free(disp_direction);
             for (i = 0; i < active_num; ++i) {
                 perp_force1[i * 3 + 0] = force1[i * 3 + 0]
                                        - push_parallel_force1[i * 3 + 0]
@@ -414,6 +412,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             free(perp_force0);
             free(perp_force1);
             free_config(config1);
+            free(disp_direction);
             free(direction);
             free(tmp_force);
             free(step);
@@ -453,6 +452,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
     free(force0);
     free(force1);
     free(full_force);
+    free(disp_direction);
     free(direction_old);
     free(cg_direction);
 }
