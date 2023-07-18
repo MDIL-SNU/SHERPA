@@ -26,20 +26,6 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    /* read input */
-    Input *input = (Input *)malloc(sizeof(Input));
-    errno = read_input(input, "./INPUT");
-    if (errno > 0) {
-        printf("ERROR in INPUT FILE!\n");
-        free(input);
-        MPI_Finalize();
-        return 1;
-    }
-    /* write_input */
-    if (rank == 0) {
-        write_input(input);
-    }
-
     /* continue check */
     if (input->cont > 0) {
         fp = fopen("./Statistics.log", "r");
@@ -58,8 +44,23 @@ int main(int argc, char *argv[])
             MPI_Finalize();
             return 1;
         } else {
+            rename("./Event.log", "Event_old.log");
             fclose(fp);
         }
+    }
+
+    /* read input */
+    Input *input = (Input *)malloc(sizeof(Input));
+    errno = read_input(input, "./INPUT");
+    if (errno > 0) {
+        printf("ERROR in INPUT FILE!\n");
+        free(input);
+        MPI_Finalize();
+        return 1;
+    }
+    /* write_input */
+    if (rank == 0) {
+        write_input(input);
     }
 
     /* random number */
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
             global_count = atoi(strtok(NULL, " \n"));
             global_done = global_count;
             fclose(fp);
-            fp = fopen("./Event.log", "r");
+            fp = fopen("./Event_old.log", "r");
             fgets(line, 1024, fp);
             fgets(line, 1024, fp);
             fgets(line, 1024, fp);
@@ -231,12 +232,8 @@ int main(int argc, char *argv[])
                 ptr = fgets(line, 1024, fp);
             }
             fclose(fp);
+            remove("./Event_old.log");
         }
-        fp = fopen("./Event.log", "w");
-        fputs("---------------------------------------------\n", fp);
-        fputs(" Reaction index   Barrier energy   Frequency\n", fp);
-        fputs("---------------------------------------------\n", fp);
-        fclose(fp);
     }
     MPI_Bcast(&global_done, 1, MPI_INT, 0, MPI_COMM_WORLD);
     input->max_search += global_done;
@@ -479,7 +476,10 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            fp = fopen("./Event.log", "a");
+            fp = fopen("./Event.log", "w");
+            fputs("---------------------------------------------\n", fp);
+            fputs(" Reaction index   Barrier energy   Frequency\n", fp);
+            fputs("---------------------------------------------\n", fp);
             for (i = 0; i < total_reac_num; ++i) {
                 fprintf(fp, " %14d   %14f   %9d\n",
                         global_reac_list[i], global_acti_list[i], freq_num[i] + 1);
