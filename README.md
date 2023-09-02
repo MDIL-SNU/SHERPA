@@ -14,6 +14,7 @@ Three executables can be built.
 - SHERPA_LMP: saddle point searches script through LAMMPS C-API
 - SHERPA_VASP: saddle point searches script by reading/writing VASP
 - EXTRACTOR: script for postprocessing of outputs (see `Outputs`)
+- KMC: script for kMC simulation utilizing SHERPA
 
 1. If `SHERPA_LMP` is needed, build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
 ```bash
@@ -33,7 +34,7 @@ If cmake fails to find LAMMPS package automatically, please check environment va
 
 3. Build targets through **one of following commands**.
 ```bash
-# All (SHERPA_LMP, SHERPA_VASP, and EXTRACTOR)
+# All (SHERPA_LMP, SHERPA_VASP, EXTRACTOR, and KMC)
 cmake --build .
 # Only SHERPA_LMP
 cmake --build . --target SHERPA_LMP
@@ -41,9 +42,11 @@ cmake --build . --target SHERPA_LMP
 cmake --build . --target SHERPA_VASP
 # Only EXTRACTOR
 cmake --build . --target EXTRACTOR
+# Only KMC
+cmake --build . --target KMC
 ```
 
-## Usage
+## Usage (SHERPA)
 Before running scripts, *INPUT*, *POSCAR*, and *TARGET* should be prepared.
 *POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 To run scripts, use the following commands:
@@ -56,8 +59,8 @@ SHERPA_VASP
 , where `${numproc}` stands for the number of processors.
 
 
-## INPUT
-### General parameter
+### INPUT
+#### General parameter
 * **ACTI_CUTOFF** [real, 5.0 (default)]
   - *ACTI_CUTOFF* sets the cutoff radius of active volume (in Angst).
 * **ACTI_NEVERY** [integer, 3 (default)]
@@ -78,7 +81,7 @@ SHERPA_VASP
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
 * **CONTINUE** [0/1, 0 (default)]
   - *CONTINUE* determines whether or not to continue SHERPA from previous results. *Statistics.log* and *Event.log* should be prepared.
-### Initial structure parameter
+#### Initial structure parameter
 * **NELEMENT** [integer]
   - *NELEMENT* is the number of elements
 * **ATOM_TYPE** [strings]
@@ -93,17 +96,17 @@ SHERPA_VASP
   - *DISP_MOVE* sets the magnitude of the initial displacement vector (in Angst).
 * **INIT_MODE** [0/1, 0 (default)]
   - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*.
-### LAMMPS parameter (for SHERPA_LMP)
+#### LAMMPS parameter (for SHERPA_LMP)
 * **PAIR_STYLE** [strings]
   - *PAIR_STYLE* stands for the pair style in LAMMPS input.
 * **PAIR_COEFF** [strings]
   - *PAIR_COEFF* stands for the pair coeff in LAMMPS input.
 * **NCORE** [integer]
   - *NCORE* sets the number of cores for each LAMMPS instance.
-### VASP parameter (for SHERPA_VASP)
+#### VASP parameter (for SHERPA_VASP)
 * **VASP_CMD** [strings]
   - *VASP_CMD* is the command to run VASP.
-### Dimer parameter
+#### Dimer parameter
 * **KAPPA_DIMER** [0/1, 0 (default)]
   - *KAPPA_DIMER* activates the basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664)).
 * **F_ROT_MIN** [real, 0.1 (default)]
@@ -114,12 +117,12 @@ SHERPA_VASP
   - *MAX_NUM_ROT* sets the maximum number of rotation steps in dimer method.
 * **MAX_NUM_TLS** [integer, 500 (default)]
   - *MAX_NUM_TLS* sets the maximum number of translation steps in dimer method.
-### ART nouveau parameter
+#### ART nouveau parameter
 * **ART_NOUVEAU** [0/1, 1 (default)]
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
 * **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
-* **MAX_NUM_RLX** [integer, 4 (default)]
+* **MAX_NUM_RLX** [integer, 1 (default)]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
 * **DELAY_STEP** [integer, 0 (default)]
   - *DELAY_STEP* sets the number of initial steps without Lanczos method.
@@ -127,11 +130,11 @@ SHERPA_VASP
   - *MIXING_STEP* sets the number of mixing steps above inflection points.
 * **HYPER_STEP** [integer, 3 (default)]
   - *HYPER_STEP* sets the number of relaxation steps, where the configuration is on the hyperplane that is spanned by eigenmode and displacement vector.
-### Random parameter
+#### Random parameter
 * **RANDOM_SEED** [unsigned integer, $RANDOM (default)]
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
-## TARGET
+### TARGET
 The TARGET file lists the conditions for the center atoms of the sphere. The conditions are appended sequentially and independently. Each one consists of numbers following characters. Three characters (I, T, A) and one additive (R) are supported currently. Three characters should be used once in one condition. Fixed atoms cannot be the center atoms.
 
 * I: index (starting from 0)
@@ -150,23 +153,15 @@ TR 1
 A
 ```
 
-## Outputs
-### Event.log
+### Outputs
+#### Event.log
 *Event.log* contains `{count}`, barrier energy and frequency of unique reactions.
 
-### Statistics.log
+#### Statistics.log
 *Statistics.log* shows a current progress of reaction finding. The number of unique reaction, relevant (=connected) reaction, and trials are written.
 
-### Redundancy.log
+#### Redundancy.log
 *Redundancy.log* tells the which reactions are duplicated.
-
-
-The below outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of reaction finding trials and the index of target atom, respectively.
-`EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs.
-```bash
-EXTRACTOR ${output} ${count}
-```
-, where `${output}` indicates one of output files.
 
 Not all saddle points are written in all output files. The rules of the outputs are summarized below table.
 ||Unconverged|Not splited|Disconnected|Connected|
@@ -177,22 +172,67 @@ Not all saddle points are written in all output files. The rules of the outputs 
 |Saddle.POSCAR|X|O|O|O|
 |Final.POSCAR|X|X|X|O|
 
-
-### SHERPA.log
+#### SHERPA.log
 *SHERPA.log* contains information of saddle point searches such as steps, potential energy, and curvature.
 *SHERPA.log* also provides the type of the saddle point, barrier energy, reaction energy, and elapsed time.
 
-### SHERPA.XDATCAR
+#### Time.log
+*Time.log* says how long the SHERPA takes to run.
+
+#### SHERPA.XDATCAR
 *SHERPA.XDATCAR* is the trajectory of configuration during saddle point searches.
 
-### SHERPA.MODECAR
+#### SHERPA.MODECAR
 *SHERPA.MODECAR* is the eigenvector at the saddle point.
 
-### Saddle.POSCAR
+#### Saddle.POSCAR
 *Saddle.POSCAR* is the configuration of the saddle point.
 
-### Final.POSCAR
+#### Final.POSCAR
 *Final.POSCAR* is the configuration of the final point (=next minimum).
+
+## Usage (EXTRACTOR)
+The below outputs have header like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of reaction finding trials and the index of target atom, respectively.
+`EXTRACTOR` executable helps to specific `{count}` of configuration and trajectories from outputs through the follow command.
+```bash
+EXTRACTOR ${output} ${count}
+```
+, where `${output}` indicates one of output files.
+
+## Usage (KMC)
+To run KMC script, several settings can be provided by in-command.
+```bash
+KMC --sherpa_cmd "{sherpa_command}" --att_freq 1e13 --temperature 298 --end_step 10000 --inputs_path "./INPUTS"
+```
+Note that "{sherpa_command}" is positional (and mandatory) parameter.
+
+For example,
+```bash
+KMC "mpirun -np 16 SHERPA_LMP" --temperature 500 --end_step 1000
+```
+
+In *inputs_path*, input files for SHERPA should be located.
+For example,
+``` text
+--- KMC
+ |- INPUTS
+      |- POSCAR
+      |- TARGET
+      |- potential files
+      |- ...
+```
+
+### Options
+* **sherpa_cmd** [string]
+  - *sherpa_cmd* is the command to run SHERPA.
+* **att_freq** [real, 1e13 (default)]
+  - *att_freq* sets the attempt frequency of reaction rates (in Hertz).
+* **temperature** [real, 298 (default)]
+  - *temperature* sets the temperature of system (in Kelvin).
+* **end_step** [int, 10000 (default)]
+  - *end_step* sets the maximum step in kMC simulation.
+* **inputs_path** [string, "./INPUTS" (default)]
+  - *inputs_path* indicates the directory that contains input files for SHERPA.
 
 
 ## Miscellaneous
