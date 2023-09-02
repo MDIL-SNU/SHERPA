@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -25,6 +26,20 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* read input */
+    Input *input = (Input *)malloc(sizeof(Input));
+    errno = read_input(input, "./INPUT");
+    if (errno > 0) {
+        printf("ERROR in INPUT FILE!\n");
+        free(input);
+        MPI_Finalize();
+        return 1;
+    }
+    /* write_input */
+    if (rank == 0) {
+        write_input(input);
+    }
 
     /* continue check */
     if (input->cont > 0) {
@@ -47,20 +62,6 @@ int main(int argc, char *argv[])
             rename("./Event.log", "Event_old.log");
             fclose(fp);
         }
-    }
-
-    /* read input */
-    Input *input = (Input *)malloc(sizeof(Input));
-    errno = read_input(input, "./INPUT");
-    if (errno > 0) {
-        printf("ERROR in INPUT FILE!\n");
-        free(input);
-        MPI_Finalize();
-        return 1;
-    }
-    /* write_input */
-    if (rank == 0) {
-        write_input(input);
     }
 
     /* random number */
@@ -247,6 +248,7 @@ int main(int argc, char *argv[])
 
     int conv, unique;
     double Ea, *eigenmode;
+    clock_t start = clock();
     while (1) {
         if (local_rank == 0) {
             /* increase count */
@@ -492,6 +494,14 @@ int main(int argc, char *argv[])
         free(global_reac_list);
         free(global_acti_list);
         free(global_freq_list);
+    }
+
+    clock_t end = clock();
+    double sherpa_time = (double)(end - start) / CLOCKS_PER_SEC;
+    if (rank == 0) {
+        FILE *fp = fopen("Time.log", "w");
+        fprintf(fp, "Total elapsed time: %f s.", sherpa_time);
+        fclose(fp);
     }
 
     free(target_list);
