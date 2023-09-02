@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
             MPI_Finalize();
             return 1;
         } else {
+            rename("./Event.log", "Event_old.log");
             fclose(fp);
         }
     }
@@ -202,7 +204,7 @@ int main(int argc, char *argv[])
             global_count = atoi(strtok(NULL, " \n"));
             global_done = global_count;
             fclose(fp);
-            fp = fopen("./Event.log", "r");
+            fp = fopen("./Event_old.log", "r");
             fgets(line, 1024, fp);
             fgets(line, 1024, fp);
             fgets(line, 1024, fp);
@@ -231,12 +233,8 @@ int main(int argc, char *argv[])
                 ptr = fgets(line, 1024, fp);
             }
             fclose(fp);
+            remove("./Event_old.log");
         }
-        fp = fopen("./Event.log", "w");
-        fputs("---------------------------------------------\n", fp);
-        fputs(" Reaction index   Barrier energy   Frequency\n", fp);
-        fputs("---------------------------------------------\n", fp);
-        fclose(fp);
     }
     MPI_Bcast(&global_done, 1, MPI_INT, 0, MPI_COMM_WORLD);
     input->max_search += global_done;
@@ -250,6 +248,7 @@ int main(int argc, char *argv[])
 
     int conv, unique;
     double Ea, *eigenmode;
+    clock_t start = clock();
     while (1) {
         if (local_rank == 0) {
             /* increase count */
@@ -479,7 +478,10 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            fp = fopen("./Event.log", "a");
+            fp = fopen("./Event.log", "w");
+            fputs("---------------------------------------------\n", fp);
+            fputs(" Reaction index   Barrier energy   Frequency\n", fp);
+            fputs("---------------------------------------------\n", fp);
             for (i = 0; i < total_reac_num; ++i) {
                 fprintf(fp, " %14d   %14f   %9d\n",
                         global_reac_list[i], global_acti_list[i], freq_num[i] + 1);
@@ -492,6 +494,14 @@ int main(int argc, char *argv[])
         free(global_reac_list);
         free(global_acti_list);
         free(global_freq_list);
+    }
+
+    clock_t end = clock();
+    double sherpa_time = (double)(end - start) / CLOCKS_PER_SEC;
+    if (rank == 0) {
+        FILE *fp = fopen("Time.log", "w");
+        fprintf(fp, "Total elapsed time: %f s.", sherpa_time);
+        fclose(fp);
     }
 
     free(target_list);
