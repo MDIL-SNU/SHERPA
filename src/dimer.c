@@ -329,7 +329,7 @@ static void translate(Config *config0, Input *input, int active_num, int *active
         config0->pos[active_list[i] * 3 + 2] += step[i * 3 + 2];
     } 
     /* trajectory */
-    if (local_rank == 0) {
+    if ((local_rank == 0) && (input->write_traj > 0)) {
         char header[128];
         sprintf(header, "%d_%d %d", count, index, sps_step);
         sprintf(filename, "./%d.XDATCAR", count);
@@ -439,10 +439,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         fputs(" Trans step   Rot step   Potential energy   Curvature   Rotation force\n", fp);
         fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
-        char header[128];
-        sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "./%d.XDATCAR", count);
-        write_config(config0, filename, header, "w");
+        if (input->write_traj > 0) {
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, 0);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "w");
+        }
     }
 
     int sps_step;

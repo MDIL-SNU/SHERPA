@@ -385,9 +385,11 @@ int main(int argc, char *argv[])
                         remove(filename);
                     }
                     /* XDATCAR */
-                    sprintf(filename, "./%d.XDATCAR", local_count);
-                    concat_files("./SHERPA.XDATCAR", filename);
-                    remove(filename);
+                    if (input->write_traj > 0) {
+                        sprintf(filename, "./%d.XDATCAR", local_count);
+                        concat_files("./SHERPA.XDATCAR", filename);
+                        remove(filename);
+                    }
                     /* log */
                     sprintf(filename, "./%d.log", local_count);
                     concat_files("./SHERPA.log", filename);

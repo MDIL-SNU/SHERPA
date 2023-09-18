@@ -12,6 +12,7 @@ typedef struct _Input
     double trial_move;
     double confidence;
     int max_search;
+    int write_traj;
     int cont;
 
     int nelem;
@@ -33,6 +34,7 @@ typedef struct _Input
 
     int art_nouveau;
     double lambda_conv;
+    int max_num_itr;
     int max_num_rlx;
     int delay_step;
     int mixing_step;

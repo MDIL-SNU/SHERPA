@@ -79,6 +79,8 @@ SHERPA_VASP
   - *CONFIDENCE* sets termination condition through confidence level (Ref. [1](https://doi.org/10.1063/1.2976010)).
 * **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
+* **WRITE_TRAJ** [0/1, 1 (default)]
+  - *WRITE_TRAJ* determines whether or not to write the saddle point search trajectories.
 * **CONTINUE** [0/1, 0 (default)]
   - *CONTINUE* determines whether or not to continue SHERPA from previous results. *Statistics.log* and *Event.log* should be prepared.
 #### Initial structure parameter
@@ -122,6 +124,8 @@ SHERPA_VASP
   - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
 * **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
+* **MAX_NUM_ITR** [integer, 500 (default)]
+  - *MAX_NUM_ITR* sets the maximum number of iteration in ARTn method.
 * **MAX_NUM_RLX** [integer, 1 (default)]
   - *MAX_NUM_RLX* sets the maximum number of perpendicular relaxation steps at eigenvalue less than *LAMBDA_CRIT*.
 * **DELAY_STEP** [integer, 0 (default)]

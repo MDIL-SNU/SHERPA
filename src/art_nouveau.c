@@ -431,10 +431,12 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
                         sps_step, *relax_step, lanczos_step, energy0);
             }
             fclose(fp);
-            char header[128];
-            sprintf(header, "%d_%d %d", count, index, sps_step);
-            sprintf(filename, "./%d.XDATCAR", count);
-            write_config(config0, filename, header, "a");
+            if (input->write_traj > 0) {
+                char header[128];
+                sprintf(header, "%d_%d %d", count, index, sps_step);
+                sprintf(filename, "./%d.XDATCAR", count);
+                write_config(config0, filename, header, "a");
+            }
         }
 
         for (i = 0; i < active_num; ++i) {
@@ -573,7 +575,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     clock_t start = clock();
-    for (sps_step = 1; sps_step <= 500; ++sps_step) {
+    for (sps_step = 1; sps_step <= input->max_num_itr; ++sps_step) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
@@ -592,10 +594,12 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                         sps_step - 1, relax_step, lanczos_step, energy0);
             }
             fclose(fp);
-            char header[128];
-            sprintf(header, "%d_%d %d", count, index, sps_step - 1);
-            sprintf(filename, "./%d.XDATCAR", count);
-            write_config(config0, filename, header, "a");
+            if (input->write_traj > 0) {
+                char header[128];
+                sprintf(header, "%d_%d %d", count, index, sps_step - 1);
+                sprintf(filename, "./%d.XDATCAR", count);
+                write_config(config0, filename, header, "a");
+            }
         }
         /* lanczos */
         if (sps_step > input->delay_step) {
