@@ -1,5 +1,5 @@
 # SHERPA
-**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as dimer method and activation-relaxation technique nouveau (ARTn). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
+**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723)). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 <p align="center">
 <img src="./src/logo.png" width="200"/>
 </p>
@@ -75,8 +75,6 @@ SHERPA_VASP
   - *MAX_MOVE* sets the maximum step size of image movement (in Angst).
 * **TRIAL_MOVE** [real, 0.01 (default)]
   - *TRIAL_MOVE* sets the trial step size of image for cg optimization (in Angst).
-* **CONFIDENCE** [real, 0.99 (default)]
-  - *CONFIDENCE* sets termination condition through confidence level (Ref. [1](https://doi.org/10.1063/1.2976010)).
 * **MAX_SEARCH** [integer, 100 (default)]
   - *MAX_SEARCH* sets termination condition through the number of saddle point searches.
 * **WRITE_TRAJ** [0/1, 1 (default)]
@@ -110,7 +108,7 @@ SHERPA_VASP
   - *VASP_CMD* is the command to run VASP.
 #### Dimer parameter
 * **KAPPA_DIMER** [0/1, 0 (default)]
-  - *KAPPA_DIMER* activates the basin constrained dimer method (Ref.[2](https://doi.org/10.1063/1.4898664)).
+  - *KAPPA_DIMER* activates the basin-constrained dimer method ([3](https://doi.org/10.1063/1.4898664)).
 * **F_ROT_MIN** [real, 0.1 (default)]
   - *F_ROT_MIN* sets the minimum force criteria for rotation (in eV/Angst).
 * **F_ROT_MAX** [real, 1.0 (default)]
@@ -121,7 +119,7 @@ SHERPA_VASP
   - *MAX_NUM_TLS* sets the maximum number of translation steps in dimer method.
 #### ART nouveau parameter
 * **ART_NOUVEAU** [0/1, 1 (default)]
-  - *ART_NOUVEAU* activates the activation and relaxation technique (Ref.[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)).
+  - *ART_NOUVEAU* activates the activation and relaxation technique.
 * **LAMBDA_CONV** [real, 0.01 (default)]
   - *LAMBDA_CONV* sets the convergence criteria value for Lanczos method (in eV/Angs^2).
 * **MAX_NUM_ITR** [integer, 500 (default)]

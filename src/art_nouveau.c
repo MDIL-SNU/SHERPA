@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 
 static void lanczos(Config *config, Input *input, int active_num, int *active_list,
@@ -574,7 +573,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
-    clock_t start = clock();
+    double start = MPI_Wtime();
     for (sps_step = 1; sps_step <= input->max_num_itr; ++sps_step) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
@@ -652,8 +651,8 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                                  &active_num, active_list, comm);
         }
     }
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    double end = MPI_Wtime();
+    double time = end - start;
     free(force0);
     free(init_direction);
     if (local_rank == 0) {

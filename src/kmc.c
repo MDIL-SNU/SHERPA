@@ -18,12 +18,13 @@ int main(int argc, char *argv[])
     FILE *fp, *pp;
 
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {
-        printf("Usage: KMC --att_freq {att_freq} --temperature {temperature} --end_step {end_step} --inputs_path {inputs_path} --sherpa_cmd {sherpa_cmd} --random_seed {random_seed}\n");
+        printf("Usage: KMC --att_freq {att_freq} --temperature {temperature} --end_step {end_step} --low_cut {low_cut} --inputs_path {inputs_path} --sherpa_cmd {sherpa_cmd} --random_seed {random_seed}\n");
         return 0;
     }
     double att_freq = 1e13;
     double temperature = 298;
     long long end_step = 10000;
+    double low_cut = 0.01;
     char *sherpa_cmd = NULL;
     char inputs_path[1024] = "./INPUTS";
     sprintf(inputs_path, "./INPUTS");
@@ -38,6 +39,9 @@ int main(int argc, char *argv[])
         }
         if (strcmp(argv[i], "--end_step") == 0) {
             end_step = atoll(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "--low_cut") == 0) {
+            low_cut = atof(argv[i + 1]);
         }
         if (strcmp(argv[i], "--inputs_path") == 0) {
             strncpy(inputs_path, argv[i + 1], sizeof(inputs_path) - 1);
@@ -121,8 +125,12 @@ int main(int argc, char *argv[])
         double *rate_list = (double *)malloc(sizeof(double) * list_size);
         double kT = 8.61733326E-5 * temperature;
         while (fgets(line, 1024, fp) != NULL) {
-            reac_list[reac_num] = atoi(strtok(line, " \n"));
+            int tmp_index = atoi(strtok(line, " \n"));
             Ea = atof(strtok(NULL, " \n"));
+            if (Ea < low_cut) {
+                continue;
+            }
+            reac_list[reac_num] = tmp_index;
             acti_list[reac_num] = Ea;
             rate_list[reac_num] = att_freq * exp(-Ea / kT);
             reac_num++;
@@ -161,13 +169,13 @@ int main(int argc, char *argv[])
         sprintf(filename1, "./Final_%d.POSCAR", count); 
         sprintf(filename2, "../%s/POSCAR", inputs_path);
         copy_files(filename2, filename1);
+        /* log */
+        fp = fopen("../KMC.log", "a");
+        fprintf(fp, "   %9lld      %14.3f      %12e\n", kmc_step, Ea, kmc_time);
+        fclose(fp);
+        append_files("../KMC.XDATCAR", filename2);
         /* chdir */
         chdir("../");
-        /* log */
-        fp = fopen("./KMC.log", "a");
-        fprintf(fp, "   %9lld      %.3f      %12e\n", kmc_step, Ea, kmc_time);
-        fclose(fp);
-        append_files("./KMC.XDATCAR", filename2);
     }
     return 0;
 }

@@ -1,5 +1,6 @@
+#include <string.h>
+#include <time.h>
 #include "my_mpi.h"
-#include "string.h"
 
 
 int MPI_Allgather(void *sendbuf, int sendcount, MPI_Datatype sendtype,
@@ -233,4 +234,10 @@ int MPI_Win_unlock(int target_rank, MPI_Win win)
     int ierror;
     ierror = MPI_SUCCESS;
     return ierror;
+}
+
+
+double MPI_Wtime()
+{
+    return (double)clock();
 }

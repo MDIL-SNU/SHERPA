@@ -147,7 +147,6 @@ int read_input(Input *input, char *filename)
     input->diff_tol = 0.4;
     input->max_move = 0.1;
     input->trial_move = 0.01;
-    input->confidence = 0.99;
     input->max_search = 100;
     input->write_traj = 1;
     input->cont = 0;
@@ -178,7 +177,6 @@ int read_input(Input *input, char *filename)
     input_double(&(input->diff_tol), "DIFF_TOL", filename);
     input_double(&(input->max_move), "MAX_MOVE", filename);
     input_double(&(input->trial_move), "TRIAL_MOVE", filename);
-    input_double(&(input->confidence), "CONFIDENCE", filename);
     input_int(&(input->max_search), "MAX_SEARCH", filename);
     input_int(&(input->write_traj), "WRITE_TRAJ", filename);
     input_int(&(input->cont), "CONTINUE", filename);
@@ -215,7 +213,6 @@ int read_input(Input *input, char *filename)
     input_int(&(input->mixing_step), "MIXING_STEP", filename);
     input_int(&(input->hyper_step), "HYPER_STEP", filename);
     input_int(&(input->random_seed), "RANDOM_SEED", filename);
-    input->nredundant = (int)round(1 / (1 - input->confidence));
     if (input->kappa_dimer + input->art_nouveau > 1) {
         printf("Choose only one algirhtm.\n");
         return 1;
@@ -237,7 +234,6 @@ void write_input(Input *input)
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
-    fprintf(fp, "CONFIDENCE\t= %f\n", input->confidence);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
     fprintf(fp, "WRITE_TRAJ\t= %d\n", input->write_traj);
     fprintf(fp, "CONTINUE\t= %d\n", input->cont);

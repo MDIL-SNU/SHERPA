@@ -10,7 +10,6 @@ typedef struct _Input
     double diff_tol;
     double max_move;
     double trial_move;
-    double confidence;
     int max_search;
     int write_traj;
     int cont;
@@ -41,8 +40,6 @@ typedef struct _Input
     int hyper_step;
 
     int random_seed;
-
-    int nredundant;
 } Input;
 
 int input_int(int *var, char *tag, char *filename);

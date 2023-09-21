@@ -14,18 +14,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 
 
 int main(int argc, char *argv[])
 {
     int i, j, atom_index, errno, rank, size;
+    double start, end;
     FILE *fp;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    start = MPI_Wtime();
 
     /* read input */
     Input *input = (Input *)malloc(sizeof(Input));
@@ -115,11 +116,6 @@ int main(int argc, char *argv[])
     MPI_Win_create(&global_count, (MPI_Aint)sizeof(int), sizeof(int),
                    MPI_INFO_NULL, group_comm, &count_win);
 
-    MPI_Win redundant_win;
-    int global_redundant = 0;
-    MPI_Win_create(&global_redundant, (MPI_Aint)sizeof(int), sizeof(int),
-                   MPI_INFO_NULL, group_comm, &redundant_win);
-
     MPI_Win done_win;
     int global_done = 0;
     MPI_Win_create(&global_done, (MPI_Aint)sizeof(int), sizeof(int),
@@ -152,7 +148,6 @@ int main(int argc, char *argv[])
     int local_conv;
     int local_unique;
     int local_write;
-    int local_redundant;
     int local_exit;
     int local_reac_num = 0;
     int local_freq_num = 0;
@@ -248,7 +243,6 @@ int main(int argc, char *argv[])
 
     int conv, unique;
     double Ea, *eigenmode;
-    clock_t start = clock();
     while (1) {
         if (local_rank == 0) {
             /* increase count */
@@ -256,28 +250,11 @@ int main(int argc, char *argv[])
             MPI_Fetch_and_op(&one, &local_count, MPI_INT,
                              0, (MPI_Aint)0, MPI_SUM, count_win);
             MPI_Win_unlock(0, count_win);
-            /* check exit condition */
-            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
-            MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
-                             0, (MPI_Aint)0, MPI_SUM, redundant_win);
-            MPI_Win_unlock(0, redundant_win);
-            if ((local_redundant >= input->nredundant) ||
-                (local_count >= input->max_search)) {
-                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
-                MPI_Fetch_and_op(&one, &local_exit, MPI_INT,
-                                 0, (MPI_Aint)0, MPI_SUM, exit_win);
-                MPI_Win_unlock(0, exit_win);
-            }
-            MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, exit_win);
-            MPI_Fetch_and_op(&zero, &local_exit, MPI_INT,
-                             0, (MPI_Aint)0, MPI_SUM, exit_win);
-            MPI_Win_unlock(0, exit_win);
-        }
-        MPI_Bcast(&local_exit, 1, MPI_INT, 0, local_comm);
-        if (local_exit > 0) {
-            break;
         }
         MPI_Bcast(&local_count, 1, MPI_INT, 0, local_comm);
+        if (local_count >= input->max_search) {
+            break;
+        }
 
         /* atom_index */
         Data *data = dataset->head;
@@ -354,15 +331,7 @@ int main(int argc, char *argv[])
                                     local_acti_list = (double *)realloc(local_acti_list,
                                                                 sizeof(double) * list_size1);
                                 }
-                                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
-                                MPI_Fetch_and_op(&zero, &local_redundant, MPI_INT,
-                                                 0, (MPI_Aint)0, MPI_REPLACE, redundant_win);
-                                MPI_Win_unlock(0, redundant_win);
                             } else {
-                                MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, redundant_win);
-                                MPI_Fetch_and_op(&one, &local_redundant, MPI_INT,
-                                                 0, (MPI_Aint)0, MPI_SUM, redundant_win);
-                                MPI_Win_unlock(0, redundant_win);
                                 local_freq_list[local_freq_num] = unique;
                                 local_freq_num++;
                                 if (local_freq_num >= list_size2) {
@@ -498,8 +467,8 @@ int main(int argc, char *argv[])
         free(global_freq_list);
     }
 
-    clock_t end = clock();
-    double sherpa_time = (double)(end - start) / CLOCKS_PER_SEC;
+    end = MPI_Wtime();
+    double sherpa_time = end - start;
     if (rank == 0) {
         FILE *fp = fopen("Time.log", "w");
         fprintf(fp, "Total elapsed time: %f s.", sherpa_time);
@@ -516,7 +485,6 @@ int main(int argc, char *argv[])
     free_input(input);
 
     MPI_Win_free(&count_win);
-    MPI_Win_free(&redundant_win);
     MPI_Win_free(&done_win);
     MPI_Win_free(&conv_win);
     MPI_Win_free(&unique_win);
