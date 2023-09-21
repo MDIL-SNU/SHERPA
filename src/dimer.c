@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 
 static double *projected_force(double *force0, double *eigenmode,
@@ -329,7 +328,7 @@ static void translate(Config *config0, Input *input, int active_num, int *active
         config0->pos[active_list[i] * 3 + 2] += step[i * 3 + 2];
     } 
     /* trajectory */
-    if (local_rank == 0) {
+    if ((local_rank == 0) && (input->write_traj > 0)) {
         char header[128];
         sprintf(header, "%d_%d %d", count, index, sps_step);
         sprintf(filename, "./%d.XDATCAR", count);
@@ -439,10 +438,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
         fputs(" Trans step   Rot step   Potential energy   Curvature   Rotation force\n", fp);
         fputs("-----------------------------------------------------------------------\n", fp);
         fclose(fp);
-        char header[128];
-        sprintf(header, "%d_%d %d", count, index, 0);
-        sprintf(filename, "./%d.XDATCAR", count);
-        write_config(config0, filename, header, "w");
+        if (input->write_traj > 0) {
+            char header[128];
+            sprintf(header, "%d_%d %d", count, index, 0);
+            sprintf(filename, "./%d.XDATCAR", count);
+            write_config(config0, filename, header, "w");
+        }
     }
 
     int sps_step;
@@ -451,7 +452,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     double energy0;
     double *force0 = (double *)calloc(config0->tot_num * 3, sizeof(double));
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
-    clock_t start = clock();
+    double start = MPI_Wtime();
     for (sps_step = 1; sps_step <= input->max_num_tls; ++sps_step) {
         oneshot(config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
@@ -498,8 +499,8 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                                  &active_num, active_list, comm);
         }
     }
-    clock_t end = clock();
-    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    double end = MPI_Wtime();
+    double time = end - start;
     free(force0);
     free(direction_old);
     free(cg_direction);

@@ -58,4 +58,5 @@ int MPI_Win_create(void *baseptr, MPI_Aint size, int disp_unit,
 int MPI_Win_free(MPI_Win *win);
 int MPI_Win_lock(int lock_type, int rank, int assert, MPI_Win win);
 int MPI_Win_unlock(int target_rank, MPI_Win win);
+double MPI_Wtime();
 #endif

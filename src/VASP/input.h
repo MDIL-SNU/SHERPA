@@ -10,8 +10,8 @@ typedef struct _Input
     double diff_tol;
     double max_move;
     double trial_move;
-    double confidence;
     int max_search;
+    int write_traj;
     int cont;
 
     int nelem;
@@ -33,14 +33,13 @@ typedef struct _Input
 
     int art_nouveau;
     double lambda_conv;
+    int max_num_itr;
     int max_num_rlx;
     int delay_step;
     int mixing_step;
     int hyper_step;
 
     int random_seed;
-
-    int nredundant;
 } Input;
 
 int input_int(int *var, char *tag, char *filename);

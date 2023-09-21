@@ -6,8 +6,8 @@ F_TOL       = 0.01
 DIFF_TOL    = 0.4
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
-CONFIDENCE  = 0.99
 MAX_SEARCH  = 100
+WRITE_TRAJ  = 0
 CONTINUE    = 0
 
 # initial structure parameter #
@@ -37,6 +37,7 @@ MAX_NUM_TLS = 500
 # art_nouveau parameter #
 ART_NOUVEAU = 1
 LAMBDA_CONV = 0.01
+MAX_NUM_ITR = 500
 MAX_NUM_RLX = 4
 DELAY_STEP  = 0
 MIXING_STEP = 0
