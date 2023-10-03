@@ -1,5 +1,5 @@
 # SHERPA
-**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723)). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
+**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
 <p align="center">
 <img src="./src/logo.png" width="200"/>
 </p>
