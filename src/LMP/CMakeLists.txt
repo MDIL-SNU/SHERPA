@@ -6,7 +6,7 @@ ELSE ()
   find_package ( LAMMPS REQUIRED )
 ENDIF ()
 
-add_library ( LMP calculator.c input.c )
+add_library ( LMP calculator.c )
 target_include_directories ( LMP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES> .. )
 target_compile_options ( LMP PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS> )
 target_link_libraries ( LMP PUBLIC $<LINK_ONLY:MKL::MKL> LAMMPS::lammps SHERPA m )

@@ -9,9 +9,9 @@ add_compile_options ( -O3 -g -Wall )
 
 add_executable ( EXTRACTOR extractor.c files.c )
 add_executable ( KMC kmc.c files.c )
-add_library ( SHERPA config.c dataset.c linalg.c target.c )
 
-set ( SRC_FILES main.c art_nouveau.c dimer.c kappa_dimer.c utils.c )
+add_library ( SHERPA config.c dataset.c input.c linalg.c target.c )
+set ( SRC_FILES main.c art_nouveau.c dimer.c utils.c )
 
 add_subdirectory ( LMP )
 add_executable ( SHERPA_LMP ${SRC_FILES} )
@@ -31,4 +31,3 @@ add_subdirectory ( VASP )
 add_executable ( SHERPA_VASP ${SRC_FILES} )
 target_include_directories ( SHERPA_VASP PRIVATE VASP )
 target_link_libraries ( SHERPA_VASP VASP )
-
