@@ -12,19 +12,20 @@
 int main(int argc, char *argv[])
 {
     int i;
-    long long kmc_step;
+    long long step, initial_step;
     double Ea, kmc_time;
     char directory[1024], filename1[1024], filename2[1024];
     FILE *fp, *pp;
 
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {
-        printf("Usage: KMC --att_freq {att_freq} --temperature {temperature} --end_step {end_step} --low_cut {low_cut} --inputs_path {inputs_path} --sherpa_cmd {sherpa_cmd} --random_seed {random_seed}\n");
+        printf("Usage: KMC --att_freq {att_freq} --temperature {temperature} --kmc_step {kmc_step} --low_cut {low_cut} --restart {restart} --inputs_path {inputs_path} --sherpa_cmd {sherpa_cmd} --random_seed {random_seed}\n");
         return 0;
     }
     double att_freq = 1e13;
     double temperature = 298;
-    long long end_step = 10000;
+    long long kmc_step = 10000;
     double low_cut = 0.01;
+    long long restart = 0;
     char *sherpa_cmd = NULL;
     char inputs_path[1024] = "./INPUTS";
     sprintf(inputs_path, "./INPUTS");
@@ -37,11 +38,14 @@ int main(int argc, char *argv[])
         if (strcmp(argv[i], "--temperature") == 0) {
             temperature = atof(argv[i + 1]);
         }
-        if (strcmp(argv[i], "--end_step") == 0) {
-            end_step = atoll(argv[i + 1]);
+        if (strcmp(argv[i], "--kmc_step") == 0) {
+            kmc_step = atoll(argv[i + 1]);
         }
         if (strcmp(argv[i], "--low_cut") == 0) {
             low_cut = atof(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "--restart") == 0) {
+            restart = atoll(argv[i + 1]);
         }
         if (strcmp(argv[i], "--inputs_path") == 0) {
             strncpy(inputs_path, argv[i + 1], sizeof(inputs_path) - 1);
@@ -59,20 +63,46 @@ int main(int argc, char *argv[])
     }
     srand(random_seed);
 
-    /* write log */
-    fp = fopen("./KMC.log", "w");
-    fputs("-----------------------------------------------------\n", fp);
-    fputs("   KMC steps      Barrier energy      Elapsed time   \n", fp);        
-    fputs("-----------------------------------------------------\n", fp);
-    fputs("           0      --------------               0.0   \n", fp);
-    fclose(fp);
-    sprintf(filename1, "%s/POSCAR", inputs_path);
-    copy_files("./KMC.XDATCAR", filename1);
+    if (restart == 0) {
+        /* write log */
+        fp = fopen("./KMC.log", "w");
+        fputs("-----------------------------------------------------\n", fp);
+        fputs("   KMC steps      Barrier energy      Elapsed time   \n", fp);
+        fputs("-----------------------------------------------------\n", fp);
+        fputs("           0      --------------               0.0   \n", fp);
+        fclose(fp);
+        sprintf(filename1, "%s/POSCAR", inputs_path);
+        copy_files("./KMC.XDATCAR", filename1);
+        kmc_time = 0.0;
+        initial_step = 1;
+    } else {
+        /* read log */
+        fp = fopen("./KMC.log", "r");
+        FILE *tmp_fp = fopen("./KMC_tmp.log", "w");
+        char *ptr;
+        char line[1024], tmp_line[1024];
+        ptr = fgets(tmp_line, 1024, fp);
+        while (ptr != NULL) {
+            memcpy(line, ptr, sizeof(char) * (strlen(ptr) + 1));
+            step = atoll(strtok(tmp_line, " \n"));
+            fputs(line, tmp_fp);
+            if (step == restart) {
+                strtok(NULL, " \n");
+                kmc_time = atof(strtok(NULL, " \n"));
+                break;
+            }
+            ptr = fgets(tmp_line, 1024, fp);
+        }
+        fclose(fp);
+        fclose(tmp_fp);
+        rename("./KMC.log", "./KMC_old.log");
+        rename("./KMC_tmp.log", "./KMC.log");
+        initial_step = step + 1;
+    }
 
-    kmc_time = 0.0;
-    for (kmc_step = 1; kmc_step <= end_step; ++kmc_step) {
+    for (step = initial_step; step < initial_step + kmc_step; ++step) {
         /* mkdir */
-        sprintf(directory, "%lld", kmc_step);
+        sprintf(directory, "%lld", step);
         mkdir(directory, 0775);
         /* cp INPUTS */
         DIR *direct;
@@ -87,7 +117,7 @@ int main(int argc, char *argv[])
         readdir(direct);
         while ((entry = readdir(direct)) != NULL) {
             sprintf(filename1, "%s/%s", inputs_path, entry->d_name);
-            sprintf(filename2, "%lld/%s", kmc_step, entry->d_name);
+            sprintf(filename2, "%lld/%s", step, entry->d_name);
             copy_files(filename2, filename1);
         }
         /* chdir */
@@ -171,7 +201,7 @@ int main(int argc, char *argv[])
         copy_files(filename2, filename1);
         /* log */
         fp = fopen("../KMC.log", "a");
-        fprintf(fp, "   %9lld      %14.3f      %12e\n", kmc_step, Ea, kmc_time);
+        fprintf(fp, "   %9lld      %14.3f      %12e\n", step, Ea, kmc_time);
         fclose(fp);
         append_files("../KMC.XDATCAR", filename2);
         /* chdir */

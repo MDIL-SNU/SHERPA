@@ -3,7 +3,6 @@
 #include "dataset.h"
 #include "dimer.h"
 #include "input.h"
-#include "kappa_dimer.h"
 #include "linalg.h"
 #include "my_mpi.h"
 #include "target.h"
@@ -30,6 +29,9 @@ int main(int argc, char *argv[])
 
     /* read input */
     Input *input = (Input *)malloc(sizeof(Input));
+    input->pair_style = NULL;
+    input->pair_coeff = NULL;
+    input->vasp_cmd = NULL;
     errno = read_input(input, "./INPUT");
     if (errno > 0) {
         printf("ERROR in INPUT FILE!\n");
@@ -283,9 +285,6 @@ int main(int argc, char *argv[])
         copy_config(final, config);
         if (input->art_nouveau > 0) {
             conv = art_nouveau(initial, saddle, final, input, eigenmode,
-                               local_count, atom_index, &Ea, local_comm);
-        } else if (input->kappa_dimer > 0) {
-            conv = kappa_dimer(initial, saddle, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {
             conv = dimer(initial, saddle, final, input, eigenmode,
