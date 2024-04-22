@@ -9,7 +9,7 @@
 #include <string.h>
 
 
-static void rotate(Config *config0, Input *input,
+static void rotate(Calc *calc, Config *config0, Input *input,
                    int active_num, int *active_list,
                    double *curvature, double *eigenmode,
                    double energy0, double *force0,
@@ -38,7 +38,7 @@ static void rotate(Config *config0, Input *input,
             config1->pos[active_list[i] * 3 + 2] += input->finite_diff
                                                   * eigenmode[i * 3 + 2];
         }
-        oneshot(config1, input, &energy1, full_force, comm);
+        oneshot(calc, config1, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -96,7 +96,7 @@ static void rotate(Config *config0, Input *input,
                                                         * input->finite_diff;
         } 
         /* derivative of curvature */
-        oneshot(trial_config1, input, &energy1, full_force, comm);
+        oneshot(calc, trial_config1, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -160,7 +160,7 @@ static void rotate(Config *config0, Input *input,
 }
 
 
-static void constrained_rotate(Config *config0, Input *input,
+static void constrained_rotate(Calc *calc, Config *config0, Input *input,
                                int active_num, int *active_list,
                                double *kappa, double *eigenmode,
                                double *force0, MPI_Comm comm)
@@ -197,7 +197,7 @@ static void constrained_rotate(Config *config0, Input *input,
             config1->pos[active_list[i] * 3 + 2] += input->finite_diff
                                                   * eigenmode[i * 3 + 2];
         }
-        oneshot(config1, input, &energy1, full_force, comm);
+        oneshot(calc, config1, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -255,7 +255,7 @@ static void constrained_rotate(Config *config0, Input *input,
                                                         * input->finite_diff;
         }
         /* derivative of curvature */
-        oneshot(trial_config1, input, &energy1, full_force, comm);
+        oneshot(calc, trial_config1, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -312,9 +312,11 @@ static void constrained_rotate(Config *config0, Input *input,
 }
 
 
-static void translate(Config *config0, Input *input, int active_num, int *active_list,
-                      double *eigenmode, double *force0, double *direction_old,
-                      double *cg_direction, int count, int index, int sps_step,
+static void translate(Calc *calc, Config *config0, Input *input,
+                      int active_num, int *active_list,
+                      double *eigenmode, double *force0,
+                      double *direction_old, double *cg_direction,
+                      int count, int index, int sps_step,
                       double kappa, MPI_Comm comm)
 {
     int i, rank;
@@ -340,7 +342,7 @@ static void translate(Config *config0, Input *input, int active_num, int *active
                                               * eigenmode[i * 3 + 2];
     }
     /* curvature */
-    oneshot(config1, input, &energy1, full_force, comm);
+    oneshot(calc, config1, input, &energy1, full_force, comm);
     for (i = 0; i < active_num; ++i) {
         force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
         force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -418,7 +420,7 @@ static void translate(Config *config0, Input *input, int active_num, int *active
         double trial_energy0;
         double *trial_force0 = (double *)malloc(sizeof(double) * active_num * 3);
         double *tmp_force = (double *)malloc(sizeof(double) * active_num * 3);
-        oneshot(trial_config0, input, &trial_energy0, full_force, comm);
+        oneshot(calc, trial_config0, input, &trial_energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             trial_force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             trial_force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -522,9 +524,9 @@ static void translate(Config *config0, Input *input, int active_num, int *active
 }
 
 
-int dimer(Config *initial, Config *saddle, Config *final, Input *input,
-          double *full_eigenmode, int count, int index, double *Ea,
-          MPI_Comm comm)
+int dimer(Calc *calc, Config *initial, Config *saddle, Config *final,
+          Input *input, double *full_eigenmode, int count, int index,
+          double *Ea, MPI_Comm comm)
 {
     int i, j, rank;
     int conv = -1;
@@ -632,14 +634,14 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     double start = MPI_Wtime();
     for (sps_step = 1; sps_step <= input->max_num_tls; ++sps_step) {
-        oneshot(config0, input, &energy0, full_force, comm);
+        oneshot(calc, config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
             force0[i * 3 + 2] = full_force[active_list[i] * 3 + 2];
         }
         /* rotation */
-        rotate(config0, input, active_num, active_list, &curvature,
+        rotate(calc, config0, input, active_num, active_list, &curvature,
                eigenmode, energy0, force0, count, sps_step, comm);
         if (curvature < 0) {
             /* force criteria */
@@ -657,7 +659,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 if (all == 0) {
                     expand_active_volume(initial, config0, input, DBL_MAX,
                                          &active_num, active_list, comm);
-                    rotate(config0, input, active_num, active_list, &curvature,
+                    rotate(calc, config0, input, active_num, active_list, &curvature,
                            eigenmode, energy0, force0, count, sps_step, comm);
                     all = 1;
                 } else {
@@ -674,12 +676,12 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
                 tmp_eigenmode[i * 3 + 1] = eigenmode[i * 3 + 1];
                 tmp_eigenmode[i * 3 + 2] = eigenmode[i * 3 + 2];
             }
-            constrained_rotate(config0, input, active_num, active_list, &kappa,
+            constrained_rotate(calc, config0, input, active_num, active_list, &kappa,
                                tmp_eigenmode, force0, comm);
             free(tmp_eigenmode);
         }
         /* translation */
-        translate(config0, input, active_num, active_list, eigenmode, force0,
+        translate(calc, config0, input, active_num, active_list, eigenmode, force0,
                   direction_old, cg_direction, count, index, sps_step, kappa, comm);
 
         /* change active volume */
@@ -727,7 +729,7 @@ int dimer(Config *initial, Config *saddle, Config *final, Input *input,
 
     /* postprocess */
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
+    conv = split_config(calc, initial, saddle, final, input, Ea, &dE, eigenmode,
                         active_num, active_list, count, index, comm);
     if (local_rank == 0) {
         char filename[128];

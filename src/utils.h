@@ -1,5 +1,6 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
+#include "calculator.h"
 #include "config.h"
 #include "input.h"
 #include "my_mpi.h"
@@ -21,8 +22,8 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                           double cutoff, int *active_num, int *active_list,
                           MPI_Comm comm);
 int diff_config(Config *config1, Config *config2, double tol);
-int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double *eigenmode,
-                int active_num, int *active_list, int count, int index,
-                MPI_Comm comm);
+int split_config(Calc *calc, Config *initial, Config *saddle, Config *final,
+                 Input *input, double *Ea, double *dE, double *eigenmode,
+                 int active_num, int *active_list, int count, int index,
+                 MPI_Comm comm);
 #endif

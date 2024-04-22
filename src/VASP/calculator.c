@@ -102,8 +102,8 @@ void read_outcar(char *filename, double *pos, double *energy, double *force)
 }
 
 
-void oneshot(Config *config, Input *input, double *energy, double *force,
-             MPI_Comm comm)
+void oneshot(Calc *calc, Config *config, Input *input,
+             double *energy, double *force, MPI_Comm comm)
 {
     FILE *fp;
     mkdir("./VASP_tmp", 0775);
@@ -120,7 +120,8 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
+void atom_relax(Calc *calc, Config *config, Input *input,
+                double *energy, MPI_Comm comm)
 {
     FILE *fp;
     char cmd[1024], filename[256];
@@ -137,4 +138,10 @@ void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
     free(tmp_force);
     fp = popen("cat VASP_tmp/OUTCAR >> OUTCAR_concat", "r");
     pclose(fp);
+}
+
+
+void free_calc(Calc *calc)
+{
+    return;
 }

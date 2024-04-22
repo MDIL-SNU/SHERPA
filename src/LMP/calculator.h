@@ -5,7 +5,15 @@
 #include "my_mpi.h"
 
 
-void oneshot(Config *config, Input *input, double *energy, double *force,
-             MPI_Comm comm);
-void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm);
+typedef struct _Calc
+{
+    void *lmp;
+    int initialized;
+} Calc;
+
+void oneshot(Calc *calc, Config *config, Input *input,
+             double *energy, double *force, MPI_Comm comm);
+void atom_relax(Calc *calc, Config *config, Input *input,
+                double *energy, MPI_Comm comm);
+void free_calc(Calc *calc);
 #endif
