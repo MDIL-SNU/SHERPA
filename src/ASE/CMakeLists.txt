@@ -1,0 +1,7 @@
+set ( Python_FIND_STRATEGY LOCATION )
+find_package ( Python REQUIRED COMPONENTS Interpreter Development )
+add_library ( ASE calculator.c )
+target_include_directories ( ASE PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES> .. )
+target_include_directories ( ASE PRIVATE ${Python_INCLUDE_DIRS} )
+target_compile_options ( ASE PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS> )
+target_link_libraries ( ASE PUBLIC $<LINK_ONLY:MKL::MKL> ${Python_LIBRARIES} SHERPA m )

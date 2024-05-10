@@ -12,8 +12,10 @@
 int main(int argc, char *argv[])
 {
     int i;
-    long long step, initial_step;
-    double Ea, kmc_time;
+    long long step = 0;
+    long long initial_step = 0;
+    double Ea = 0.0;
+    double kmc_time = 0.0;
     char directory[1024], filename1[1024], filename2[1024];
     FILE *fp, *pp;
 
@@ -177,7 +179,7 @@ int main(int argc, char *argv[])
         for (i = 0; i < reac_num; ++i) {
             rate_sum += rate_list[i];
         }
-        int count;
+        int count = 0;
         double acc_rate_sum = 0.0;
         double rn = (double)random() / RAND_MAX;
         for (i = 0; i < reac_num; ++i) {

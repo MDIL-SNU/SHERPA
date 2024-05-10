@@ -1,5 +1,5 @@
 # SHERPA
-**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator) and VASP (Vienna Ab initio Simulation Package).
+**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator), VASP (Vienna Ab initio Simulation Package), and ASE (Atomic Simulation Environment) calculator.
 <p align="center">
 <img src="./src/logo.png" width="200"/>
 </p>
@@ -13,6 +13,7 @@
 Three executables can be built.
 - SHERPA_LMP: saddle point searches script through LAMMPS C-API
 - SHERPA_VASP: saddle point searches script by reading/writing VASP
+- SHERPA_ASE: saddle point searches script with ASE calculation
 - EXTRACTOR: script for postprocessing of outputs (see `Outputs`)
 - KMC: script for kMC simulation utilizing SHERPA
 
@@ -34,12 +35,14 @@ If cmake fails to find LAMMPS package automatically, please check environment va
 
 3. Build targets through **one of following commands**.
 ```bash
-# All (SHERPA_LMP, SHERPA_VASP, EXTRACTOR, and KMC)
+# All (SHERPA_LMP, SHERPA_VASP, SHERPA_ASE, EXTRACTOR, and KMC)
 cmake --build .
 # Only SHERPA_LMP
 cmake --build . --target SHERPA_LMP
 # Only SHERPA_VASP
 cmake --build . --target SHERPA_VASP
+# Only SHERPA_ASE
+cmake --build . --target SHERPA_ASE
 # Only EXTRACTOR
 cmake --build . --target EXTRACTOR
 # Only KMC
@@ -106,6 +109,9 @@ SHERPA_VASP
 #### VASP parameter (for SHERPA_VASP)
 * **VASP_CMD** [strings]
   - *VASP_CMD* is the command to run VASP.
+#### VASP parameter (for SHERPA_ASE)
+* **ASE_CALC** [strings]
+  - *ASE_CALC* indicates the python file containing ASE calculator.
 #### Dimer parameter
 * **KAPPA_DIMER** [0/1, 0 (default)]
   - *KAPPA_DIMER* activates the basin-constrained dimer method ([3](https://doi.org/10.1063/1.4898664)).

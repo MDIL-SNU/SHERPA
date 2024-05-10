@@ -143,5 +143,5 @@ void atom_relax(Calc *calc, Config *config, Input *input,
 
 void free_calc(Calc *calc)
 {
-    return;
+    free(calc);
 }

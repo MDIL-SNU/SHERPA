@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-static void create_atoms(Calc *calc, Config *config, Input *input)
+static void create_atoms(void *lmp, Config *config, Input *input)
 {
     int i, j, k;
     /* atoms */
@@ -24,30 +24,10 @@ static void create_atoms(Calc *calc, Config *config, Input *input)
             }
         }
     }
-    lammps_create_atoms(calc->lmp, config->tot_num, id,
+    lammps_create_atoms(lmp, config->tot_num, id,
                         type, config->pos, NULL, NULL, 0);
     free(id);
     free(type);
-    /* fix */
-    int fix = 0;
-    for (i = 0; i < config->tot_num; ++i) {
-        if (config->fix[i] > 0) {
-            fix++;
-            break;
-        }
-    }
-    char cmd[65536], tmp_cmd[65536];
-    if (fix > 0) {
-        sprintf(cmd, "group freeze id");
-        for (i = 0; i < config->tot_num; ++i) {
-            if (config->fix[i] > 0) {
-                sprintf(tmp_cmd, " %d", i + 1);
-                strcat(cmd, tmp_cmd);
-            }
-        }
-        lammps_command(calc->lmp, cmd);
-        lammps_command(calc->lmp, "fix int freeze setforce 0.0 0.0 0.0");
-    }
 }
 
 
@@ -56,8 +36,8 @@ static void lmp_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
     /* create LAMMPS instance */
     int i;
     char cmd[65536];
-//    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
-    char *lmpargv[] = {"liblammps", "-screen", "none"};
+    char *lmpargv[] = {"liblammps", "-log", "none", "-screen", "none"};
+//    char *lmpargv[] = {"liblammps", "-screen", "none"};
     int lmpargc = sizeof(lmpargv) / sizeof(char *);
     calc->lmp = lammps_open(lmpargc, lmpargv, comm, NULL);
     if (calc->lmp == NULL) {
@@ -76,8 +56,6 @@ static void lmp_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
     lammps_command(calc->lmp, cmd);
     sprintf(cmd, "create_box %d cell", input->nelem);
     lammps_command(calc->lmp, cmd);
-    /* atoms */
-    create_atoms(calc, config, input);
     /* mass */
     for (i = 0; i < input->nelem; ++i) {
         sprintf(cmd, "mass %d %f", i + 1,
@@ -96,8 +74,6 @@ static void lmp_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
         lammps_command(calc->lmp, cmd);
         ptr = strtok(NULL, "|\n");
     }
-    /* balance */
-    lammps_command(calc->lmp, "balance 1.0 shift xyz 20 1.0");
     /* turn on initialized tag */
     calc->initialized = 1;
 }
@@ -112,8 +88,11 @@ void oneshot(Calc *calc, Config *config, Input *input,
     } else {
         /* delete */
         lammps_command(calc->lmp, "delete_atoms group all");
-        create_atoms(calc, config, input); 
     }
+    /* atoms */
+    create_atoms(calc, config, input); 
+    /* balance */
+    lammps_command(calc->lmp, "balance 1.0 shift xyz 20 1.0");
     /* oneshot */
     lammps_command(calc->lmp, "run 0");
     *energy = lammps_get_thermo(calc->lmp, "pe");
@@ -124,15 +103,38 @@ void oneshot(Calc *calc, Config *config, Input *input,
 void atom_relax(Calc *calc, Config *config, Input *input,
                 double *energy, MPI_Comm comm)
 {
+    int i;
+    char cmd[65536], tmp_cmd[65536];
     if (calc->initialized == 0) {
         /* create LAMMPS instance */
         lmp_init(calc, config, input, comm);
     } else {
         /* delete */
         lammps_command(calc->lmp, "delete_atoms group all");
-        create_atoms(calc, config, input); 
     }
-    char cmd[1024];
+    /* atoms */
+    create_atoms(calc->lmp, config, input);
+    /* balance */
+    lammps_command(calc->lmp, "balance 1.0 shift xyz 20 1.0");
+    /* fix */
+    int fix = 0;
+    for (i = 0; i < config->tot_num; ++i) {
+        if (config->fix[i] > 0) {
+            fix++;
+            break;
+        }
+    }
+    if (fix > 0) {
+        sprintf(cmd, "group freeze id");
+        for (i = 0; i < config->tot_num; ++i) {
+            if (config->fix[i] > 0) {
+                sprintf(tmp_cmd, " %d", i + 1);
+                strcat(cmd, tmp_cmd);
+            }
+        }
+        lammps_command(calc->lmp, cmd);
+        lammps_command(calc->lmp, "fix int freeze setforce 0.0 0.0 0.0");
+    }
     /* minimize */
     sprintf(cmd, "minimize 0 %f 10000 100000", input->f_tol);
     lammps_command(calc->lmp, cmd);
@@ -146,4 +148,5 @@ void free_calc(Calc *calc)
 {
     /* delete LAMMPS instance */
     lammps_close(calc->lmp);
+    free(calc);
 }

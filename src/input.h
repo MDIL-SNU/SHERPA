@@ -25,6 +25,8 @@ typedef struct _Input
     char *pair_style;
     char *pair_coeff;
     char *vasp_cmd;
+    char *ase_calc;
+    char *model_path;
     int ncore;
 
     int kappa_dimer;

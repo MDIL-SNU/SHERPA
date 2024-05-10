@@ -465,7 +465,7 @@ int art_nouveau(Calc *calc, Config *initial, Config *saddle, Config *final,
                 Input *input, double *full_eigenmode, int count, int index,
                 double *Ea, MPI_Comm comm)
 {
-    int i, j, rank;
+    int i, rank;
     int conv = -1;
     char filename[128];
 

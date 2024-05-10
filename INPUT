@@ -27,6 +27,10 @@ NCORE       = 4
 # VASP parameter (SHERPA_VASP) #
 VASP_CMD    = mpirun -np $nprocs vasp_std
 
+# ASE parameter (SHERPA_ASE) #
+ASE_CALC    = ase_calc.py
+MODEL_PATH  = checkpoint.pth
+
 # dimer parameter #
 KAPPA_DIMER = 0
 F_ROT_MIN   = 0.1 

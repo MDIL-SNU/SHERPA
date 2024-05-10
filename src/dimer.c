@@ -17,7 +17,6 @@ static void rotate(Calc *calc, Config *config0, Input *input,
 {
     int i, rank;
     double magnitude, cmin;
-    char filename[128];
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     int local_rank = rank % input->ncore;
@@ -528,7 +527,7 @@ int dimer(Calc *calc, Config *initial, Config *saddle, Config *final,
           Input *input, double *full_eigenmode, int count, int index,
           double *Ea, MPI_Comm comm)
 {
-    int i, j, rank;
+    int i, rank;
     int conv = -1;
     double kappa = 1.0;;
     char filename[128];

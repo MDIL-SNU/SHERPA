@@ -8,7 +8,6 @@
 
 int read_input(Input *input, char *filename)
 {
-    int errno;
     input->acti_cutoff = 6.0;
     input->acti_nevery = 3;
     input->finite_diff = 0.01;
@@ -33,6 +32,9 @@ int read_input(Input *input, char *filename)
     input->ncore = 1;
 
     input->vasp_cmd = NULL;
+
+    input->ase_calc = NULL;
+    input->model_path = NULL;
 
     input->kappa_dimer = 0;
     input->f_rot_min = 0.1;
@@ -135,6 +137,14 @@ int read_input(Input *input, char *filename)
                 strtok(NULL, " \n\t");
                 input->vasp_cmd = (char *)malloc(sizeof(char) * 65536);
                 strcpy(input->vasp_cmd, strtok(NULL, "\n"));
+            } else if (strcmp(ptr, "ASE_CALC") == 0) {
+                strtok(NULL, " \n\t");
+                input->ase_calc = (char *)malloc(sizeof(char) * 65536);
+                strcpy(input->ase_calc, strtok(NULL, "\n"));
+            } else if (strcmp(ptr, "MODEL_PATH") == 0) {
+                strtok(NULL, " \n\t");
+                input->model_path = (char *)malloc(sizeof(char) * 65536);
+                strcpy(input->model_path, strtok(NULL, "\n"));
             } else if (strcmp(ptr, "KAPPA_DIMER") == 0) {
                 strtok(NULL, " \n\t");
                 input->kappa_dimer = atoi(strtok(NULL, "\n"));
@@ -180,13 +190,18 @@ int read_input(Input *input, char *filename)
         }
     }
     fclose(fp);
-    if (input->kappa_dimer + input->art_nouveau > 1) {
-        printf("Choose only one algirhtm. Kappa-dimer or ARTn?\n");
+    if (input->pair_style == NULL && input->pair_coeff == NULL
+       && input->vasp_cmd == NULL && input->ase_calc == NULL) {
+        printf("Choose one method. LAMMPS, VASP, or ASE.\n");
         return 1;
     }
-    if (input->pair_style == NULL && input->pair_coeff == NULL && input->vasp_cmd == NULL) {
-        printf("Choose only one method. LAMMPS or VASP?\n");
+    /* TODO: dimer is not a default option */
+    if (input->kappa_dimer + input->art_nouveau > 1) {
+        printf("Choose only one algirhtm. Kappa-dimer or ARTn\n");
         return 1;
+    }
+    if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
+        input->ncore = 1;
     }
     return 0;
 }
@@ -235,6 +250,11 @@ void write_input(Input *input)
     if (input->vasp_cmd != NULL) {
         fputs("# VASP parameter #\n", fp);
         fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
+        fputs("\n", fp);
+    }
+    if (input->ase_calc != NULL) {
+        fputs("# ASE parameter #\n", fp);
+        fprintf(fp, "ASE_CALC\t= %s\n", input->ase_calc);
         fputs("\n", fp);
     }
 

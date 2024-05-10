@@ -53,14 +53,13 @@ void get_minimum_image(double *del, double *boxlo, double *boxhi,
 /* -1: unique, nonnegative: degenerate */
 int check_unique(Config *config, Input *input)
 {
-    int i, j, unique, count, errno;
-    char filename[128];
+    int i;
     FILE *rp = fopen("./Saddle.POSCAR", "r");
     /* first open */
     if (rp == NULL) {
         return -1;
     } else {
-        char line[1024], header[128], *ptr;
+        char line[1024], header[128];
         while (1) {
             if (fgets(header, 128, rp) == NULL) {
                 break;
@@ -261,7 +260,8 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                           double cutoff, int *active_num, int *active_list,
                           MPI_Comm comm)
 {
-    int i, j, max_index;
+    int i, j;
+    int max_index = 0;
     double del[3];
     double dmax = 0.0;
     /* maximally displaced atom */
@@ -338,10 +338,7 @@ int split_config(Calc *calc, Config *initial, Config *saddle, Config *final,
                  int active_num, int *active_list, int count, int index,
                  MPI_Comm comm)
 {
-    int i, j, rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int local_rank = rank % input->ncore;
+    int i, j;
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);

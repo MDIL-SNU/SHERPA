@@ -4,8 +4,6 @@
 #include "dataset.h"
 #include "dimer.h"
 #include "input.h"
-#include "linalg.h"
-#include "my_mpi.h"
 #include "target.h"
 #include "utils.h"
 #include <math.h>
@@ -150,7 +148,6 @@ int main(int argc, char *argv[])
     int local_conv;
     int local_unique;
     int local_write;
-    int local_exit;
     int local_reac_num = 0;
     int local_freq_num = 0;
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size1);
@@ -159,6 +156,7 @@ int main(int argc, char *argv[])
 
     /* initialize calculator */
     Calc *calc = (Calc *)malloc(sizeof(Calc));
+    calc->initialized = 0;
 
     /* initial relax */
     if (input->init_relax > 0) {

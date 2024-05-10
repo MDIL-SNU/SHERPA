@@ -203,7 +203,7 @@ int read_config(Config *config, char *filename)
     if (fp == NULL) {
         return 1;
     }
-    int i, j, k;
+    int i, j; 
     double tmp_pos[3];
     char line[1024], tmp_line[1024], *ptr;
 
