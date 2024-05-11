@@ -15,7 +15,6 @@ void vasp_run(Input *input)
     chdir("./VASP_tmp");
     fp = popen(input->vasp_cmd, "r");
     if (fp != NULL) {
-        char line[1024];
         while (fgets(line, 1024, fp)) {
             if (strstr(line, "General timing") != NULL) {
                 break;
@@ -124,7 +123,6 @@ void atom_relax(Calc *calc, Config *config, Input *input,
                 double *energy, MPI_Comm comm)
 {
     FILE *fp;
-    char cmd[1024], filename[256];
     mkdir("./VASP_tmp", 0775);
     write_incar(input, "VASP_tmp/INCAR", 2);
     write_config(config, "VASP_tmp/POSCAR", "poscar", "w");

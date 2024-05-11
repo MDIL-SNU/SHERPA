@@ -53,33 +53,37 @@ static void ase_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
         Py_Initialize();
     }
 
-    PyObject* pySys;
-    PyObject* pyPath;
-    PyObject* pyName;
-    PyObject* pyModule;
-    PyObject* pyFunc;
-    PyObject* pyArg;
+    PyObject* pySys = NULL;
+    PyObject* pyPath = NULL;
+    PyObject* pyName = NULL;
+    PyObject* pyModule = NULL;
+    PyObject* pyFunc = NULL;
+    PyObject* pyArg = NULL;
 
     /* append path */
     pySys = PyImport_ImportModule("sys");
     pyPath = PyObject_GetAttrString(pySys, "path");
-    char path[65536];
-    getcwd(path, sizeof(path));
-    pyName = PyUnicode_DecodeFSDefault(path);
+    pyName = PyUnicode_DecodeFSDefault(".");
     PyList_Append(pyPath, pyName);
     Py_XDECREF(pyName);
 
-    /* change / to . */
+    char *ptr = strrchr(input->ase_calc, '/');
     char *name = (char *)malloc(sizeof(char) * 65536);
-    strcpy(name, input->ase_calc);
-    char *index = strchr(name, '/');
-    while (index) {
-        *index = '.';
-        index = strchr(index, '/');
+    if (ptr != NULL) {
+        char path[65536];
+        strcpy(path, input->ase_calc);
+        path[strlen(input->ase_calc) - strlen(ptr)] = '\0';
+        pyName = PyUnicode_DecodeFSDefault(path);
+        PyList_Append(pyPath, pyName);
+        Py_XDECREF(pyName);
+        strcpy(name, ptr + 1);
+    } else {
+        strcpy(name, input->ase_calc); 
     }
-    name[strlen(name) - 3] = '\0';
 
     /* import */
+    name[strlen(name) - 3] = '\0';
+    printf("name? %s\n", name);
     pyName = PyUnicode_DecodeFSDefault(name);
     free(name);
     if (pyName != NULL) {
@@ -126,20 +130,20 @@ static void run_ase(Calc *calc, char *name, PyObject *pyArg,
                     double *output_scalar, double *output_array)
 {
     int i, j;
-    PyObject* pyFunc;
-    PyObject* pyValue;
-    PyObject* pyScalar;
-    PyObject* pyVector;
-    PyObject* pyMatrix;
+    PyObject* pyFunc = NULL;
+    PyObject* pyValue = NULL;
+    PyObject* pyScalar = NULL;
+    PyObject* pyVector = NULL;
+    PyObject* pyMatrix = NULL;
 
     /* run */
     pyFunc = PyObject_GetAttrString((PyObject *)calc->ase, name);
-    if ((pyFunc != NULL) && (PyCallable_Check(pyFunc))) {
+    if (pyFunc != NULL && PyCallable_Check(pyFunc)) {
         pyValue = PyObject_CallObject(pyFunc, pyArg);
         Py_XDECREF(pyArg);
-        if ((pyValue != NULL) && PyTuple_Check(pyValue) && (PyTuple_Size(pyValue) >= 2)) {
+        if (pyValue != NULL && PyTuple_Check(pyValue)) {
             pyScalar = PyTuple_GetItem(pyValue, 0);
-            if ((pyScalar != NULL) && PyFloat_Check(pyScalar)) {
+            if (pyScalar != NULL && PyFloat_Check(pyScalar)) {
                 *output_scalar = PyFloat_AsDouble(pyScalar);
             } else {
                 if (PyErr_Occurred()) {
@@ -147,13 +151,13 @@ static void run_ase(Calc *calc, char *name, PyObject *pyArg,
                 }
             }
             pyMatrix = PyTuple_GetItem(pyValue, 1);
-            if ((pyMatrix != NULL) && PyList_Check(pyMatrix)) {
-                for (i = 0; i < PyTuple_Size(pyMatrix); ++i) {
+            if (pyMatrix != NULL && PyList_Check(pyMatrix)) {
+                for (i = 0; i < PyList_Size(pyMatrix); ++i) {
                     pyVector = PyList_GetItem(pyMatrix, i);
-                    if ((pyVector != NULL) && PyList_Check(pyVector)) {
+                    if (pyVector != NULL && PyList_Check(pyVector)) {
                         for (j = 0; j < 3; ++j) {
                             pyScalar = PyList_GetItem(pyVector, j);
-                            if ((pyScalar != NULL) && PyFloat_Check(pyScalar)) {
+                            if (pyScalar != NULL && PyFloat_Check(pyScalar)) {
                                 output_array[i * 3 + j] = PyFloat_AsDouble(pyScalar);
                             } else {
                                 if (PyErr_Occurred()) {
@@ -190,10 +194,10 @@ static void run_ase(Calc *calc, char *name, PyObject *pyArg,
 void oneshot(Calc *calc, Config *config, Input *input,
              double *energy, double *force, MPI_Comm comm)
 {
-    PyObject* pyArg;
-    PyObject* pyAtomNum;
-    PyObject* pyPos;
-    PyObject* pyCell;
+    PyObject* pyArg = NULL;
+    PyObject* pyAtomNum = NULL;
+    PyObject* pyPos = NULL;
+    PyObject* pyCell = NULL;
 
     /* initialize */
     if (calc->initialized == 0) {
@@ -220,7 +224,6 @@ void atom_relax(Calc *calc, Config *config, Input *input,
     PyObject* pyPos;
     PyObject* pyCell;
     PyObject* pyFix;
-    PyObject* pyFtol;
 
     /* initialize */
     if (calc->initialized == 0) {

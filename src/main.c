@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
         copy_config(saddle, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
-        if (input->art_nouveau > 0) {
+        if (input->algorithm == 'a') {
             conv = art_nouveau(calc, initial, saddle, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {

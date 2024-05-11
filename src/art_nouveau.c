@@ -5,11 +5,14 @@
 #include "utils.h"
 #include <float.h>
 #include <math.h>
-#include <mkl.h>
+//#include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+
+extern void dsyev_(char *jobz, char *uplo, int *n, double *a, int *lda,
+                   double *w, double *work, int *lwork, int *info);
 
 static void lanczos(Calc *calc, Config *config, Input *input, int active_num,
                     int *active_list, double *eigenvalue, double *eigenmode,
@@ -138,15 +141,17 @@ static void lanczos(Calc *calc, Config *config, Input *input, int active_num,
         }
 
         /* eigenvector consists of orthonormal columns */
-        MKL_INT n = k;
-        MKL_INT info, lwork;
+//        MKL_INT n = k;
+//        MKL_INT info, lwork;
+        int n = k;
+        int info, lwork;
         double wkopt;
         double *w = (double *)malloc(sizeof(double) * k);
         lwork = -1;
-        dsyev("V", "U", &n, eigenvector, &n, w, &wkopt, &lwork, &info);
-        lwork = (MKL_INT)wkopt;
+        dsyev_("V", "U", &n, eigenvector, &n, w, &wkopt, &lwork, &info);
+        lwork = (int)wkopt;
         double *work = (double *)malloc(lwork * sizeof(double));
-        dsyev("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
+        dsyev_("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
         lambda_new = w[0]; 
         criteria = fabs((lambda_new - lambda_old) / lambda_new);
         lambda_old = lambda_new;

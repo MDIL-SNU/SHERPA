@@ -371,7 +371,7 @@ static void translate(Calc *calc, Config *config0, Input *input,
     }
     double *f0p = (double *)malloc(sizeof(double) * active_num * 3);
     double gamma1, gamma2;
-    if (input->kappa_dimer > 0) {
+    if (input->algorithm == 'k') {
         double beta = 5.0;
         gamma1 = 2.0 / (1.0 + exp(beta * kappa)) - 1.0;
         gamma2 = 1.0 - 1.0 / (1.0 + exp(beta * kappa));
@@ -667,7 +667,7 @@ int dimer(Calc *calc, Config *initial, Config *saddle, Config *final,
                 }
             }
         }
-        if (input->kappa_dimer > 0) {
+        if (input->algorithm == 'k') {
             /* kappa */
             double *tmp_eigenmode = (double *)malloc(sizeof(double) * active_num * 3);
             for (i = 0; i < active_num; ++i) {

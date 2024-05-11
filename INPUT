@@ -1,4 +1,5 @@
-# general parameter #
+# general #
+ALGORITHM   = art_nouveau
 ACTI_CUTOFF = 5.0
 ACTI_NEVERY = 3
 FINITE_DIFF = 0.01
@@ -7,42 +8,43 @@ DIFF_TOL    = 0.4
 MAX_MOVE    = 0.1
 TRIAL_MOVE  = 0.01
 MAX_SEARCH  = 100
-WRITE_TRAJ  = 0
-CONTINUE    = 0
+WRITE_TRAJ  = T
+CONTINUE    = F
 
-# initial structure parameter #
+# initial structure #
 NELEMENT    = 2
 ATOM_TYPE   = O Pt
-INIT_RELAX  = 1
-INIT_DISP   = 0
+INIT_RELAX  = T
+INIT_DISP   = F
 DISP_CUTOFF = 5.0
 DISP_MOVE   = 0.2
-INIT_MODE   = 0
+INIT_MODE   = F
 
-# LAMMPS parameter (SHERPA_LMP) #
+# LAMMPS (only work for sherpa_lmp) #
 PAIR_STYLE  = nn
 PAIR_COEFF  = * * potential_saved O Pt
 NCORE       = 4
 
-# VASP parameter (SHERPA_VASP) #
+# VASP (only work for sherpa_vasp) #
 VASP_CMD    = mpirun -np $nprocs vasp_std
 
-# ASE parameter (SHERPA_ASE) #
+# ASE (only work for sherpa_ase) #
 ASE_CALC    = ase_calc.py
 MODEL_PATH  = checkpoint.pth
 
-# dimer parameter #
-KAPPA_DIMER = 0
+# dimer  #
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
 MAX_NUM_ROT = 4
 MAX_NUM_TLS = 500
 
-# art_nouveau parameter #
-ART_NOUVEAU = 1
+# art_nouveau #
 LAMBDA_CONV = 0.01
 MAX_NUM_ITR = 500
 MAX_NUM_RLX = 1
 DELAY_STEP  = 0
 MIXING_STEP = 0
 HYPER_STEP  = 3
+
+# random #
+RANDOM_SEED = 928

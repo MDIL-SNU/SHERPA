@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         }
     }
     if (sherpa_cmd == NULL) {
-        printf("--sherpa_cmd is necessary\n");
+        printf("--sherpa_cmd is missing.\n");
         return 1;
     }
     srand(random_seed);

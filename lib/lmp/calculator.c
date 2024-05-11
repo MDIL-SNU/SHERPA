@@ -90,7 +90,7 @@ void oneshot(Calc *calc, Config *config, Input *input,
         lammps_command(calc->lmp, "delete_atoms group all");
     }
     /* atoms */
-    create_atoms(calc, config, input); 
+    create_atoms(calc->lmp, config, input); 
     /* balance */
     lammps_command(calc->lmp, "balance 1.0 shift xyz 20 1.0");
     /* oneshot */

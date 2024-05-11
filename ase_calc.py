@@ -5,13 +5,14 @@ from ase.optimize import LBFGS
 from ase.constraints import FixAtoms
 
 
-# modify here!
 def ase_initialize(model_path: Optional[str] = None) -> None:
+    """
+    Assign the ase calculator to the calculator variable.    
+    """
     global calculator
 
-    from ase.calculators.abc import ABC
-
-    calculator = ABC(model_path)
+    from sevenn.sevennet_calculator import SevenNetCalculator
+    calculator = SevenNetCalculator(model_path)
 
 
 def oneshot(
@@ -43,7 +44,7 @@ def atom_relax(
     )
     atoms.constraints = FixAtoms(mask=fix)
     atoms.calc = calculator
-    opt = LBFGS(atoms)
+    opt = LBFGS(atoms, logfile=None)
     opt.run(fmax=ftol, steps=10000)
 
     energy = atoms.get_potential_energy(force_consistent=True)

@@ -7,7 +7,6 @@
 
 typedef struct _Calc
 {
-    //PyObject *ase;
     void *ase;
     int initialized;
 } Calc;

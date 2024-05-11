@@ -8,6 +8,7 @@
 
 int read_input(Input *input, char *filename)
 {
+    input->algorithm = 'a';
     input->acti_cutoff = 6.0;
     input->acti_nevery = 3;
     input->finite_diff = 0.01;
@@ -36,13 +37,11 @@ int read_input(Input *input, char *filename)
     input->ase_calc = NULL;
     input->model_path = NULL;
 
-    input->kappa_dimer = 0;
     input->f_rot_min = 0.1;
     input->f_rot_max = 1.0;
     input->max_num_rot = 4;
     input->max_num_tls = 500;
 
-    input->art_nouveau = 1;
     input->lambda_conv = 0.01;
     input->max_num_itr = 500;
     input->max_num_rlx = 1;
@@ -55,7 +54,7 @@ int read_input(Input *input, char *filename)
     FILE *fp;
     fp = fopen(filename, "r");
     if (fp == NULL) {
-        printf("Check INPUT directory.\n");
+        printf("Cannot find INPUT file.\n");
         return 1;
     }
     char line[128], *ptr;
@@ -67,7 +66,20 @@ int read_input(Input *input, char *filename)
             continue;
         } else {
             ptr = strtok(line, " \n\t");
-            if (strcmp(ptr, "ACTI_CUTOFF") == 0) {
+            if (strcmp(ptr, "ALGORITHM") == 0) {
+                strtok(NULL, " \n\t");
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "A", 1) == 0 || strncmp(ptr, "a", 1) == 0) {
+                    input->algorithm = 'a';
+                } else if (strncmp(ptr, "D", 1) == 0 || strncmp(ptr, "d", 1) == 0) {
+                    input->algorithm = 'd';
+                } else if (strncmp(ptr, "K", 1) == 0 || strncmp(ptr, "k", 1) == 0) {
+                    input->algorithm = 'k';
+                } else {
+                    printf("Invalid input for ALGORITHM\n");
+                    return 1;
+                }
+            } else if (strcmp(ptr, "ACTI_CUTOFF") == 0) {
                 strtok(NULL, " \n\t");
                 input->acti_cutoff = atof(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "ACTI_NEVERY") == 0) {
@@ -93,10 +105,26 @@ int read_input(Input *input, char *filename)
                 input->max_search = atoi(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "WRITE_TRAJ") == 0) {
                 strtok(NULL, " \n\t");
-                input->write_traj = atoi(strtok(NULL, "\n"));
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                    input->write_traj = 1;
+                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                    input->write_traj = 0;
+                } else {
+                    printf("Invalid input for WRITE_TRAJ\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "CONTINUE") == 0) {
                 strtok(NULL, " \n\t");
-                input->cont = atoi(strtok(NULL, "\n"));
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                    input->cont = 1;
+                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                    input->cont = 0;
+                } else {
+                    printf("Invalid input for CONTINUE\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "NELEMENT") == 0) {
                 strtok(NULL, " \n\t");
                 input->nelem = atoi(strtok(NULL, "\n"));
@@ -109,10 +137,26 @@ int read_input(Input *input, char *filename)
                 }
             } else if (strcmp(ptr, "INIT_RELAX") == 0) {
                 strtok(NULL, " \n\t");
-                input->init_relax = atoi(strtok(NULL, "\n"));
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                    input->init_relax = 1;
+                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                    input->init_relax = 0;
+                } else {
+                    printf("Invalid input for INIT_RELAX\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "INIT_DISP") == 0) {
                 strtok(NULL, " \n\t");
-                input->init_disp = atoi(strtok(NULL, "\n"));
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                    input->init_disp = 1;
+                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                    input->init_disp = 0;
+                } else {
+                    printf("Invalid input for INIT_DISP\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "DISP_CUTOFF") == 0) {
                 strtok(NULL, " \n\t");
                 input->disp_cutoff = atof(strtok(NULL, "\n"));
@@ -121,7 +165,15 @@ int read_input(Input *input, char *filename)
                 input->disp_move = atof(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "INIT_MODE") == 0) {
                 strtok(NULL, " \n\t");
-                input->init_mode = atoi(strtok(NULL, "\n"));
+                ptr = strtok(NULL, "\n");
+                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                    input->init_mode = 1;
+                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                    input->init_mode = 0;
+                } else {
+                    printf("Invalid input for INIT_MODE\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "PAIR_STYLE") == 0) {
                 strtok(NULL, " \n\t");
                 input->pair_style = (char *)malloc(sizeof(char) * 65536);
@@ -145,9 +197,6 @@ int read_input(Input *input, char *filename)
                 strtok(NULL, " \n\t");
                 input->model_path = (char *)malloc(sizeof(char) * 65536);
                 strcpy(input->model_path, strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "KAPPA_DIMER") == 0) {
-                strtok(NULL, " \n\t");
-                input->kappa_dimer = atoi(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "F_ROT_MIN") == 0) {
                 strtok(NULL, " \n\t");
                 input->f_rot_min = atof(strtok(NULL, "\n"));
@@ -160,9 +209,6 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "MAX_NUM_TLS") == 0) {
                 strtok(NULL, " \n\t");
                 input->max_num_tls = atoi(strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "ART_NOUVEAU") == 0) {
-                strtok(NULL, " \n\t");
-                input->art_nouveau = atoi(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "LAMBDA_CONV") == 0) {
                 strtok(NULL, " \n\t");
                 input->lambda_conv = atof(strtok(NULL, "\n"));
@@ -185,19 +231,14 @@ int read_input(Input *input, char *filename)
                 strtok(NULL, " \n\t");
                 input->random_seed = atoi(strtok(NULL, "\n"));
             } else {
-                printf("Unidentified tag. %s\n", ptr);
+                printf("Unsupported tag: %s\n", ptr);
             }
         }
     }
     fclose(fp);
     if (input->pair_style == NULL && input->pair_coeff == NULL
        && input->vasp_cmd == NULL && input->ase_calc == NULL) {
-        printf("Choose one method. LAMMPS, VASP, or ASE.\n");
-        return 1;
-    }
-    /* TODO: dimer is not a default option */
-    if (input->kappa_dimer + input->art_nouveau > 1) {
-        printf("Choose only one algirhtm. Kappa-dimer or ARTn\n");
+        printf("Choose the method: LAMMPS, VASP, or ASE.\n");
         return 1;
     }
     if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
@@ -212,7 +253,14 @@ void write_input(Input *input)
     int i;
     FILE *fp = fopen("./INPUT_read", "w");
 
-    fputs("# general parameter #\n", fp);
+    fputs("# general #\n", fp);
+    if (input->algorithm == 'a') {
+        fprintf(fp, "ALGORITHM\t= %s\n", "art_nouveau");
+    } else if (input->algorithm == 'd') {
+        fprintf(fp, "ALGORITHM\t= %s\n", "dimer method");
+    } else {
+        fprintf(fp, "ALGORITHM\t= %s\n", "kappa-dimer method");
+    }
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
@@ -222,52 +270,71 @@ void write_input(Input *input)
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);
     fprintf(fp, "TRIAL_MOVE\t= %f\n", input->trial_move);
     fprintf(fp, "MAX_SEARCH\t= %d\n", input->max_search);
-    fprintf(fp, "WRITE_TRAJ\t= %d\n", input->write_traj);
-    fprintf(fp, "CONTINUE\t= %d\n", input->cont);
+    if (input->write_traj) {
+        fputs("WRITE_TRAJ\t= True\n", fp);
+    } else {
+        fputs("WRITE_TRAJ\t= False\n", fp);
+    }
+    if (input->cont) {
+        fputs("CONTINUE\t= True\n", fp);
+    } else {
+        fputs("CONTINUE\t= False\n", fp);
+    }
     fputs("\n", fp);
 
-    fputs("# initial structure parameter #\n", fp);
+    fputs("# initial structure #\n", fp);
     fprintf(fp, "NELEMENT\t= %d\n", input->nelem);
     fputs("ATOM_TYPE\t=", fp);
     for (i = 0; i < input->nelem; ++i) {
         fprintf(fp, " %s", input->atom_type[i]);
     }
     fputs("\n", fp);
-    fprintf(fp, "INIT_RELAX\t= %d\n", input->init_relax);
-    fprintf(fp, "INIT_DISP\t= %d\n", input->init_disp);
+    if (input->init_relax) {
+        fputs("INIT_RELAX\t= True\n", fp);
+    } else {
+        fputs("INIT_RELAX\t= False\n", fp);
+    }
+    if (input->init_disp) {
+        fputs("INIT_DISP\t= True\n", fp);
+    } else {
+        fputs("INIT_DISP\t= False\n", fp);
+    }
     fprintf(fp, "DISP_CUTOFF\t= %f\n", input->disp_cutoff);
     fprintf(fp, "DISP_MOVE\t= %f\n", input->disp_move);
-    fprintf(fp, "INIT_MODE\t= %d\n", input->init_mode);
+    if (input->init_mode) {
+        fputs("INIT_MODE\t= True\n", fp);
+    } else {
+        fputs("INIT_MODE\t= False\n", fp);
+    }
     fputs("\n", fp);
 
     if (input->pair_style != NULL && input->pair_coeff != NULL) {
-        fputs("# LAMMPS parameter #\n", fp);
+        fputs("# LAMMPS #\n", fp);
         fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
         fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
         fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
         fputs("\n", fp);
     }
     if (input->vasp_cmd != NULL) {
-        fputs("# VASP parameter #\n", fp);
+        fputs("# VASP #\n", fp);
         fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
         fputs("\n", fp);
     }
     if (input->ase_calc != NULL) {
-        fputs("# ASE parameter #\n", fp);
+        fputs("# ASE #\n", fp);
         fprintf(fp, "ASE_CALC\t= %s\n", input->ase_calc);
+        fprintf(fp, "MODEL_PATH\t= %s\n", input->model_path);
         fputs("\n", fp);
     }
 
-    fputs("# dimer parameter #\n", fp);
-    fprintf(fp, "KAPPA_DIMER\t= %d\n", input->kappa_dimer);
+    fputs("# dimer #\n", fp);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
     fprintf(fp, "F_ROT_MAX\t= %f\n", input->f_rot_max);
     fprintf(fp, "MAX_NUM_ROT\t= %d\n", input->max_num_rot);
     fprintf(fp, "MAX_NUM_TLS\t= %d\n", input->max_num_tls);
     fputs("\n", fp);
 
-    fputs("# art_nouveau parameter #\n", fp);
-    fprintf(fp, "ART_NOUVEAU\t= %d\n", input->art_nouveau);
+    fputs("# art_nouveau #\n", fp);
     fprintf(fp, "LAMBDA_CONV\t= %f\n", input->lambda_conv);
     fprintf(fp, "MAX_NUM_ITR\t= %d\n", input->max_num_itr);
     fprintf(fp, "MAX_NUM_RLX\t= %d\n", input->max_num_rlx);
@@ -298,6 +365,12 @@ void free_input(Input *input)
     }
     if (input->vasp_cmd != NULL) {
         free(input->vasp_cmd);
+    }
+    if (input->ase_calc != NULL) {
+        free(input->ase_calc);
+    }
+    if (input->model_path != NULL) {
+        free(input->model_path);
     }
     free(input);
 }
