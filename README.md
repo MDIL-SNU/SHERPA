@@ -1,21 +1,20 @@
 # SHERPA
-**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods such as the dimer method[1](https://doi.org/10.1063/1.480097) and activation-relaxation technique nouveau (ARTn)[2](http://dx.doi.org/10.1103/PhysRevE.62.7723). This script can interface with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator), VASP (Vienna Ab initio Simulation Package), and ASE[3](https://doi.org/10.1088/1361-648X/aa680e) (Atomic Simulation Environment) calculator.
-* **DIMER** [0/1, 0 (default)]
-  - *DIMER* activates the original dimer method ([4](https://doi.org/10.1063/1.480097)).
-* **KAPPA_DIMER** [0/1, 0 (default)]
-  - *KAPPA_DIMER* activates the basin-constrained dimer method ([5](https://doi.org/10.1063/1.4898664)).
-* **ART_NOUVEAU** [0/1, 1 (default)]
-  - *ART_NOUVEAU* activates the activation and relaxation technique. ([6](https://doi.org/10.1103/PhysRevE.62.7723))
+**SHERPA** (**S**addle points **H**unting based on **E**nergy surface for **R**eaction **PA**thways) is the script for finding saddle points of atomic reaction with minimum-mode following methods.
+
+We support the dimer method[[1](https://doi.org/10.1063/1.480097)], kappa-dimer method[[2](https://doi.org/10.1063/1.4898664)] and activation-relaxation technique nouveau (ARTn)[[3](http://dx.doi.org/10.1103/PhysRevE.62.7723)] as a minimum-mode following method.
+
+SHERPA interfaces with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator), VASP (Vienna Ab initio Simulation Package), and ASE (Atomic Simulation Environment) calculator.
+
 <p align="center">
 <img src="./assets/logo.png" width="200"/>
 </p>
 
 ## Requirement
 - CMake >= 3.13
-- LAMMPS, VASP, ASE are tested by version of 23Jun2022, 6.3.2, and 3.22.1, respectively.
+- LAPACK
 
 ## Installation
-Five executables are supported.
+Following executables can be installed.
 - sherpa_lmp: saddle point searches script through LAMMPS C-API
 - sherpa_vasp: saddle point searches script via reading/writing VASP
 - sherpa_ase: saddle point searches script with embedded ASE python calculator
@@ -23,7 +22,10 @@ Five executables are supported.
 - kmc: script for kMC simulation combined with SHERPA
 
 1. Build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
+
+[!TIP]
 Skip this step, if `sherpa_lmp` is not needed.
+
 ```bash
 cd lammps
 mkdir build; cd build
@@ -37,8 +39,10 @@ cd SHERPA
 mkdir build; cd build
 cmake ../
 ```
+[!NOTE]
 The path for Python package for `sherpa_ase` can be specified through `CMAKE_PREFIX_PATH`.
-For example, if virtual environment is managed by Anaconda, python interpreter would be located in `/path/.conda/envs/{name}/bin/python`. Then,
+
+For example, if python interpreter is located in `/path/.conda/envs/{name}/bin/python`, `CMAKE_PREFIX_PATH` will be written as below:
 ```bash
 cmake ../ -D CMAKE_PREFIX_PATH=/path/.conda/envs/{name}
 ```
@@ -56,7 +60,7 @@ The built executable will be copied to `SHERPA/bin`.
 *INPUT*, *POSCAR*, and *TARGET* are required to run the `sherpa` script.
 *POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 
-**Note**
+[!IMPORTANT]
 `sherpa_vasp` requires additional files to run VASP such as INCAR, KPOINTS, and POTCAR. `sherpa_ase` also needs a python file that defines ase calculator. An example python file is provided as `ase_calc.py`.
 
 Use the following commands:
@@ -66,7 +70,8 @@ mpirun -np ${numproc} sherpa_lmp
 # sherpa_vasp
 sherpa_vasp
 ```
-, where `${numproc}` stands for the number of processors.
+where `${numproc}` stands for the number of processors.
+
 The number of processors for VASP can be defined in `VASP_CMD` in `INPUT`.
 
 ### INPUT
@@ -149,7 +154,7 @@ The number of processors for VASP can be defined in `VASP_CMD` in `INPUT`.
 * **RANDOM_SEED** [unsigned integer | $RANDOM (default)]
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
-**Note**
+[!TIP]
 In the case of *ALGORITHM* and boolean tags, the first letter determines the applied algorithm.
 
 ### TARGET
@@ -215,13 +220,14 @@ The below outputs have header like `{count}_{index}`, meaning that `{count}` and
 ```bash
 extractor ${output} ${count}
 ```
-, where `${output}` indicates one of output files.
+where `${output}` indicates one of output files.
 
 ## Usage (kmc)
 To run KMC script, several settings can be provided by in-command.
 ```bash
 kmc --sherpa_cmd "{sherpa_command}" --att_freq 1e13 --temperature 298 --kmc_step 10000 --inputs_path "./INPUTS"
 ```
+[!IMPORTANT]
 In *inputs_path*, input files for the `sherpa` should be located (INPUT, POSCAR, and TARGET).
 
 
