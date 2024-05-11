@@ -83,7 +83,6 @@ static void ase_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
 
     /* import */
     name[strlen(name) - 3] = '\0';
-    printf("name? %s\n", name);
     pyName = PyUnicode_DecodeFSDefault(name);
     free(name);
     if (pyName != NULL) {

@@ -1,17 +1,18 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, List
 
 from ase import Atoms
 from ase.optimize import LBFGS
 from ase.constraints import FixAtoms
 
 
-def ase_initialize(model_path: Optional[str] = None) -> None:
+def ase_initialize(model_path: str) -> None:
     """
-    Assign the ase calculator to the calculator variable.    
+    Assign the ase calculator to the calculator variable.
     """
     global calculator
 
     from sevenn.sevennet_calculator import SevenNetCalculator
+
     calculator = SevenNetCalculator(model_path)
 
 

@@ -121,7 +121,7 @@ The number of processors for VASP can be defined in `VASP_CMD` in `INPUT`.
 #### ASE (only work for sherpa_ase)
 * **ASE_CALC** [strings]
   - *ASE_CALC* indicates the python file containing ASE calculator.
-* **MODEL_PATH** [strings | None (default)]
+* **MODEL_PATH** [strings]
   - *MODEL_PATH* indicates the potential file for ASE calculator.
 #### Dimer (only work for dimer and kappa-dimer method)
 * **F_ROT_MIN** [real | 0.1 (default)]

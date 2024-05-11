@@ -32,7 +32,7 @@ VASP_CMD    = mpirun -np $nprocs vasp_std
 ASE_CALC    = ase_calc.py
 MODEL_PATH  = checkpoint.pth
 
-# dimer  #
+# dimer #
 F_ROT_MIN   = 0.1 
 F_ROT_MAX   = 1.0
 MAX_NUM_ROT = 4

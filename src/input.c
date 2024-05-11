@@ -241,6 +241,10 @@ int read_input(Input *input, char *filename)
         printf("Choose the method: LAMMPS, VASP, or ASE.\n");
         return 1;
     }
+    if (input->ase_calc != NULL && input->model_path == NULL) {
+        printf("Specify MODEL_PATH.\n");
+        return 1;
+    }
     if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
         input->ncore = 1;
     }
