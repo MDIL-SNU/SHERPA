@@ -1,13 +1,11 @@
 #include "art_nouveau.h"
+#include "calculator.h"
 #include "config.h"
 #include "dataset.h"
 #include "dimer.h"
 #include "input.h"
-#include "linalg.h"
-#include "my_mpi.h"
 #include "target.h"
 #include "utils.h"
-#include "calculator.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -150,17 +148,20 @@ int main(int argc, char *argv[])
     int local_conv;
     int local_unique;
     int local_write;
-    int local_exit;
     int local_reac_num = 0;
     int local_freq_num = 0;
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size1);
     int *local_freq_list = (int *)malloc(sizeof(int) * list_size2);
     double *local_acti_list = (double *)malloc(sizeof(double) * list_size1);
 
+    /* initialize calculator */
+    Calc *calc = (Calc *)malloc(sizeof(Calc));
+    calc->initialized = 0;
+
     /* initial relax */
     if (input->init_relax > 0) {
         double energy;
-        atom_relax(config, input, &energy, local_comm);
+        atom_relax(calc, config, input, &energy, local_comm);
     }
     /* write config */
     if (rank == 0) {
@@ -283,11 +284,11 @@ int main(int argc, char *argv[])
         copy_config(saddle, config);
         Config *final = (Config *)malloc(sizeof(Config));
         copy_config(final, config);
-        if (input->art_nouveau > 0) {
-            conv = art_nouveau(initial, saddle, final, input, eigenmode,
+        if (input->algorithm == 'a') {
+            conv = art_nouveau(calc, initial, saddle, final, input, eigenmode,
                                local_count, atom_index, &Ea, local_comm);
         } else {
-            conv = dimer(initial, saddle, final, input, eigenmode,
+            conv = dimer(calc, initial, saddle, final, input, eigenmode,
                          local_count, atom_index, &Ea, local_comm);
         }
         if (local_rank == 0) {
@@ -482,6 +483,7 @@ int main(int argc, char *argv[])
     free_dataset(dataset);
     free_config(config);
     free_input(input);
+    free_calc(calc);
 
     MPI_Win_free(&count_win);
     MPI_Win_free(&done_win);

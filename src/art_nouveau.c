@@ -5,15 +5,17 @@
 #include "utils.h"
 #include <float.h>
 #include <math.h>
-#include <mkl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 
-static void lanczos(Config *config, Input *input, int active_num, int *active_list,
-                    double *eigenvalue, double *eigenmode, int *lanczos_step,
-                    double *force0, MPI_Comm comm)
+extern void dsyev_(char *jobz, char *uplo, int *n, double *a, int *lda,
+                   double *w, double *work, int *lwork, int *info);
+
+static void lanczos(Calc *calc, Config *config, Input *input, int active_num,
+                    int *active_list, double *eigenvalue, double *eigenmode,
+                    int *lanczos_step, double *force0, MPI_Comm comm)
 {
     int i, j;
     int size = 32;
@@ -37,7 +39,7 @@ static void lanczos(Config *config, Input *input, int active_num, int *active_li
     double energy1;
     double *force1 = (double *)malloc(sizeof(double) * active_num * 3);
     double *full_force = (double *)malloc(sizeof(double) * config->tot_num * 3);
-    oneshot(config, input, &energy1, full_force, comm);
+    oneshot(calc, config, input, &energy1, full_force, comm);
     for (i = 0; i < active_num; ++i) {
         force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
         force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -86,7 +88,7 @@ static void lanczos(Config *config, Input *input, int active_num, int *active_li
             config->pos[active_list[i] * 3 + 1] += input->finite_diff * L1[i * 3 + 1];
             config->pos[active_list[i] * 3 + 2] += input->finite_diff * L1[i * 3 + 2];
         } 
-        oneshot(config, input, &energy1, full_force, comm);
+        oneshot(calc, config, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -138,15 +140,17 @@ static void lanczos(Config *config, Input *input, int active_num, int *active_li
         }
 
         /* eigenvector consists of orthonormal columns */
-        MKL_INT n = k;
-        MKL_INT info, lwork;
+//        MKL_INT n = k;
+//        MKL_INT info, lwork;
+        int n = k;
+        int info, lwork;
         double wkopt;
         double *w = (double *)malloc(sizeof(double) * k);
         lwork = -1;
-        dsyev("V", "U", &n, eigenvector, &n, w, &wkopt, &lwork, &info);
-        lwork = (MKL_INT)wkopt;
+        dsyev_("V", "U", &n, eigenvector, &n, w, &wkopt, &lwork, &info);
+        lwork = (int)wkopt;
         double *work = (double *)malloc(lwork * sizeof(double));
-        dsyev("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
+        dsyev_("V", "U", &n, eigenvector, &n, w, work, &lwork, &info);
         lambda_new = w[0]; 
         criteria = fabs((lambda_new - lambda_old) / lambda_new);
         lambda_old = lambda_new;
@@ -184,9 +188,11 @@ static void lanczos(Config *config, Input *input, int active_num, int *active_li
 }
 
 
-static void uphill_push(Config *config, Input *input, int active_num, int *active_list,
-                        double eigenvalue, double *eigenmode, double **push_direction,
-                        double *init_direction, double *force, int negative, MPI_Comm comm)
+static void uphill_push(Calc *calc, Config *config, Input *input,
+                        int active_num, int *active_list,
+                        double eigenvalue, double *eigenmode,
+                        double **push_direction, double *init_direction,
+                        double *force, int negative, MPI_Comm comm)
 {
     int i;
     if (eigenvalue < 0) {
@@ -243,7 +249,7 @@ static void uphill_push(Config *config, Input *input, int active_num, int *activ
 }
 
 
-static void perp_relax(Config *initial, Config *config0, Input *input,
+static void perp_relax(Calc *calc, Config *initial, Config *config0, Input *input,
                        int active_num, int *active_list, double eigenvalue,
                        double *push_direction, int count, int index,
                        int sps_step, int lanczos_step, int *relax_step,
@@ -288,7 +294,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
 
     int end_step = eigenvalue < 0 ? 500 : input->max_num_rlx;
     for ((*relax_step) = 0; (*relax_step) < end_step; ++(*relax_step)) {
-        oneshot(config0, input, &energy0, full_force, comm);
+        oneshot(calc, config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -341,7 +347,7 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
             config1->pos[active_list[i] * 3 + 2] += direction[i * 3 + 2]
                                                   * input->trial_move;
         }
-        oneshot(config1, input, &energy1, full_force, comm);
+        oneshot(calc, config1, input, &energy1, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force1[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force1[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -459,11 +465,11 @@ static void perp_relax(Config *initial, Config *config0, Input *input,
 }
 
 
-int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
-                double *full_eigenmode, int count, int index, double *Ea,
-                MPI_Comm comm)
+int art_nouveau(Calc *calc, Config *initial, Config *saddle, Config *final,
+                Input *input, double *full_eigenmode, int count, int index,
+                double *Ea, MPI_Comm comm)
 {
-    int i, j, rank;
+    int i, rank;
     int conv = -1;
     char filename[128];
 
@@ -575,7 +581,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
     double *full_force = (double *)malloc(sizeof(double) * config0->tot_num * 3);
     double start = MPI_Wtime();
     for (sps_step = 1; sps_step <= input->max_num_itr; ++sps_step) {
-        oneshot(config0, input, &energy0, full_force, comm);
+        oneshot(calc, config0, input, &energy0, full_force, comm);
         for (i = 0; i < active_num; ++i) {
             force0[i * 3 + 0] = full_force[active_list[i] * 3 + 0];
             force0[i * 3 + 1] = full_force[active_list[i] * 3 + 1];
@@ -602,7 +608,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         }
         /* lanczos */
         if (sps_step > input->delay_step) {
-            lanczos(config0, input, active_num, active_list,
+            lanczos(calc, config0, input, active_num, active_list,
                     &eigenvalue, eigenmode, &lanczos_step, force0, comm);
         }
         if (eigenvalue < 0) {
@@ -621,7 +627,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
                 if (all == 0) {
                     expand_active_volume(initial, config0, input, DBL_MAX,
                                          &active_num, active_list, comm);
-                    lanczos(config0, input, active_num, active_list,
+                    lanczos(calc, config0, input, active_num, active_list,
                             &eigenvalue, eigenmode, &lanczos_step, force0, comm);
                     all = 1;
                 } else {
@@ -636,12 +642,13 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         }
         /* uphill push */
         double *push_direction;
-        uphill_push(config0, input, active_num, active_list, eigenvalue, eigenmode,
-                    &push_direction, init_direction, force0, negative, comm);
+        uphill_push(calc, config0, input, active_num, active_list,
+                    eigenvalue, eigenmode, &push_direction, init_direction,
+                    force0, negative, comm);
         /* normal relax */
-        perp_relax(initial, config0, input, active_num, active_list, eigenvalue,
-                   push_direction, count, index, sps_step, lanczos_step,
-                   &relax_step, negative, comm);
+        perp_relax(calc, initial, config0, input, active_num, active_list,
+                   eigenvalue, push_direction, count, index, sps_step,
+                   lanczos_step, &relax_step, negative, comm);
         free(push_direction);
 
         /* change active volume */
@@ -686,7 +693,7 @@ int art_nouveau(Config *initial, Config *saddle, Config *final, Input *input,
         full_eigenmode[active_list[i] * 3 + 2] = eigenmode[i * 3 + 2];
     }
     double dE;
-    conv = split_config(initial, saddle, final, input, Ea, &dE, eigenmode,
+    conv = split_config(calc, initial, saddle, final, input, Ea, &dE, eigenmode,
                         active_num, active_list, count, index, comm);
     if (local_rank == 0) {
         char filename[128];

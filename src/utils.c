@@ -53,14 +53,13 @@ void get_minimum_image(double *del, double *boxlo, double *boxhi,
 /* -1: unique, nonnegative: degenerate */
 int check_unique(Config *config, Input *input)
 {
-    int i, j, unique, count, errno;
-    char filename[128];
+    int i;
     FILE *rp = fopen("./Saddle.POSCAR", "r");
     /* first open */
     if (rp == NULL) {
         return -1;
     } else {
-        char line[1024], header[128], *ptr;
+        char line[1024], header[128];
         while (1) {
             if (fgets(header, 128, rp) == NULL) {
                 break;
@@ -261,7 +260,8 @@ void expand_active_volume(Config *initial, Config *saddle, Input *input,
                           double cutoff, int *active_num, int *active_list,
                           MPI_Comm comm)
 {
-    int i, j, max_index;
+    int i, j;
+    int max_index = 0;
     double del[3];
     double dmax = 0.0;
     /* maximally displaced atom */
@@ -333,23 +333,20 @@ int diff_config(Config *config1, Config *config2, double tol)
 }
 
 
-int split_config(Config *initial, Config *saddle, Config *final, Input *input,
-                double *Ea, double *dE, double *eigenmode,
-                int active_num, int *active_list, int count, int index,
-                MPI_Comm comm)
+int split_config(Calc *calc, Config *initial, Config *saddle, Config *final,
+                 Input *input, double *Ea, double *dE, double *eigenmode,
+                 int active_num, int *active_list, int count, int index,
+                 MPI_Comm comm)
 {
-    int i, j, rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int local_rank = rank % input->ncore;
+    int i, j;
 
     double energy0;
     double *force0 = (double *)malloc(sizeof(double) * saddle->tot_num * 3);
     /* initial oneshot */
-    oneshot(initial, input, &energy0, force0, comm);
+    oneshot(calc, initial, input, &energy0, force0, comm);
     double initial_energy = energy0;
     /* saddle oneshot */
-    oneshot(saddle, input, &energy0, force0, comm);
+    oneshot(calc, saddle, input, &energy0, force0, comm);
     double saddle_energy = energy0;
     *Ea = saddle_energy - initial_energy;
     free(force0);
@@ -368,13 +365,13 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
             config1->pos[active_list[j] * 3 + 2] += input->max_move
                                                   * eigenmode[j * 3 + 2];
         }
-        oneshot(config1, input, &energy1, force1, comm);
+        oneshot(calc, config1, input, &energy1, force1, comm);
         if (energy1 < energy0) {
             break;
         }
     }
     free(force1);
-    atom_relax(config1, input, &energy1, comm);
+    atom_relax(calc, config1, input, &energy1, comm);
     int diff1 = diff_config(initial, config1, input->diff_tol);
 
     /* backward image */
@@ -391,13 +388,13 @@ int split_config(Config *initial, Config *saddle, Config *final, Input *input,
             config2->pos[active_list[j] * 3 + 2] -= input->max_move
                                                   * eigenmode[j * 3 + 2];
         }
-        oneshot(config2, input, &energy2, force2, comm);
+        oneshot(calc, config2, input, &energy2, force2, comm);
         if (energy2 < energy0) {
             break;
         }
     }
     free(force2);
-    atom_relax(config2, input, &energy2, comm);
+    atom_relax(calc, config2, input, &energy2, comm);
     int diff2 = diff_config(initial, config2, input->diff_tol);
 
     /* disconnected */

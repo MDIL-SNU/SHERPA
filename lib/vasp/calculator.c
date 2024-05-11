@@ -15,7 +15,6 @@ void vasp_run(Input *input)
     chdir("./VASP_tmp");
     fp = popen(input->vasp_cmd, "r");
     if (fp != NULL) {
-        char line[1024];
         while (fgets(line, 1024, fp)) {
             if (strstr(line, "General timing") != NULL) {
                 break;
@@ -102,8 +101,8 @@ void read_outcar(char *filename, double *pos, double *energy, double *force)
 }
 
 
-void oneshot(Config *config, Input *input, double *energy, double *force,
-             MPI_Comm comm)
+void oneshot(Calc *calc, Config *config, Input *input,
+             double *energy, double *force, MPI_Comm comm)
 {
     FILE *fp;
     mkdir("./VASP_tmp", 0775);
@@ -120,10 +119,10 @@ void oneshot(Config *config, Input *input, double *energy, double *force,
 }
 
 
-void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
+void atom_relax(Calc *calc, Config *config, Input *input,
+                double *energy, MPI_Comm comm)
 {
     FILE *fp;
-    char cmd[1024], filename[256];
     mkdir("./VASP_tmp", 0775);
     write_incar(input, "VASP_tmp/INCAR", 2);
     write_config(config, "VASP_tmp/POSCAR", "poscar", "w");
@@ -137,4 +136,10 @@ void atom_relax(Config *config, Input *input, double *energy, MPI_Comm comm)
     free(tmp_force);
     fp = popen("cat VASP_tmp/OUTCAR >> OUTCAR_concat", "r");
     pclose(fp);
+}
+
+
+void free_calc(Calc *calc)
+{
+    free(calc);
 }

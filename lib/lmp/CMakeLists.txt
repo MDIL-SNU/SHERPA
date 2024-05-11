@@ -1,0 +1,11 @@
+set ( LAMMPS_SRC_DIRECTORY "" CACHE PATH "Path for lammps source" )
+IF ( NOT LAMMPS_SRC_DIRECTORY STREQUAL "" AND EXISTS ${LAMMPS_SRC_DIRECTORY}/cmake/CMakeLists.txt )
+  option ( BUILD_LIB "Build LAMMPS library" ON )
+  add_subdirectory ( ${LAMMPS_SRC_DIRECTORY}/cmake lammps )
+ELSE ()
+  find_package ( LAMMPS REQUIRED )
+ENDIF ()
+
+add_library ( lmp calculator.c )
+target_include_directories ( lmp PRIVATE ../../include )
+target_link_libraries ( lmp PRIVATE LAMMPS::lammps )

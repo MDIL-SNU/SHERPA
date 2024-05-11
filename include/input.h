@@ -3,6 +3,7 @@
 
 typedef struct _Input
 {
+    char algorithm;
     double acti_cutoff;
     int acti_nevery;
     double finite_diff;
@@ -25,15 +26,15 @@ typedef struct _Input
     char *pair_style;
     char *pair_coeff;
     char *vasp_cmd;
+    char *ase_calc;
+    char *model_path;
     int ncore;
 
-    int kappa_dimer;
     double f_rot_min;
     double f_rot_max;
     int max_num_rot;
     int max_num_tls;
 
-    int art_nouveau;
     double lambda_conv;
     int max_num_itr;
     int max_num_rlx;
