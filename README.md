@@ -23,7 +23,7 @@ Following executables can be installed.
 
 1. Build LAMMPS as shared library. [[link](https://docs.lammps.org/Build_basics.html)]
 
-[!TIP]
+[!TIP]  
 Skip this step, if `sherpa_lmp` is not needed.
 
 ```bash
@@ -39,7 +39,7 @@ cd SHERPA
 mkdir build; cd build
 cmake ../
 ```
-[!NOTE]
+[!NOTE]  
 The path for Python package for `sherpa_ase` can be specified through `CMAKE_PREFIX_PATH`.
 
 For example, if python interpreter is located in `/path/.conda/envs/{name}/bin/python`, `CMAKE_PREFIX_PATH` will be written as below:
@@ -60,7 +60,7 @@ The built executable will be copied to `SHERPA/bin`.
 *INPUT*, *POSCAR*, and *TARGET* are required to run the `sherpa` script.
 *POSCAR* is an initial structure file written in VASP5 format, which supports `Selective dynamics`.
 
-[!IMPORTANT]
+[!IMPORTANT]  
 `sherpa_vasp` requires additional files to run VASP such as INCAR, KPOINTS, and POTCAR. `sherpa_ase` also needs a python file that defines ase calculator. An example python file is provided as `ase_calc.py`.
 
 Use the following commands:
@@ -154,7 +154,7 @@ The number of processors for VASP can be defined in `VASP_CMD` in `INPUT`.
 * **RANDOM_SEED** [unsigned integer | $RANDOM (default)]
   - *RANDOM_SEED* sets the seed for random number generation. If *RANDOM_SEED* is not specified, random seed is generated randomly.
 
-[!TIP]
+[!TIP]  
 In the case of *ALGORITHM* and boolean tags, the first letter determines the applied algorithm.
 
 ### TARGET
@@ -227,7 +227,7 @@ To run KMC script, several settings can be provided by in-command.
 ```bash
 kmc --sherpa_cmd "{sherpa_command}" --att_freq 1e13 --temperature 298 --kmc_step 10000 --inputs_path "./INPUTS"
 ```
-[!IMPORTANT]
+[!IMPORTANT]  
 In *inputs_path*, input files for the `sherpa` should be located (INPUT, POSCAR, and TARGET).
 
 
