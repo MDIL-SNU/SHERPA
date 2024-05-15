@@ -5,6 +5,8 @@ We support the dimer method[[1](https://doi.org/10.1063/1.480097)], kappa-dimer 
 
 SHERPA interfaces with LAMMPS (Large Atomic/Molecular Massively Parallel Simulator), VASP (Vienna Ab initio Simulation Package), and ASE (Atomic Simulation Environment) calculator.
 
+For LAMMPS and ASE, SHERPA leverages one-sided communation through MPI library, enabling asynchronous parallel saddle point searches.
+
 <p align="center">
 <img src="./assets/logo.png" width="200"/>
 </p>
@@ -12,6 +14,7 @@ SHERPA interfaces with LAMMPS (Large Atomic/Molecular Massively Parallel Simulat
 ## Requirement
 - CMake >= 3.13
 - LAPACK
+- MPI
 
 ## Installation
 The following executables can be installed.
@@ -110,7 +113,7 @@ The number of processors for VASP can be defined in `VASP_CMD` in `INPUT`.
 * **DISP_MOVE** [real | 0.0 (default)]
   - *DISP_MOVE* sets the magnitude of the initial displacement vector (in Angst).
 * **INIT_MODE** [True/False | False (default)]
-  - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*.
+  - *INIT_MODE* determines whether or not to provide the initial eigenmode. The initial eigenmode can be provided by the file named *Initial.MODECAR*. *Initial.MODECAR* has an identical format with *SHERPA.MODECAR* (see `Outputs`) 
 #### LAMMPS (only works for sherpa_lmp)
 * **PAIR_STYLE** [strings]
   - *PAIR_STYLE* stands for the pair style in LAMMPS input.
@@ -210,7 +213,7 @@ Not all saddle points are written in all output files. The rules of the outputs 
 *Saddle.POSCAR* is the configuration of the saddle point.
 
 #### Final.POSCAR
-*Final.POSCAR* is the configuration of the final point (=next minimum).
+*Final.POSCAR* is the configuration of the final point.
 
 ## Usage (extractor)
 The below outputs have headers like `{count}_{index}`, meaning that `{count}` and `{index}` are the number of reaction finding trials and the index of the target atom, respectively.
