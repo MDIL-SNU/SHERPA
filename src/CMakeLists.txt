@@ -1,4 +1,4 @@
-add_library( sherpa config.c input.c dataset.c linalg.c target.c )
+add_library( sherpa config.c dataset.c linalg.c target.c )
 target_include_directories ( sherpa PRIVATE ../include )
 
 add_subdirectory ( lmp )

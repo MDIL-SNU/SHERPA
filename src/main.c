@@ -27,9 +27,6 @@ int main(int argc, char *argv[])
 
     /* read input */
     Input *input = (Input *)malloc(sizeof(Input));
-    input->pair_style = NULL;
-    input->pair_coeff = NULL;
-    input->vasp_cmd = NULL;
     errno = read_input(input, "./INPUT");
     if (errno > 0) {
         printf("ERROR in INPUT FILE!\n");

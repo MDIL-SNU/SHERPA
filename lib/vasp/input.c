@@ -28,8 +28,6 @@ int read_input(Input *input, char *filename)
     input->disp_move = 0.1;
     input->init_mode = 0;
 
-    input->pair_style = NULL;
-    input->pair_coeff = NULL;
     input->ncore = 1;
 
     input->vasp_cmd = NULL;
@@ -174,17 +172,6 @@ int read_input(Input *input, char *filename)
                     printf("Invalid input for INIT_MODE\n");
                     return 1;
                 }
-            } else if (strcmp(ptr, "PAIR_STYLE") == 0) {
-                strtok(NULL, " \n\t");
-                input->pair_style = (char *)malloc(sizeof(char) * 65536);
-                strcpy(input->pair_style, strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "PAIR_COEFF") == 0) {
-                strtok(NULL, " \n\t");
-                input->pair_coeff = (char *)malloc(sizeof(char) * 65536);
-                strcpy(input->pair_coeff, strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "NCORE") == 0) {
-                strtok(NULL, " \n\t");
-                input->ncore = atoi(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "VASP_CMD") == 0) {
                 strtok(NULL, " \n\t");
                 input->vasp_cmd = (char *)malloc(sizeof(char) * 65536);
@@ -236,18 +223,6 @@ int read_input(Input *input, char *filename)
         }
     }
     fclose(fp);
-    if (input->pair_style == NULL && input->pair_coeff == NULL
-       && input->vasp_cmd == NULL && input->ase_calc == NULL) {
-        printf("Choose the method: LAMMPS, VASP, or ASE.\n");
-        return 1;
-    }
-    if (input->ase_calc != NULL && input->model_path == NULL) {
-        printf("Specify MODEL_PATH.\n");
-        return 1;
-    }
-    if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
-        input->ncore = 1;
-    }
     return 0;
 }
 
@@ -312,24 +287,9 @@ void write_input(Input *input)
     }
     fputs("\n", fp);
 
-    if (input->pair_style != NULL && input->pair_coeff != NULL) {
-        fputs("# LAMMPS #\n", fp);
-        fprintf(fp, "PAIR_STYLE\t= %s\n", input->pair_style);
-        fprintf(fp, "PAIR_COEFF\t= %s\n", input->pair_coeff);
-        fprintf(fp, "NCORE\t\t= %d\n", input->ncore);
-        fputs("\n", fp);
-    }
-    if (input->vasp_cmd != NULL) {
-        fputs("# VASP #\n", fp);
-        fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
-        fputs("\n", fp);
-    }
-    if (input->ase_calc != NULL) {
-        fputs("# ASE #\n", fp);
-        fprintf(fp, "ASE_CALC\t= %s\n", input->ase_calc);
-        fprintf(fp, "MODEL_PATH\t= %s\n", input->model_path);
-        fputs("\n", fp);
-    }
+    fputs("# VASP #\n", fp);
+    fprintf(fp, "VASP_CMD\t= %s\n", input->vasp_cmd);
+    fputs("\n", fp);
 
     fputs("# dimer #\n", fp);
     fprintf(fp, "F_ROT_MIN\t= %f\n", input->f_rot_min);
@@ -361,20 +321,8 @@ void free_input(Input *input)
         free(input->atom_type[i]);
     }
     free(input->atom_type);
-    if (input->pair_style != NULL) {
-        free(input->pair_style);
-    }
-    if (input->pair_coeff != NULL) {
-        free(input->pair_coeff);
-    }
     if (input->vasp_cmd != NULL) {
         free(input->vasp_cmd);
-    }
-    if (input->ase_calc != NULL) {
-        free(input->ase_calc);
-    }
-    if (input->model_path != NULL) {
-        free(input->model_path);
     }
     free(input);
 }

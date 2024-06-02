@@ -6,6 +6,6 @@ ELSE ()
   find_package ( LAMMPS REQUIRED )
 ENDIF ()
 
-add_library ( lmp calculator.c )
+add_library ( lmp calculator.c input.c )
 target_include_directories ( lmp PRIVATE ../../include )
 target_link_libraries ( lmp PRIVATE LAMMPS::lammps )
