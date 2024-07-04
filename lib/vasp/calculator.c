@@ -33,20 +33,21 @@ static void write_incar(Input *input, char *filename, int ibrion)
     fputs("# Written by SHERPA #\n", wp);
     fputs("ISTART    =    1\n", wp);
     fputs("ICHARG    =    1\n", wp);
-    fputs("LWAVE     =    TRUE\n", wp);
-    fputs("LCHARG    =    TRUE\n", wp);
+    fputs("LWAVE     =    .TRUE.\n", wp);
+    fputs("LCHARG    =    .TRUE.\n", wp);
     sprintf(line, "IBRION    =    %d\n", ibrion);
     fputs(line, wp);
+    fputs("EDIFF     =    1E-06\n", wp);
     if (ibrion == -1) {
         fputs("NSW       =    0\n", wp);
     } else {
         fputs("NSW       =    1000\n", wp);
         fputs("POTIM     =    0.5\n", wp);
+        sprintf(line, "EDIFFG    =    -%f\n", input->f_tol);
+        fputs(line, wp);
     }
-    sprintf(line, "EDIFFG    =    -%f\n", input->f_tol);
-    fputs(line, wp);
     fputs("\n", wp);
-    FILE *rp = fopen("INCAR", "r");
+    FILE *rp = fopen("./INCAR", "r");
     while (fgets(line, 1024, rp)) {
         fputs(line, wp);
     }
@@ -124,8 +125,8 @@ void atom_relax(Calc *calc, Config *config, Input *input,
 {
     FILE *fp;
     mkdir("./VASP_tmp", 0775);
-    write_incar(input, "VASP_tmp/INCAR", 2);
-    write_config(config, "VASP_tmp/POSCAR", "poscar", "w");
+    write_incar(input, "./VASP_tmp/INCAR", 2);
+    write_config(config, "./VASP_tmp/POSCAR", "poscar", "w");
     fp = popen("cp POTCAR VASP_tmp", "r");
     pclose(fp);
     fp = popen("cp KPOINTS VASP_tmp", "r");

@@ -32,9 +32,6 @@ int read_input(Input *input, char *filename)
 
     input->vasp_cmd = NULL;
 
-    input->ase_calc = NULL;
-    input->model_path = NULL;
-
     input->f_rot_min = 0.1;
     input->f_rot_max = 1.0;
     input->max_num_rot = 4;
@@ -176,14 +173,6 @@ int read_input(Input *input, char *filename)
                 strtok(NULL, " \n\t");
                 input->vasp_cmd = (char *)malloc(sizeof(char) * 65536);
                 strcpy(input->vasp_cmd, strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "ASE_CALC") == 0) {
-                strtok(NULL, " \n\t");
-                input->ase_calc = (char *)malloc(sizeof(char) * 65536);
-                strcpy(input->ase_calc, strtok(NULL, "\n"));
-            } else if (strcmp(ptr, "MODEL_PATH") == 0) {
-                strtok(NULL, " \n\t");
-                input->model_path = (char *)malloc(sizeof(char) * 65536);
-                strcpy(input->model_path, strtok(NULL, "\n"));
             } else if (strcmp(ptr, "F_ROT_MIN") == 0) {
                 strtok(NULL, " \n\t");
                 input->f_rot_min = atof(strtok(NULL, "\n"));

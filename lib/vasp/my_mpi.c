@@ -197,6 +197,15 @@ int MPI_Fetch_and_op(void *origin_addr, void *result_addr,
         } else {
             ierror = MPI_FAILURE;
         }
+    } else if (op == MPI_REPLACE) {
+        ierror = MPI_SUCCESS;
+        if (datatype == MPI_INT) {
+            *(int *)result_addr = *(int *)origin_addr;
+        } else if (datatype == MPI_DOUBLE) {
+            *(double *)result_addr = *(double *)origin_addr;
+        } else {
+            ierror = MPI_FAILURE;
+        }
     } else {
         ierror = MPI_FAILURE;
     }

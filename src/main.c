@@ -140,11 +140,11 @@ int main(int argc, char *argv[])
 
     int zero = 0;
     int one = 1;
-    int local_count;
-    int local_done;
-    int local_conv;
-    int local_unique;
-    int local_write;
+    int local_count = -1;
+    int local_done = 0;
+    int local_conv = 0;
+    int local_unique = 0;
+    int local_write = -1;
     int local_reac_num = 0;
     int local_freq_num = 0;
     int *local_reac_list = (int *)malloc(sizeof(int) * list_size1);
