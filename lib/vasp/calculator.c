@@ -35,15 +35,14 @@ static void write_incar(Input *input, char *filename, int ibrion)
     fputs("ICHARG    =    1\n", wp);
     fputs("LWAVE     =    .TRUE.\n", wp);
     fputs("LCHARG    =    .TRUE.\n", wp);
-    sprintf(line, "IBRION    =    %d\n", ibrion);
-    fputs(line, wp);
+    fprintf(wp, "IBRION    =    %d\n", ibrion);
     fputs("EDIFF     =    1E-06\n", wp);
     if (ibrion == -1) {
         fputs("NSW       =    0\n", wp);
     } else {
         fputs("NSW       =    1000\n", wp);
         fputs("POTIM     =    0.5\n", wp);
-        sprintf(line, "EDIFFG    =    -%f\n", input->f_tol);
+        fprintf(wp, "EDIFFG    =    -%f\n", input->f_tol);
         fputs(line, wp);
     }
     fputs("\n", wp);

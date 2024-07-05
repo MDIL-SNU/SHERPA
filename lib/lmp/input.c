@@ -243,7 +243,6 @@ void write_input(Input *input)
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
-    fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);
     fprintf(fp, "MAX_MOVE\t= %f\n", input->max_move);

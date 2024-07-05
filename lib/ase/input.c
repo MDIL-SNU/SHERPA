@@ -220,19 +220,8 @@ int read_input(Input *input, char *filename)
         }
     }
     fclose(fp);
-    if ((input->pair_style == NULL && input->pair_coeff != NULL)
-       || (input->pair_style != NULL && input->pair_coeff == NULL)) {
-        printf("Provide both PAIR_STYLE and PAIR_COEFF.\n");
-        return 1;
-    }
-    if ((input->pair_style != NULL && input->vasp_cmd != NULL)
-       || (input->pair_style != NULL && input->ase_calc != NULL)
-       || (input->vasp_cmd != NULL && input->ase_calc != NULL)) {
-        printf("Choose the method: LAMMPS, VASP, or ASE.\n");
-        return 1;
-    }
     if (input->ase_calc != NULL && input->model_path == NULL) {
-        printf("Specify MODEL_PATH.\n");
+        printf("Provide MODEL_PATH.\n");
         return 1;
     }
     if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
@@ -257,7 +246,6 @@ void write_input(Input *input)
     }
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
-    fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);

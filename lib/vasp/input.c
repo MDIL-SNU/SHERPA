@@ -212,6 +212,13 @@ int read_input(Input *input, char *filename)
         }
     }
     fclose(fp);
+    if (input->vasp_cmd == NULL) {
+        printf("Provide VASP_CMD.\n");
+        return 1;
+    }
+    if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
+        input->ncore = 1;
+    }
     return 0;
 }
 
@@ -231,7 +238,6 @@ void write_input(Input *input)
     }
     fprintf(fp, "ACTI_CUTOFF\t= %f\n", input->acti_cutoff);
     fprintf(fp, "ACTI_NEVERY\t= %d\n", input->acti_nevery);
-    fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "FINITE_DIFF\t= %f\n", input->finite_diff);
     fprintf(fp, "F_TOL\t\t= %f\n", input->f_tol);
     fprintf(fp, "DIFF_TOL\t= %f\n", input->diff_tol);

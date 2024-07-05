@@ -197,7 +197,7 @@ Not all saddle points are written in all output files. The rules of the outputs 
 |Final.POSCAR|X|X|X|O|
 
 #### SHERPA.log
-*SHERPA.log* contains information on saddle point searches such as steps, potential energy, and curvature.
+*SHERPA.log* contains information on saddle point searches such as step, potential energy, and curvature.
 *SHERPA.log* also provides the saddle point type, barrier energy, reaction energy, and elapsed time.
 
 #### Time.log
