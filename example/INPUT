@@ -1,0 +1,37 @@
+# general #
+ALGORITHM   = art_nouveau
+ACTI_CUTOFF = 5.0
+ACTI_NEVERY = 3
+FINITE_DIFF = 0.01
+F_TOL       = 0.01
+DIFF_TOL    = 0.4
+MAX_MOVE    = 0.1
+TRIAL_MOVE  = 0.01
+MAX_SEARCH  = 10
+WRITE_TRAJ  = T
+CONTINUE    = F
+
+# initial structure #
+NELEMENT    = 2
+ATOM_TYPE   = O Pt
+INIT_RELAX  = T
+INIT_DISP   = F
+DISP_CUTOFF = 5.0
+DISP_MOVE   = 0.2
+INIT_MODE   = F
+
+# LAMMPS #
+PAIR_STYLE  = nn
+PAIR_COEFF  = * * potential_saved O Pt
+NCORE       = 4
+
+# art_nouveau #
+LAMBDA_CONV = 0.01
+MAX_NUM_ITR = 500
+MAX_NUM_RLX = 1
+DELAY_STEP  = 0
+MIXING_STEP = 0
+HYPER_STEP  = 3
+
+# random #
+RANDOM_SEED = 928
