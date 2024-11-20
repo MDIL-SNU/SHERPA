@@ -8,5 +8,5 @@ To run SHERPA package with ASE Python module (`sherpa_ase`), five input files ar
 
 Here, we provide the input files with checkpoint of pretrained [SevenNet](https://github.com/MDIL-SNU/SevenNet) model. 
 
-> [!NOTE}
+> [!NOTE]
 > ASE calculators module can be loaded by modifying `ase_calc.py` only if the module can be found in `CMAKE_PREFIX_PATH` defined in the build.
