@@ -64,11 +64,11 @@ int read_input(Input *input, char *filename)
             if (strcmp(ptr, "ALGORITHM") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "A", 1) == 0 || strncmp(ptr, "a", 1) == 0) {
+                if (strncasecmp(ptr, "a", 1) == 0) {
                     input->algorithm = 'a';
-                } else if (strncmp(ptr, "D", 1) == 0 || strncmp(ptr, "d", 1) == 0) {
+                } else if (strncasecmp(ptr, "d", 1) == 0) {
                     input->algorithm = 'd';
-                } else if (strncmp(ptr, "K", 1) == 0 || strncmp(ptr, "k", 1) == 0) {
+                } else if (strncasecmp(ptr, "k", 1) == 0) {
                     input->algorithm = 'k';
                 } else {
                     printf("Invalid input for ALGORITHM\n");
@@ -101,9 +101,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "WRITE_TRAJ") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->write_traj = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->write_traj = 0;
                 } else {
                     printf("Invalid input for WRITE_TRAJ\n");
@@ -112,9 +112,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "CONTINUE") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->cont = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->cont = 0;
                 } else {
                     printf("Invalid input for CONTINUE\n");
@@ -133,9 +133,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "INIT_RELAX") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->init_relax = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_relax = 0;
                 } else {
                     printf("Invalid input for INIT_RELAX\n");
@@ -144,9 +144,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "INIT_DISP") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1)) {
                     input->init_disp = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_disp = 0;
                 } else {
                     printf("Invalid input for INIT_DISP\n");
@@ -161,9 +161,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "INIT_MODE") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->init_mode = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_mode = 0;
                 } else {
                     printf("Invalid input for INIT_MODE\n");

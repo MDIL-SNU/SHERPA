@@ -32,6 +32,7 @@ int read_input(Input *input, char *filename)
 
     input->ase_calc = NULL;
     input->model_path = NULL;
+    input->device = NULL;
 
     input->f_rot_min = 0.1;
     input->f_rot_max = 1.0;
@@ -65,11 +66,11 @@ int read_input(Input *input, char *filename)
             if (strcmp(ptr, "ALGORITHM") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "A", 1) == 0 || strncmp(ptr, "a", 1) == 0) {
+                if (strncasecmp(ptr, "a", 1) == 0) {
                     input->algorithm = 'a';
-                } else if (strncmp(ptr, "D", 1) == 0 || strncmp(ptr, "d", 1) == 0) {
+                } else if (strncasecmp(ptr, "d", 1) == 0) {
                     input->algorithm = 'd';
-                } else if (strncmp(ptr, "K", 1) == 0 || strncmp(ptr, "k", 1) == 0) {
+                } else if (strncasecmp(ptr, "k", 1) == 0) {
                     input->algorithm = 'k';
                 } else {
                     printf("Invalid input for ALGORITHM\n");
@@ -102,9 +103,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "WRITE_TRAJ") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->write_traj = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->write_traj = 0;
                 } else {
                     printf("Invalid input for WRITE_TRAJ\n");
@@ -113,9 +114,9 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "CONTINUE") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->cont = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->cont = 0;
                 } else {
                     printf("Invalid input for CONTINUE\n");
@@ -134,22 +135,30 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "INIT_RELAX") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->init_relax = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_relax = 0;
                 } else {
+                    for (int i = 0; i < input->nelem; ++i) {
+                        free(input->atom_type[i]);
+                    }
+                    free(input->atom_type);
                     printf("Invalid input for INIT_RELAX\n");
                     return 1;
                 }
             } else if (strcmp(ptr, "INIT_DISP") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1)) {
                     input->init_disp = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_disp = 0;
                 } else {
+                    for (int i = 0; i < input->nelem; ++i) {
+                        free(input->atom_type[i]);
+                    }
+                    free(input->atom_type);
                     printf("Invalid input for INIT_DISP\n");
                     return 1;
                 }
@@ -162,17 +171,18 @@ int read_input(Input *input, char *filename)
             } else if (strcmp(ptr, "INIT_MODE") == 0) {
                 strtok(NULL, " \n\t");
                 ptr = strtok(NULL, "\n");
-                if (strncmp(ptr, "T", 1) == 0 || strncmp(ptr, "t", 1) == 0) {
+                if (strncasecmp(ptr, "T", 1) == 0) {
                     input->init_mode = 1;
-                } else if (strncmp(ptr, "F", 1) == 0 || strncmp(ptr, "f", 1) == 0) {
+                } else if (strncasecmp(ptr, "F", 1) == 0) {
                     input->init_mode = 0;
                 } else {
+                    for (int i = 0; i < input->nelem; ++i) {
+                        free(input->atom_type[i]);
+                    }
+                    free(input->atom_type);
                     printf("Invalid input for INIT_MODE\n");
                     return 1;
                 }
-            } else if (strcmp(ptr, "NCORE") == 0) {
-                strtok(NULL, " \n\t");
-                input->ncore = atoi(strtok(NULL, "\n"));
             } else if (strcmp(ptr, "ASE_CALC") == 0) {
                 strtok(NULL, " \n\t");
                 input->ase_calc = (char *)malloc(sizeof(char) * 65536);
@@ -181,6 +191,33 @@ int read_input(Input *input, char *filename)
                 strtok(NULL, " \n\t");
                 input->model_path = (char *)malloc(sizeof(char) * 65536);
                 strcpy(input->model_path, strtok(NULL, "\n"));
+            } else if (strcmp(ptr, "DEVICE") == 0) {
+                strtok(NULL, " \n\t");
+                input->device = (char *)malloc(sizeof(char) * 16);
+                ptr = strtok(NULL, "\n");
+                if (strncasecmp(ptr, "cpu", 3) == 0) {
+                    strcpy(input->device, "cpu");
+                } else if (strncasecmp(ptr, "cuda", 4) == 0) {
+                    strcpy(input->device, "cuda");
+                } else if (strncasecmp(ptr, "mps", 3) == 0) {
+                    strcpy(input->device, "mps");
+                } else if (strncasecmp(ptr, "xpu", 3) == 0) {
+                    strcpy(input->device, "xpu");
+                } else if (strncasecmp(ptr, "xla", 3) == 0) {
+                    strcpy(input->device, "xla");
+                } else if (strncasecmp(ptr, "meta", 4) == 0) {
+                    strcpy(input->device, "meta");
+                } else {
+                    for (int i = 0; i < input->nelem; ++i) {
+                        free(input->atom_type[i]);
+                    }
+                    free(input->atom_type);
+                    free(input->ase_calc);
+                    free(input->model_path);
+                    free(input->device);
+                    printf("Invalid input for DEVICE\n");
+                    return 1;
+                }
             } else if (strcmp(ptr, "F_ROT_MIN") == 0) {
                 strtok(NULL, " \n\t");
                 input->f_rot_min = atof(strtok(NULL, "\n"));
@@ -223,9 +260,6 @@ int read_input(Input *input, char *filename)
     if (input->ase_calc != NULL && input->model_path == NULL) {
         printf("Provide MODEL_PATH.\n");
         return 1;
-    }
-    if ((input->vasp_cmd != NULL || input->ase_calc != NULL) && input->ncore != 1) {
-        input->ncore = 1;
     }
     return 0;
 }
@@ -293,6 +327,7 @@ void write_input(Input *input)
     fputs("# ASE #\n", fp);
     fprintf(fp, "ASE_CALC\t= %s\n", input->ase_calc);
     fprintf(fp, "MODEL_PATH\t= %s\n", input->model_path);
+    fprintf(fp, "DEVICE\t\t= %s\n", input->device);
     fputs("\n", fp);
 
     fputs("# dimer #\n", fp);

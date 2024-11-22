@@ -31,6 +31,7 @@ VASP_CMD    = mpirun -np $nprocs vasp_std
 # ASE (only work for sherpa_ase) #
 ASE_CALC    = ase_calc.py
 MODEL_PATH  = checkpoint.pth
+DEVICE      = cuda
 
 # dimer #
 F_ROT_MIN   = 0.1 

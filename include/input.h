@@ -25,10 +25,11 @@ typedef struct _Input
 
     char *pair_style;
     char *pair_coeff;
+    int ncore;
     char *vasp_cmd;
     char *ase_calc;
     char *model_path;
-    int ncore;
+    char *device;
 
     double f_rot_min;
     double f_rot_max;

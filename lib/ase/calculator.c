@@ -97,8 +97,22 @@ static void ase_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
     if (pyModule != NULL) {
         pyFunc = PyObject_GetAttrString(pyModule, "ase_initialize");
         if ((pyFunc != NULL) && (PyCallable_Check(pyFunc))) {
-            pyArg = PyTuple_New(1);
+            pyArg = PyTuple_New(2);
             PyTuple_SetItem(pyArg, 0, PyUnicode_FromString(input->model_path));
+            if (input->device != NULL) {
+                int rank;
+                MPI_Comm_rank(comm, &rank);
+                char *device = (char *)malloc(sizeof(char) * 16);
+                strcpy(device, input->device);
+                char *index = (char *)malloc(sizeof(char) * 8);
+                sprintf(index, ":%d", rank);
+                strcat(device, index);
+                PyTuple_SetItem(pyArg, 1, PyUnicode_FromString(device));
+                free(device);
+                free(index);
+            } else {
+                PyTuple_SetItem(pyArg, 1, NULL);
+            }
             PyObject_CallObject(pyFunc, pyArg);
             if (PyErr_Occurred()) {
                 PyErr_Print();

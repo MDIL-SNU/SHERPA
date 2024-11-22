@@ -10,3 +10,6 @@ Here, we provide the input files with checkpoint of pretrained [SevenNet](https:
 
 > [!NOTE]
 > ASE calculators module can be loaded by modifying `ase_calc.py` only if the module can be found in `CMAKE_PREFIX_PATH` defined in the build.
+
+> [!TIP]
+> Multiple GPU cards allows simultaneous multiple saddle point search with the same numbers of `ntasks-per-node` and `gres:gpu` (see `run.sh`).

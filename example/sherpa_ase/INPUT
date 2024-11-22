@@ -23,6 +23,7 @@ INIT_MODE   = F
 # ASE #
 ASE_CALC    = ase_calc.py
 MODEL_PATH  = checkpoint_sevennet_0.pth
+DEVICE      = cuda
 
 # art_nouveau #
 LAMBDA_CONV = 0.01

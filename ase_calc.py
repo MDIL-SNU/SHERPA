@@ -5,15 +5,18 @@ from ase.optimize import LBFGS
 from ase.constraints import FixAtoms
 
 
-def ase_initialize(model_path: str) -> None:
+def ase_initialize(model_path: str, device: str) -> None:
     """
-    Assign the ase calculator to the calculator variable.
+    Assign the ase calculator to the global calculator variable.
     """
     global calculator
 
     from sevenn.sevennet_calculator import SevenNetCalculator
 
-    calculator = SevenNetCalculator(model_path)
+    if device is None:
+        calculator = SevenNetCalculator(model_path)
+    else:
+        calculator = SevenNetCalculator(model_path, device=device)
 
 
 def oneshot(
