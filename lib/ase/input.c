@@ -366,5 +366,8 @@ void free_input(Input *input)
     if (input->model_path != NULL) {
         free(input->model_path);
     }
+    if (input->device != NULL) {
+        free(input->device);
+    }
     free(input);
 }

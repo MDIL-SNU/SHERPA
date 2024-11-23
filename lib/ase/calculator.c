@@ -101,7 +101,7 @@ static void ase_init(Calc *calc, Config *config, Input *input, MPI_Comm comm)
             PyTuple_SetItem(pyArg, 0, PyUnicode_FromString(input->model_path));
             if (input->device != NULL) {
                 int rank;
-                MPI_Comm_rank(comm, &rank);
+                MPI_Comm_rank(MPI_COMM_WORLD, &rank);
                 char *device = (char *)malloc(sizeof(char) * 16);
                 strcpy(device, input->device);
                 char *index = (char *)malloc(sizeof(char) * 8);
