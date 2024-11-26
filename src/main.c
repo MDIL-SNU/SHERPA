@@ -156,6 +156,7 @@ int main(int argc, char *argv[])
     calc->initialized = 0;
 
     /* initial relax */
+    // TODO: debug for ASE!
     if (input->init_relax > 0) {
         double energy;
         atom_relax(calc, config, input, &energy, local_comm);

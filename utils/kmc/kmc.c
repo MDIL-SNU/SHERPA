@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     double att_freq = 1e13;
     double temperature = 298;
     long long kmc_step = 10000;
-    double low_cut = 0.01;
+    double low_cut = 0.0;
     long long restart = 0;
     char *sherpa_cmd = NULL;
     char inputs_path[1024] = "./INPUTS";
@@ -100,7 +100,24 @@ int main(int argc, char *argv[])
         rename("./KMC.log", "./KMC_old.log");
         rename("./KMC_tmp.log", "./KMC.log");
         initial_step = step + 1;
+        /* copy POSCAR */
+        DIR *dp = NULL;
+        struct dirent *entry = NULL;
+        sprintf(directory, "%lld", step);
+        if ((dp = opendir(directory)) == NULL) {
+            printf("Check restart step.\n");
+            return 1;
+        }
+        while ((entry = readdir(dp)) != NULL) {
+            if (strncmp(entry->d_name, "Final_", 6) == 0) {
+                sprintf(filename1, "%lld/%s", step, entry->d_name);
+                break;
+            }
+        }
+        sprintf(filename2, "%s/POSCAR", inputs_path);
+        copy_files(filename2, filename1);
     }
+    return 0;
 
     for (step = initial_step; step < initial_step + kmc_step; ++step) {
         /* mkdir */
@@ -124,56 +141,58 @@ int main(int argc, char *argv[])
         }
         /* chdir */
         chdir(directory);
-        /* run sherpa */
-        pp = popen(sherpa_cmd, "r");
-        if (pp != NULL) {
-            while (1) {
-                fp = fopen("./Time.log", "r");
-                if (fp != NULL) {
-                    printf("Time found\n");
-                    fclose(fp);
-                    break;
-                }
-            }
-            pclose(pp);
-        } else {
-            printf("Please provide absolute SHERPA path.\n");
-            return 1;
-        }
-        /* read log */
-        fp = fopen("./Event.log", "r");
-        if (fp == NULL) {
-            printf("Check your SHERPA.");
-            return 1;
-        }
-        char line[1024];
-        fgets(line, 1024, fp);
-        fgets(line, 1024, fp);
-        fgets(line, 1024, fp);
         int list_size = 1024;
         int reac_num = 0;
         int *reac_list = (int *)malloc(sizeof(int) * list_size);
         double *acti_list = (double *)malloc(sizeof(double) * list_size);
         double *rate_list = (double *)malloc(sizeof(double) * list_size);
-        double kT = 8.61733326E-5 * temperature;
-        while (fgets(line, 1024, fp) != NULL) {
-            int tmp_index = atoi(strtok(line, " \n"));
-            Ea = atof(strtok(NULL, " \n"));
-            if (Ea < low_cut) {
-                continue;
+        do {
+            /* run sherpa */
+            pp = popen(sherpa_cmd, "r");
+            if (pp != NULL) {
+                while (1) {
+                    fp = fopen("./Time.log", "r");
+                    if (fp != NULL) {
+                        printf("Time found\n");
+                        fclose(fp);
+                        break;
+                    }
+                }
+                pclose(pp);
+            } else {
+                printf("Please provide absolute SHERPA path.\n");
+                return 1;
             }
-            reac_list[reac_num] = tmp_index;
-            acti_list[reac_num] = Ea;
-            rate_list[reac_num] = att_freq * exp(-Ea / kT);
-            reac_num++;
-            if (reac_num >= list_size) {
-                list_size = list_size << 1;
-                reac_list = (int *)realloc(reac_list, sizeof(int) * list_size);
-                acti_list = (double *)realloc(acti_list, sizeof(double) * list_size);
-                rate_list = (double *)realloc(rate_list, sizeof(double) * list_size);
+            /* read log */
+            fp = fopen("./Event.log", "r");
+            if (fp == NULL) {
+                printf("Check your SHERPA.");
+                return 1;
             }
-        }
-        fclose(fp);
+            char line[1024];
+            fgets(line, 1024, fp);
+            fgets(line, 1024, fp);
+            fgets(line, 1024, fp);
+            double kT = 8.61733326E-5 * temperature;
+            while (fgets(line, 1024, fp) != NULL) {
+                int tmp_index = atoi(strtok(line, " \n"));
+                Ea = atof(strtok(NULL, " \n"));
+                if (Ea < low_cut) {
+                    continue;
+                }
+                reac_list[reac_num] = tmp_index;
+                acti_list[reac_num] = Ea;
+                rate_list[reac_num] = att_freq * exp(-Ea / kT);
+                reac_num++;
+                if (reac_num >= list_size) {
+                    list_size = list_size << 1;
+                    reac_list = (int *)realloc(reac_list, sizeof(int) * list_size);
+                    acti_list = (double *)realloc(acti_list, sizeof(double) * list_size);
+                    rate_list = (double *)realloc(rate_list, sizeof(double) * list_size);
+                }
+            }
+            fclose(fp);
+        } while (reac_num == 0);
         /* select event */
         double rate_sum = 0.0;
         for (i = 0; i < reac_num; ++i) {
