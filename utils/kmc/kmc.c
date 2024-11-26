@@ -117,7 +117,6 @@ int main(int argc, char *argv[])
         sprintf(filename2, "%s/POSCAR", inputs_path);
         copy_files(filename2, filename1);
     }
-    return 0;
 
     for (step = initial_step; step < initial_step + kmc_step; ++step) {
         /* mkdir */
