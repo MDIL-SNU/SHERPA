@@ -244,7 +244,7 @@ kmc --sherpa_cmd "{sherpa_command}" --att_freq 1e13 --temperature 298 --kmc_step
 * **low_cut** [real | 0.1 (default)]
   - *low_cut* sets the minimum activation energy in the event table.
 * **restart** [int | 0 (default)]
-  - *restart* sets the initial step to continue from the previous kMC simulation.
+  - *restart* sets the last finished step of the previous kMC simulation.
 * **inputs_path** [string | "./INPUTS" (default)]
   - *inputs_path* indicates the directory that contains input files for SHERPA.
 * **random_seed** [unsigned int | $RANDOM (default)]

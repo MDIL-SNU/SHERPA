@@ -97,6 +97,10 @@ int main(int argc, char *argv[])
         }
         fclose(fp);
         fclose(tmp_fp);
+        if (step != restart) {
+            printf("Check restart step.\n");
+            return 1;
+        }
         rename("./KMC.log", "./KMC_old.log");
         rename("./KMC_tmp.log", "./KMC.log");
         initial_step = step + 1;
