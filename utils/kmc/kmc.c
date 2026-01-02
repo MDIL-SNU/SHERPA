@@ -134,13 +134,13 @@ int main(int argc, char *argv[])
             printf("Check inputs_path.\n");
             return 1;
         }
-        /* skip ./ and ../ */
-        readdir(direct);
-        readdir(direct);
         while ((entry = readdir(direct)) != NULL) {
-            sprintf(filename1, "%s/%s", inputs_path, entry->d_name);
-            sprintf(filename2, "%lld/%s", step, entry->d_name);
-            copy_files(filename2, filename1);
+            /* only files */
+            if (entry->d_type == DT_REG) {
+                sprintf(filename1, "%s/%s", inputs_path, entry->d_name);
+                sprintf(filename2, "%lld/%s", step, entry->d_name);
+                copy_files(filename2, filename1);
+            }
         }
         /* chdir */
         chdir(directory);
